@@ -33,7 +33,7 @@ class MrpWorkorder(models.Model):
     product_id = fields.Many2one(related='production_id.product_id', readonly=True, store=True, check_company=True)
     product_tracking = fields.Selection(related="product_id.tracking")
     product_uom_id = fields.Many2one('uom.uom', 'Unit of Measure', required=True, readonly=True)
-    production_id = fields.Many2one('mrp.production', 'Manufacturing Order', required=True, check_company=True, readonly=True)
+    production_id = fields.Many2one('mrp.production', 'Manufacturing Order', required=True, check_company=True, readonly=True, index='btree')
     production_availability = fields.Selection(
         string='Stock Availability', readonly=True,
         related='production_id.reservation_state', store=True) # Technical: used in views and domains only
@@ -145,26 +145,27 @@ class MrpWorkorder(models.Model):
                                      domain="[('allow_workorder_dependencies', '=', True), ('id', '!=', id), ('production_id', '=', production_id)]",
                                      copy=False)
 
-    @api.depends('production_availability', 'blocked_by_workorder_ids', 'blocked_by_workorder_ids.state')
+    @api.depends('production_availability', 'blocked_by_workorder_ids.state')
     def _compute_state(self):
-        # Force the flush of the production_availability, the wo state is modify in the _compute_reservation_state
-        # It is a trick to force that the state of workorder is computed as the end of the
-        # cyclic depends with the mo.state, mo.reservation_state and wo.state
+        # Force to compute the production_availability right away.
+        # It is a trick to force that the state of workorder is computed at the end of the
+        # cyclic depends with the mo.state, mo.reservation_state and wo.state and avoid recursion error
+        self.mapped('production_availability')
         for workorder in self:
             if workorder.state == 'pending':
                 if all([wo.state in ('done', 'cancel') for wo in workorder.blocked_by_workorder_ids]):
-                    workorder.state = 'ready' if workorder.production_id.reservation_state == 'assigned' else 'waiting'
+                    workorder.state = 'ready' if workorder.production_availability == 'assigned' else 'waiting'
                     continue
             if workorder.state not in ('waiting', 'ready'):
                 continue
             if not all([wo.state in ('done', 'cancel') for wo in workorder.blocked_by_workorder_ids]):
                 workorder.state = 'pending'
                 continue
-            if workorder.production_id.reservation_state not in ('waiting', 'confirmed', 'assigned'):
+            if workorder.production_availability not in ('waiting', 'confirmed', 'assigned'):
                 continue
-            if workorder.production_id.reservation_state == 'assigned' and workorder.state == 'waiting':
+            if workorder.production_availability == 'assigned' and workorder.state == 'waiting':
                 workorder.state = 'ready'
-            elif workorder.production_id.reservation_state != 'assigned' and workorder.state == 'ready':
+            elif workorder.production_availability != 'assigned' and workorder.state == 'ready':
                 workorder.state = 'waiting'
 
     @api.depends('production_state', 'date_start', 'date_finished')
@@ -248,7 +249,8 @@ class MrpWorkorder(models.Model):
                     'date_from': wo.date_start,
                     'date_to': wo.date_finished,
                 })
-            elif wo.date_start and wo.date_finished:
+            elif wo.date_start:
+                wo.date_finished = wo._calculate_date_finished()
                 wo.leave_id = wo.env['resource.calendar.leaves'].create({
                     'name': wo.display_name,
                     'calendar_id': wo.workcenter_id.resource_calendar_id.id,
@@ -294,10 +296,14 @@ class MrpWorkorder(models.Model):
             rounding = order.production_id.product_uom_id.rounding
             order.is_produced = float_compare(order.qty_produced, order.production_id.product_qty, precision_rounding=rounding) >= 0
 
-    @api.depends('operation_id', 'workcenter_id', 'qty_production')
+    @api.depends('operation_id', 'workcenter_id', 'qty_producing', 'qty_production')
     def _compute_duration_expected(self):
         for workorder in self:
-            workorder.duration_expected = workorder._get_duration_expected()
+            # Recompute the duration expected if the qty_producing has been changed:
+            # compare with the origin record if it happens during an onchange
+            if workorder.state not in ['done', 'cancel'] and (workorder.qty_producing != workorder.qty_production
+                or (workorder._origin != workorder and workorder._origin.qty_producing and workorder.qty_producing != workorder._origin.qty_producing)):
+                workorder.duration_expected = workorder._get_duration_expected()
 
     @api.depends('time_ids.duration', 'qty_produced')
     def _compute_duration(self):
@@ -406,6 +412,9 @@ class MrpWorkorder(models.Model):
     def _onchange_date_finished(self):
         if self.date_start and self.date_finished and self.workcenter_id:
             self.duration_expected = self._calculate_duration_expected()
+        if not self.date_finished and self.date_start:
+            raise UserError(_("It is not possible to unplan one single Work Order. "
+                              "You should unplan the Manufacturing Order instead in order to unplan all the linked operations."))
 
     def _calculate_duration_expected(self, date_start=False, date_finished=False):
         interval = self.workcenter_id.resource_calendar_id.get_work_duration_data(
@@ -430,6 +439,9 @@ class MrpWorkorder(models.Model):
                     if workorder.state in ('progress', 'done', 'cancel'):
                         raise UserError(_('You cannot change the workcenter of a work order that is in progress or done.'))
                     workorder.leave_id.resource_id = self.env['mrp.workcenter'].browse(values['workcenter_id']).resource_id
+                    workorder.duration_expected = workorder._get_duration_expected()
+                    if workorder.date_start:
+                        workorder.date_finished = workorder._calculate_date_finished()
         if 'date_start' in values or 'date_finished' in values:
             for workorder in self:
                 date_start = fields.Datetime.to_datetime(values.get('date_start', workorder.date_start))
@@ -582,9 +594,8 @@ class MrpWorkorder(models.Model):
         for wo in self:
             if any(not time.date_end for time in wo.time_ids.filtered(lambda t: t.user_id.id == self.env.user.id)):
                 continue
-            # As button_start is automatically called in the new view
             if wo.state in ('done', 'cancel'):
-                continue
+                raise UserError(_('You cannot start a work order that is already done or cancelled'))
 
             if wo.product_tracking == 'serial' and wo.qty_producing == 0:
                 wo.qty_producing = 1.0
@@ -600,6 +611,7 @@ class MrpWorkorder(models.Model):
                 wo.production_id.write({
                     'date_start': fields.Datetime.now()
                 })
+
             if wo.state == 'progress':
                 continue
             date_start = fields.Datetime.now()
@@ -738,13 +750,17 @@ class MrpWorkorder(models.Model):
             duration_expected_working = (self.duration_expected - self.workcenter_id.time_start - self.workcenter_id.time_stop) * self.workcenter_id.time_efficiency / 100.0
             if duration_expected_working < 0:
                 duration_expected_working = 0
-            return self.workcenter_id._get_expected_duration(self.product_id) + duration_expected_working * ratio * 100.0 / self.workcenter_id.time_efficiency
-        qty_production = self.production_id.product_uom_id._compute_quantity(self.qty_production, self.production_id.product_id.uom_id)
+            if self.qty_producing not in (0, self.qty_production, self._origin.qty_producing):
+                qty_ratio = self.qty_producing / (self._origin.qty_producing or self.qty_production)
+            else:
+                qty_ratio = 1
+            return self.workcenter_id._get_expected_duration(self.product_id) + duration_expected_working * qty_ratio * ratio * 100.0 / self.workcenter_id.time_efficiency
+        qty_production = self.production_id.product_uom_id._compute_quantity(self.qty_producing or self.qty_production, self.production_id.product_id.uom_id)
         capacity = self.workcenter_id._get_capacity(self.product_id)
         cycle_number = float_round(qty_production / capacity, precision_digits=0, rounding_method='UP')
         if alternative_workcenter:
             # TODO : find a better alternative : the settings of workcenter can change
-            duration_expected_working = (self.duration_expected - self.workcenter_id.time_start - self.workcenter_id.time_stop) * self.workcenter_id.time_efficiency / (100.0 * cycle_number)
+            duration_expected_working = (self.duration_expected - self.workcenter_id._get_expected_duration(self.product_id)) * self.workcenter_id.time_efficiency / (100.0 * cycle_number)
             if duration_expected_working < 0:
                 duration_expected_working = 0
             capacity = alternative_workcenter._get_capacity(self.product_id)
@@ -879,7 +895,7 @@ class MrpWorkorder(models.Model):
                 wo.duration_percent = 100
 
     def _compute_expected_operation_cost(self):
-        return (self.duration_expected / 60.0) * self.workcenter_id.costs_hour
+        return (self.duration_expected / 60.0) * (self.costs_hour or self.workcenter_id.costs_hour)
 
     def _compute_current_operation_cost(self):
-        return (self.get_duration() / 60.0) * self.workcenter_id.costs_hour
+        return (self.get_duration() / 60.0) * (self.costs_hour or self.workcenter_id.costs_hour)

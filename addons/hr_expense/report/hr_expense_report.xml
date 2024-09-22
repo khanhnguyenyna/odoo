@@ -49,21 +49,13 @@
                                 <tr t-foreach="o.expense_line_ids" t-as="line">
                                     <td class="text-start"><span t-field="line.date"></span></td>
                                     <td t-att-class="'text-start' + (' o_overflow' if len(line.name) > 30 else '')">
-                                        <span t-field="line.name">Flight Ticket</span><br/>
-                                        <span>
-                                            <span t-foreach="line.analytic_distribution" t-as="distribution">
-                                                <span t-out="line.env['account.analytic.account'].browse(int(distribution))[0].name">Analytic Account Name</span>:
-                                                <span t-out="line.analytic_distribution.get(distribution)">50%</span>
-                                            </span>
-                                        </span>
+                                        <span t-field="line.name">Flight Ticket</span>
                                     </td>
                                     <td class="text-end"><span t-field="line.price_unit">$100.00</span></td>
                                     <td class="text-end"><span t-field="line.quantity">1</span></td>
-                                    <td class="text-end">
-                                        <t t-foreach="line.tax_ids" t-as="tax">
-                                            <t t-if="tax.description"><span t-field="tax.description">VAT</span></t>
-                                            <t t-if="not tax.description"><span t-field="tax.name">Tax Name</span></t>
-                                        </t>
+                                    <t t-set="taxes" t-value="', '.join([(tax.invoice_label or tax.name) for tax in line.tax_ids])"/>
+                                    <td t-attf-class="text-end {{ 'text-nowrap' if len(taxes) &lt; 10 else '' }}">
+                                        <span t-out="taxes" id="line_tax_ids">Tax 15%</span>
                                     </td>
                                     <td t-if="foreign_currencies" class="text-end">
                                         <span t-field="line.total_amount_currency" t-options='{"widget": "monetary", "display_currency": line.currency_id}'>$120.00</span>

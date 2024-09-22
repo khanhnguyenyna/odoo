@@ -3,21 +3,28 @@
 # 	* website_blog
 # 
 # Translators:
-# Wil Odoo, 2023
+# Wil Odoo, 2024
+# Sarah Park, 2024
+# Daye Jeong, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Daye Jeong, 2024\n"
 "Language-Team: Korean (https://app.transifex.com/odoo/teams/41243/ko/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Language: ko\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
+
+#. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.date_selector
+msgid "#{year}"
+msgstr "#{year}"
 
 #. module: website_blog
 #. odoo-python
@@ -341,6 +348,7 @@ msgid "All"
 msgstr "전체"
 
 #. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.blogs_nav
 #: model_terms:ir.ui.view,arch_db:website_blog.post_breadcrumbs
 msgid "All Blogs"
 msgstr "모든 블로그"
@@ -632,6 +640,7 @@ msgstr "블로그 제목"
 #: model:ir.actions.act_window,name:website_blog.action_blog_blog
 #: model:ir.ui.menu,name:website_blog.menu_blog_global
 #: model_terms:ir.ui.view,arch_db:website_blog.blog_searchbar_input_snippet_options
+#: model_terms:ir.ui.view,arch_db:website_blog.blogs_nav
 #: model_terms:ir.ui.view,arch_db:website_blog.view_blog_blog_list
 msgid "Blogs"
 msgstr "블로그"
@@ -728,6 +737,7 @@ msgid ""
 msgstr "첫 번째 블로그 게시물을 작성하려면 오른쪽 상단 모서리에 있는 \"<b>새로 만들기</b>\"를 클릭하십시오."
 
 #. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.blogs_nav
 #: model_terms:ir.ui.view,arch_db:website_blog.posts_loop
 msgid "Close"
 msgstr "닫기"
@@ -987,7 +997,7 @@ msgstr "역사를 좀 찾아보세요."
 #. module: website_blog
 #: model_terms:blog.post,content:website_blog.blog_post_4
 msgid "Get started"
-msgstr "시작함"
+msgstr "시작하기"
 
 #. module: website_blog
 #: model_terms:ir.ui.view,arch_db:website_blog.snippet_options
@@ -1513,6 +1523,15 @@ msgstr ""
 " 우주 천체에서 볼 수 있는 것에 만족하지 못하고 있습니다."
 
 #. module: website_blog
+#. odoo-python
+#: code:addons/website_blog/models/ir_qweb_fields.py:0
+#, python-format
+msgid ""
+"On your default language, empty the blog post description and save to get an"
+" automated (translated) summary."
+msgstr ""
+
+#. module: website_blog
 #. odoo-javascript
 #: code:addons/website_blog/static/src/js/tours/website_blog.js:0
 #, python-format
@@ -1632,6 +1651,11 @@ msgstr "게시 선택 사항"
 #: model:ir.model.fields,field_description:website_blog.field_blog_post__post_date
 msgid "Publishing date"
 msgstr "게시 날짜"
+
+#. module: website_blog
+#: model:ir.model,name:website_blog.model_ir_qweb_field
+msgid "Qweb Field"
+msgstr "Qweb 필드"
 
 #. module: website_blog
 #: model:ir.model.fields,field_description:website_blog.field_blog_blog__rating_ids
@@ -2335,6 +2359,11 @@ msgstr "모든 블로그 페이지에 표시"
 #: model:ir.model.fields,field_description:website_blog.field_blog_post__website_published
 msgid "Visible on current website"
 msgstr "현재 웹 사이트에 공개"
+
+#. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.blog_post_content
+msgid "WRITE HERE OR DRAG BUILDING BLOCKS"
+msgstr "여기에 작성하거나 빌딩 블록을 끌어다 놓으세요."
 
 #. module: website_blog
 #: model:ir.model,name:website_blog.model_website

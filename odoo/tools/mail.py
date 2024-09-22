@@ -11,11 +11,12 @@ import threading
 import time
 from email.utils import getaddresses
 from urllib.parse import urlparse
+import html as htmllib
 
 import idna
 import markupsafe
 from lxml import etree, html
-from lxml.html import clean
+from lxml.html import clean, defs
 from werkzeug import urls
 
 import odoo
@@ -28,7 +29,7 @@ _logger = logging.getLogger(__name__)
 # HTML Sanitizer
 #----------------------------------------------------------
 
-safe_attrs = clean.defs.safe_attrs | frozenset(
+safe_attrs = defs.safe_attrs | frozenset(
     ['style',
      'data-o-mail-quote', 'data-o-mail-quote-node',  # quote detection
      'data-oe-model', 'data-oe-id', 'data-oe-field', 'data-oe-type', 'data-oe-expression', 'data-oe-translation-initial-sha', 'data-oe-nodeid',
@@ -41,7 +42,7 @@ safe_attrs = clean.defs.safe_attrs | frozenset(
      ])
 SANITIZE_TAGS = {
     # allow new semantic HTML5 tags
-    'allow_tags': clean.defs.tags | frozenset('article bdi section header footer hgroup nav aside figure main'.split() + [etree.Comment]),
+    'allow_tags': defs.tags | frozenset('article bdi section header footer hgroup nav aside figure main'.split() + [etree.Comment]),
     'kill_tags': ['base', 'embed', 'frame', 'head', 'iframe', 'link', 'meta',
                   'noscript', 'object', 'script', 'style', 'title'],
     'remove_tags': ['html', 'body'],
@@ -201,6 +202,9 @@ def html_normalize(src, filter_callback=None):
     try:
         src = src.replace('--!>', '-->')
         src = re.sub(r'(<!-->|<!--->)', '<!-- -->', src)
+        # On the specific case of Outlook desktop it adds unnecessary '<o:.*></o:.*>' tags which are parsed
+        # in '<p></p>' which may alter the appearance (eg. spacing) of the mail body
+        src = re.sub(r'</?o:.*?>', '', src)
         doc = html.fromstring(src)
     except etree.ParserError as e:
         # HTML comment only string, whitespace only..
@@ -311,7 +315,7 @@ def is_html_empty(html_content):
     """
     if not html_content:
         return True
-    tag_re = re.compile(r'\<\s*\/?(?:p|div|span|br|b|i|font)(?:(?=\s+\w*)[^/>]*|\s*)/?\s*\>')
+    tag_re = re.compile(r'\<\s*\/?(?:p|div|section|span|br|b|i|font)(?:(?=\s+\w*)[^/>]*|\s*)/?\s*\>')
     return not bool(re.sub(tag_re, '', html_content).strip())
 
 def html_keep_url(text):
@@ -338,6 +342,7 @@ def html_to_inner_content(html):
     processed = re.sub(HTML_NEWLINES_REGEX, ' ', html)
     processed = re.sub(HTML_TAGS_REGEX, '', processed)
     processed = re.sub(r' {2,}|\t', ' ', processed)
+    processed = htmllib.unescape(processed)
     processed = processed.strip()
     return processed
 
@@ -375,6 +380,15 @@ def html2plaintext(html, body_id=None, encoding='utf-8'):
             link.text = '%s [%s]' % (link.text, i)
             url_index.append(url)
 
+    for img in tree.findall('.//img'):
+        src = img.get('src')
+        if src:
+            i += 1
+            img.tag = 'span'
+            img_name = re.search(r'[^/]+(?=\.[a-zA-Z]+(?:\?|$))', src)
+            img.text = '%s [%s]' % (img_name.group(0) if img_name else 'Image', i)
+            url_index.append(src)
+
     html = ustr(etree.tostring(tree, encoding=encoding))
     # \r char is converted into &#13;, must remove it
     html = html.replace('&#13;', '')
@@ -387,7 +401,7 @@ def html2plaintext(html, body_id=None, encoding='utf-8'):
     html = html.replace('<em>', '/').replace('</em>', '/')
     html = html.replace('<tr>', '\n')
     html = html.replace('</p>', '\n')
-    html = re.sub('<br\s*/?>', '\n', html)
+    html = re.sub(r'<br\s*/?>', '\n', html)
     html = re.sub('<.*?>', ' ', html)
     html = html.replace(' ' * 2, ' ')
     html = html.replace('&gt;', '>')
@@ -488,7 +502,8 @@ def append_content_to_html(html, content, plaintext=True, preserve=False, contai
 
 def prepend_html_content(html_body, html_content):
     """Prepend some HTML content at the beginning of an other HTML content."""
-    html_content = type(html_content)(re.sub(r'(?i)(</?(?:html|body|head|!\s*DOCTYPE)[^>]*>)', '', html_content))
+    replacement = re.sub(r'(?i)(</?(?:html|body|head|!\s*DOCTYPE)[^>]*>)', '', html_content)
+    html_content = markupsafe.Markup(replacement) if isinstance(html_content, markupsafe.Markup) else replacement
     html_content = html_content.strip()
 
     body_match = re.search(r'<body[^>]*>', html_body) or re.search(r'<html[^>]*>', html_body)

@@ -27,9 +27,10 @@ patch(PosStore.prototype, {
     async setup() {
         this.orderToTransfer = null; // table transfer feature
         this.transferredOrdersSet = new Set(); // used to know which orders has been transferred but not sent to the back end yet
-        this.floorPlanStyle = "default";
         this.isEditMode = false;
         await super.setup(...arguments);
+        this.floorPlanStyle =
+            localStorage.getItem("floorPlanStyle") || (this.ui.isSmall ? "kanban" : "default");
         if (this.config.module_pos_restaurant) {
             this.setActivityListeners();
             this.showScreen("FloorScreen", { floor: this.table?.floor || null });
@@ -45,7 +46,7 @@ patch(PosStore.prototype, {
     setIdleTimer() {
         clearTimeout(this.idleTimer);
         if (this.shouldResetIdleTimer()) {
-            this.idleTimer = setTimeout(() => this.actionAfterIdle(), 60000);
+            this.idleTimer = setTimeout(() => this.actionAfterIdle(), 180000);
         }
     },
     async actionAfterIdle() {
@@ -62,13 +63,13 @@ patch(PosStore.prototype, {
             this.showScreen("FloorScreen", { floor: table?.floor });
         }
     },
-    getReceiptHeaderData() {
+    getReceiptHeaderData(order) {
         const json = super.getReceiptHeaderData(...arguments);
-        if (this.config.module_pos_restaurant) {
-            if (this.get_order().getTable()) {
-                json.table = this.get_order().getTable().name;
+        if (this.config.module_pos_restaurant && order) {
+            if (order.getTable()) {
+                json.table = order.getTable().name;
             }
-            json.customer_count = this.get_order().getCustomerCount();
+            json.customer_count = order.getCustomerCount();
         }
         return json;
     },
@@ -194,6 +195,7 @@ patch(PosStore.prototype, {
             await this._syncTableOrdersToServer(); // to prevent losing the transferred orders
             const ordersJsons = await this._getTableOrdersFromServer(tableIds); // get all orders
             await this._loadMissingProducts(ordersJsons);
+            await this._loadMissingPartners(ordersJsons);
             return ordersJsons;
         } else {
             return await super._getOrdersJson();
@@ -281,9 +283,14 @@ patch(PosStore.prototype, {
             Promise.reject(e);
         }
         this.table = null;
+        const order = this.get_order();
+        if (order && !order.isBooked) {
+            this.removeOrder(order);
+        }
         this.set_order(null);
     },
     setCurrentOrderToTransfer() {
+        this.selectedOrder.setBooked(true);
         this.orderToTransfer = this.selectedOrder;
     },
     async transferTable(table) {
@@ -329,5 +336,11 @@ patch(PosStore.prototype, {
             }
         }
         return super.updateModelsData(models_data);
+    },
+    async addProductToCurrentOrder(product, options = {}) {
+        if (this.config.module_pos_restaurant && !this.get_order().booked) {
+            this.get_order().setBooked(true);
+        }
+        return super.addProductToCurrentOrder(...arguments);
     },
 });

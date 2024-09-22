@@ -4,16 +4,16 @@
 # 
 # Translators:
 # Sergio Zanchetta <primes2h@gmail.com>, 2023
-# Wil Odoo, 2023
-# Marianna Ciofani, 2023
+# Marianna Ciofani, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Marianna Ciofani, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Italian (https://app.transifex.com/odoo/teams/41243/it/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -536,8 +536,8 @@ msgstr "<span name=\"sent\">e-mail sono state inviate.</span>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.digest_mail_main
-msgid "<span style=\"color: #8f8f8f;\">Turn off Mailing Reports</span>"
-msgstr "<span style=\"color: #8f8f8f;\">Disattiva rendiconti e-mail</span>"
+msgid "<span style=\"color: #878d97;\">Turn off Mailing Reports</span>"
+msgstr "<span style=\"color: #878d97;\">Disattiva resoconti e-mail</span>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_alert
@@ -2340,7 +2340,7 @@ msgstr "Piè di pagina"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_company_team
 msgid ""
 "Founder and chief visionary, Tony is the driving force behind the company. "
-"He lovesto keep his hands full by participating in the development of the "
+"He loves to keep his hands full by participating in the development of the "
 "software, marketing, and customer experience strategies."
 msgstr ""
 "Fondatore e capo visionario, Tony è la forza motrice dell'azienda. Ama "
@@ -2397,6 +2397,11 @@ msgstr "Raggruppa per"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_trace_report_view_search
 msgid "Group By..."
 msgstr "Raggruppa per..."
+
+#. module: mass_mailing
+#: model:ir.model,name:mass_mailing.model_ir_http
+msgid "HTTP Routing"
+msgstr "Instradamento HTTP"
 
 #. module: mass_mailing
 #: model:ir.model.fields,field_description:mass_mailing.field_mailing_contact__has_message
@@ -3903,6 +3908,11 @@ msgid "Processing"
 msgstr "In elaborazione"
 
 #. module: mass_mailing
+#: model_terms:ir.ui.view,arch_db:mass_mailing.view_mail_mass_mailing_kanban
+msgid "Progress bar"
+msgstr "Barra di avanzamento"
+
+#. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.email_designer_snippets
 msgid "Promo Code"
 msgstr "Codice promozionale"
@@ -4724,10 +4734,10 @@ msgstr "Il campo filtri non è valido per i seguenti destinatari."
 #: model:ir.model.fields,help:mass_mailing.field_mailing_list__is_public
 msgid ""
 "The mailing list can be accessible by recipients in the subscription "
-"management page to allows them to update their preferences."
+"management page to allow them to update their preferences."
 msgstr ""
-"I destinatari possono accedere alla mailing list attraverso la pagina di "
-"gestione dell'iscrizione per aggiornare le preferenze."
+"I destinatari possono accedere alla lista di distribuzione dalla pagina di "
+"gestione dell'iscrizione e aggiornare le preferenze."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_text_block

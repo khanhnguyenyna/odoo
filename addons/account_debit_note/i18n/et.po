@@ -11,6 +11,9 @@
 # Eneli Õigus <enelioigus@gmail.com>, 2023
 # Patrick-Jordan Kiudorv, 2023
 # Rivo Zängov <eraser@eraser.ee>, 2023
+# Anna, 2023
+# Kärt Villako, 2024
+# Birgit Vijar, 2024
 # 
 msgid ""
 msgstr ""
@@ -18,7 +21,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-10-26 21:55+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Rivo Zängov <eraser@eraser.ee>, 2023\n"
+"Last-Translator: Birgit Vijar, 2024\n"
 "Language-Team: Estonian (https://app.transifex.com/odoo/teams/41243/et/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -29,7 +32,7 @@ msgstr ""
 #. module: account_debit_note
 #: model_terms:ir.ui.view,arch_db:account_debit_note.view_move_form_debit
 msgid "<span class=\"o_stat_text\">Debit Notes</span>"
-msgstr ""
+msgstr "<span class=\"o_stat_text\">Deebet</span>"
 
 #. module: account_debit_note
 #: model:ir.model,name:account_debit_note.model_account_debit_note
@@ -55,7 +58,7 @@ msgstr "Riigikood"
 #: model:ir.actions.act_window,name:account_debit_note.action_view_account_move_debit
 #: model_terms:ir.ui.view,arch_db:account_debit_note.view_account_debit_note
 msgid "Create Debit Note"
-msgstr ""
+msgstr "Loo kreeditarve"
 
 #. module: account_debit_note
 #: model:ir.model.fields,field_description:account_debit_note.field_account_debit_note__create_uid
@@ -70,13 +73,13 @@ msgstr "Loodud"
 #. module: account_debit_note
 #: model:ir.actions.server,name:account_debit_note.action_move_debit_note
 msgid "Debit Note"
-msgstr ""
+msgstr "Deebet"
 
 #. module: account_debit_note
 #: model:ir.model.fields,field_description:account_debit_note.field_account_debit_note__date
 #: model_terms:ir.ui.view,arch_db:account_debit_note.view_account_debit_note
 msgid "Debit Note Date"
-msgstr ""
+msgstr "Arve kuupäev"
 
 #. module: account_debit_note
 #. odoo-python
@@ -87,7 +90,7 @@ msgstr ""
 #: model:ir.model.fields,field_description:account_debit_note.field_account_payment__debit_note_ids
 #, python-format
 msgid "Debit Notes"
-msgstr ""
+msgstr "Deebet"
 
 #. module: account_debit_note
 #: model:ir.model.fields,field_description:account_debit_note.field_account_debit_note__display_name

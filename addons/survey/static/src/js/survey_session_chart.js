@@ -151,12 +151,14 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
                     },
                     x: {
                         ticks: {
-                            maxRotation: 0,
+                            minRotation: 20,
+                            maxRotation: 90,
                             font: {
                                 size :"35",
                                 weight:"bold"
                             },
-                            color : '#212529'
+                            color : '#212529',
+                            autoSkip: false,
                         },
                         grid: {
                             drawOnChartArea: false,
@@ -188,6 +190,10 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
                  * Which will be displayed as "this is an<br/>example of<br/>a label"
                  * Obviously, the more labels you have, the more columns, and less screen space is available.
                  *
+                 * When the screen space is too small for long words, those long words are split over multiple rows.
+                 * At 6 chars per row, the above example becomes ["this", "is an", "examp-", "le of", "a label"]
+                 * Which is displayed as "this<br/>is an<br/>examp-<br/>le of<br/>a label"
+                 * 
                  * We also adapt the font size based on the width available in the chart.
                  *
                  * So we counterbalance multiple times:
@@ -204,13 +210,13 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
                     const nbrCol = chart.data.labels.length;
                     const minRatio = 0.4;
                     // Numbers of maximum characters per line to print based on the number of columns and default ratio for the font size
-                    // Between 1 and 2 -> 25, 3 and 4 -> 20, 5 and 6 -> 15, ...
+                    // Between 1 and 2 -> 35, 3 and 4 -> 30, 5 and 6 -> 30, ...
                     const charPerLineBreakpoints = [
-                        [1, 2, 25, minRatio],
-                        [3, 4, 20, minRatio],
-                        [5, 6, 15, 0.45],
-                        [7, 8, 10, 0.65],
-                        [9, null, 7, 0.7],
+                        [1, 2, 35, minRatio],
+                        [3, 4, 30, minRatio],
+                        [5, 6, 30, 0.45],
+                        [7, 8, 30, 0.65],
+                        [9, null, 30, 0.7],
                     ];
 
                     let charPerLine;
@@ -223,7 +229,7 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
                     });
 
                     // Adapt font size if the number of characters per line is under the maximum
-                    if (charPerLine < 25) {
+                    if (charPerLine < 35) {
                         const allWords = chart.data.labels.reduce((accumulator, words) => accumulator.concat(' '.concat(words)));
                         const maxWordLength = Math.max(...allWords.split(' ').map((word) => word.length));
                         fontRatio = maxWordLength > charPerLine ? minRatio : fontRatio;
@@ -236,8 +242,13 @@ publicWidget.registry.SurveySessionChart = publicWidget.Widget.extend({
                         let resultLines = [];
                         let currentLine = [];
                         for (let i = 0; i < words.length; i++) {
-                            // If the word we are adding exceed already the number of characters for the line, we add it anyway before passing to a new line
-                            currentLine.push(words[i]);
+                            // Chop down words that do not fit on a single line, add each part on its own line.
+                            let word = words[i];
+                            while (word.length > charPerLine) {
+                                resultLines.push(word.slice(0, charPerLine - 1) + '-');
+                                word = word.slice(charPerLine - 1);
+                            }
+                            currentLine.push(word);
 
                             // Continue to add words in the line if there is enough space and if there is at least one more word to add
                             const nextWord = i+1 < words.length ? words[i+1] : null;

@@ -89,7 +89,8 @@
                     <t t-foreach="languages" t-as="lg">
                         <a class="dropdown-item" t-att-href="url_for(request.httprequest.path + '?' + keep_query(), lang_code=lg[0])"
                         t-attf-class="dropdown-item js_change_lang #{active_lang == lg and 'active'}"
-                        t-att-data-url_code="lg[1]" t-att-title="lg[2].split('/').pop()">
+                        t-att-data-url_code="lg[1]" t-att-title="lg[2].split('/').pop()"
+                        role="menuitem">
                             <span t-if="not no_text" t-esc="lg[2].split('/').pop()" t-attf-class="#{_txt_class}"/>
                             <span t-elif="codes" t-esc="lg[1].split('_').pop(0).upper()" t-attf-class="align-middle #{_txt_class}"/>
                         </a>
@@ -157,13 +158,13 @@
             <t t-set="is_portal" t-value="True"/>
 
             <div t-if="not no_breadcrumbs and not my_details and not breadcrumbs_searchbar" class="o_portal container mt-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex justify-content-between align-items-center">
                     <t t-call="portal.portal_breadcrumbs"/>
                     <t t-if="prev_record or next_record" t-call='portal.record_pager'/>
                 </div>
             </div>
             <div id="wrap" class='o_portal_wrap'>
-                <div class="container pt-3 pb-5">
+                <div class="container pt-3">
                     <t t-if="my_details">
                         <div class="wrapper col-12 d-flex flex-wrap justify-content-between align-items-center">
                             <h3 class="my-3">My account</h3>
@@ -175,7 +176,7 @@
                             </button>
                         </div>
                         <div class="row justify-content-between">
-                            <div t-attf-class="o_portal_content col-12 col-lg-8">
+                            <div t-attf-class="o_portal_content col-12 col-lg-8 mb-5">
                                 <t t-out="0"/>
                             </div>
                             <div class="d-none d-lg-flex justify-content-end col-lg-4">
@@ -222,19 +223,12 @@
                 <div class="oe_structure" id="oe_structure_portal_my_home_1"/>
                 <div class="o_portal_docs row g-2">
                     <div class="o_portal_doc_spinner spinner-border text-o-color-2 align-self-center mt-5"/>
-                    <p class="o_portal_no_doc_message d-none">No Documents to display</p>
                     <div t-if="portal_alert_category_enable" class="o_portal_category row g-2 mt-3" id="portal_alert_category"/>
                     <div t-if="portal_client_category_enable" class="o_portal_category row g-2 mt-3" id="portal_client_category"/>
                     <div t-if="portal_service_category_enable" class="o_portal_category row g-2 mt-3" id="portal_service_category"/>
                     <div t-if="portal_vendor_category_enable" class="o_portal_category row g-2 mt-3" id="portal_vendor_category"/>
                     <div class="o_portal_category row g-2 mt-3" id="portal_common_category">
-                        <t t-call="portal.portal_docs_entry">
-                            <t t-set="icon" t-value="'/portal/static/src/img/portal-addresses.svg'"/>
-                            <t t-set="title">Addresses</t>
-                            <t t-set="text">Add, remove or modify your addresses</t>
-                            <t t-set="url" t-value="'/my/account'"/>
-                            <t t-set="config_card" t-value="True"/>
-                        </t>
+                        <t t-call="portal.portal_docs_entry" t-if="False"/>
                         <t t-call="portal.portal_docs_entry">
                             <t t-set="icon" t-value="'/portal/static/src/img/portal-connection.svg'"/>
                             <t t-set="title">Connection &amp; Security</t>
@@ -275,14 +269,14 @@
                 <t t-out="0"/>
             </table>
         </div>
-        <div t-if="pager" class="o_portal_pager d-flex justify-content-center mt-3">
+        <div t-if="pager" class="o_portal_pager d-flex justify-content-center my-3">
             <t t-call="portal.pager"/>
         </div>
     </template>
 
     <template id="portal_record_sidebar" name="My Portal Record Sidebar">
         <div t-attf-class="#{classes}">
-            <div class="o_portal_sidebar_content sticky-lg-top d-lg-inline-block mb-4 mb-lg-0 p-3 p-lg-0" id="sidebar_content">
+            <div class="o_portal_sidebar_content d-lg-inline-block mb-4 mb-lg-0 p-3 p-lg-0" id="sidebar_content">
                 <div t-if="title" class="position-relative d-flex align-items-center justify-content-md-center justify-content-lg-between flex-wrap gap-2">
                     <t t-out="title"/>
                 </div>
@@ -440,6 +434,12 @@
                 <t t-foreach="error_message" t-as="err"><t t-esc="err"/><br /></t>
             </div>
         </div>
+        <div t-if="not partner_can_edit_vat" class="col-12 d-none d-xl-block">
+            <small class="form-text text-muted">
+                Company name, VAT Number and country can not be changed once document(s) have been issued for your account.
+                <br/>Please contact us directly for that operation.
+            </small>
+        </div>
         <div t-attf-class="mb-3 #{error.get('name') and 'o_has_error' or ''} col-xl-6">
             <label class="col-form-label" for="name">Name</label>
             <input type="text" name="name" t-attf-class="form-control #{error.get('name') and 'is-invalid' or ''}" t-att-value="name or partner.name" />
@@ -468,9 +468,6 @@
             <input type="text" name="vat" t-attf-class="form-control #{error.get('vat') and 'is-invalid' or ''}" t-att-value="vat or partner.vat" t-att-disabled="None if partner_can_edit_vat else '1'" />
             <small t-if="not partner_can_edit_vat" class="form-text text-muted d-block d-xl-none">Changing VAT number is not allowed once document(s) have been issued for your account. Please contact us directly for this operation.</small>
         </div>
-        <div t-if="not partner_can_edit_vat" class="col-12 d-none d-xl-block">
-            <small class="form-text text-muted">Changing company name or VAT number is not allowed once document(s) have been issued for your account. <br/>Please contact us directly for this operation.</small>
-        </div>
         <div t-attf-class="mb-3 #{error.get('phone') and 'o_has_error' or ''} col-xl-6">
             <label class="col-form-label" for="phone">Phone</label>
             <input type="tel" name="phone" t-attf-class="form-control #{error.get('phone') and 'is-invalid' or ''}" t-att-value="phone or partner.phone" />
@@ -491,7 +488,7 @@
         </div>
         <div t-attf-class="mb-3 #{error.get('country_id') and 'o_has_error' or ''} col-xl-6">
             <label class="col-form-label" for="country_id">Country</label>
-            <select name="country_id" t-attf-class="form-select #{error.get('country_id') and 'is-invalid' or ''}">
+            <select name="country_id" t-attf-class="form-select #{error.get('country_id') and 'is-invalid' or ''}" t-att-disabled="None if partner_can_edit_vat else '1'">
                 <option value="">Country...</option>
                 <t t-foreach="countries or []" t-as="country">
                     <option t-att-value="country.id" t-att-selected="country.id == int(country_id) if country_id else country.id == partner.country_id.id">
@@ -499,6 +496,7 @@
                     </option>
                 </t>
             </select>
+            <small t-if="not partner_can_edit_vat" class="form-text text-muted d-block d-xl-none">Changing the country is not allowed once document(s) have been issued for your account. Please contact us directly for this operation.</small>
         </div>
         <div t-attf-class="mb-3 #{error.get('state_id') and 'o_has_error' or ''} col-xl-6">
             <label class="col-form-label label-optional" for="state_id">State / Province</label>

@@ -35,9 +35,6 @@ patch(ThreadService.prototype, {
     },
 
     async openChat() {
-        if (this.chatbotService.shouldRestore) {
-            this.chatbotService.restore();
-        }
         const thread = await this.livechatService.getOrCreateThread();
         if (!thread) {
             return;
@@ -47,6 +44,9 @@ patch(ThreadService.prototype, {
             folded: thread.state === "folded",
         });
         chatWindow.autofocus++;
+        if (this.chatbotService.savedState) {
+            this.chatbotService._restore();
+        }
         if (this.chatbotService.active) {
             this.chatbotService.start();
         }

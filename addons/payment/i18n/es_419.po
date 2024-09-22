@@ -4,17 +4,17 @@
 # 
 # Translators:
 # Wil Odoo, 2023
-# Iran Villalobos López, 2023
-# Fernanda Alvarez, 2023
-# Patricia Gutiérrez Capetillo <pagc@odoo.com>, 2023
+# Iran Villalobos López, 2024
+# Patricia Gutiérrez Capetillo <pagc@odoo.com>, 2024
+# Fernanda Alvarez, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-11-14 13:53+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Patricia Gutiérrez Capetillo <pagc@odoo.com>, 2023\n"
+"Last-Translator: Fernanda Alvarez, 2024\n"
 "Language-Team: Spanish (Latin America) (https://app.transifex.com/odoo/teams/41243/es_419/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -150,11 +150,6 @@ msgstr ""
 "PayPal</span>"
 
 #. module: payment
-#: model_terms:ir.ui.view,arch_db:payment.form
-msgid "<span>Your payment methods</span>"
-msgstr "<span>Sus métodos de pago</span>"
-
-#. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.pay
 #: model_terms:ir.ui.view,arch_db:payment.payment_methods
 msgid ""
@@ -202,7 +197,7 @@ msgid ""
 "                                    correct partner before making this payment."
 msgstr ""
 "<strong>Advertencia</strong> Asegúrese de que inició sesión como\n"
-"                                    el partner correcto antes de realizar este pago."
+"                                    el contacto correcto antes de realizar este pago."
 
 #. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.pay
@@ -737,7 +732,7 @@ msgstr "Correo electrónico"
 #. module: payment
 #: model:ir.model.fields.selection,name:payment.selection__payment_provider__state__enabled
 msgid "Enabled"
-msgstr "Habilitado"
+msgstr "Activado"
 
 #. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.payment_provider_kanban
@@ -1063,7 +1058,7 @@ msgstr "No se encontraron métodos de pago para sus proveedores de pago"
 #: code:addons/payment/models/payment_token.py:0
 #, python-format
 msgid "No token can be assigned to the public partner."
-msgstr "No se puede asignar un token a un partner público "
+msgstr "No es posible asignar un token a un contacto público."
 
 #. module: payment
 #: model:ir.model.fields,field_description:payment.field_payment_provider__module_to_buy
@@ -1136,7 +1131,7 @@ msgstr "Operación"
 #: code:addons/payment/models/payment_method.py:0
 #, python-format
 msgid "Operation not supported."
-msgstr "La operación no es compatible."
+msgstr "Operación incompatible."
 
 #. module: payment
 #: model:ir.model.fields.selection,name:payment.selection__res_company__payment_onboarding_payment_method__other
@@ -1309,7 +1304,7 @@ msgstr "Métodos de pago"
 #: code:addons/payment/static/src/js/payment_form.js:0
 #, python-format
 msgid "Payment processing failed"
-msgstr "Fallo al procesar el pago"
+msgstr "Error al procesar el pago"
 
 #. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.payment_provider_form
@@ -1503,7 +1498,8 @@ msgstr "Seleccionar países. Déjelo en blanco para permitir cualquiera."
 #: model_terms:ir.ui.view,arch_db:payment.payment_provider_form
 msgid "Select countries. Leave empty to make available everywhere."
 msgstr ""
-"Seleccione sus países. Deje vacío para estar disponible en todas partes."
+"Seleccione sus países, deje el campo vacío para usarlo desde cualquier "
+"parte."
 
 #. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.payment_provider_form
@@ -1651,6 +1647,11 @@ msgstr "Con el apoyo de "
 #: model_terms:ir.ui.view,arch_db:payment.payment_provider_form
 msgid "Test Mode"
 msgstr "Modo de prueba"
+
+#. module: payment
+#: model_terms:ir.ui.view,arch_db:payment.transaction_status
+msgid "Thank you!"
+msgstr "Gracias"
 
 #. module: payment
 #. odoo-python
@@ -2007,8 +2008,8 @@ msgid ""
 "This partner has no email, which may cause issues with some payment providers.\n"
 "                     Setting an email for this partner is advised."
 msgstr ""
-"Este partner no tiene correo electrónico, lo que puede ocasionar problemas con algunos proveedores de pago.\n"
-"                     Se recomienda configurar un correo electrónico para este partner."
+"Este contacto no tiene correo electrónico, esto puede ocasionar problemas con algunos proveedores de pago.\n"
+"                     Le recomendamos que configure un correo para este contacto."
 
 #. module: payment
 #. odoo-python
@@ -2127,7 +2128,7 @@ msgstr "Mensaje de advertencia"
 #: code:addons/payment/static/src/js/payment_form.js:0
 #, python-format
 msgid "Warning!"
-msgstr "¡Alerta!"
+msgstr "¡Advertencia!"
 
 #. module: payment
 #. odoo-javascript
@@ -2176,6 +2177,22 @@ msgstr ""
 #: model:payment.provider,name:payment.payment_provider_transfer
 msgid "Wire Transfer"
 msgstr "Transferencia bancaria"
+
+#. module: payment
+#: model:payment.provider,name:payment.payment_provider_xendit
+msgid "Xendit"
+msgstr "Xendit"
+
+#. module: payment
+#. odoo-python
+#: code:addons/payment/models/payment_provider.py:0
+#, python-format
+msgid ""
+"You cannot change the company of a payment provider with existing "
+"transactions."
+msgstr ""
+"No puede comprar la empresa de un proveedor de pago con transacciones "
+"existentes."
 
 #. module: payment
 #. odoo-python
@@ -2228,9 +2245,10 @@ msgstr ""
 #: model_terms:payment.provider,auth_msg:payment.payment_provider_sips
 #: model_terms:payment.provider,auth_msg:payment.payment_provider_stripe
 #: model_terms:payment.provider,auth_msg:payment.payment_provider_transfer
+#: model_terms:payment.provider,auth_msg:payment.payment_provider_xendit
 #, python-format
 msgid "Your payment has been authorized."
-msgstr "Se ha autorizado su pago."
+msgstr "Se autorizó su pago."
 
 #. module: payment
 #. odoo-python
@@ -2250,9 +2268,10 @@ msgstr "Se ha autorizado su pago."
 #: model_terms:payment.provider,cancel_msg:payment.payment_provider_sips
 #: model_terms:payment.provider,cancel_msg:payment.payment_provider_stripe
 #: model_terms:payment.provider,cancel_msg:payment.payment_provider_transfer
+#: model_terms:payment.provider,cancel_msg:payment.payment_provider_xendit
 #, python-format
 msgid "Your payment has been cancelled."
-msgstr "Se ha cancelado su pago."
+msgstr "Se canceló su pago."
 
 #. module: payment
 #. odoo-python
@@ -2271,6 +2290,7 @@ msgstr "Se ha cancelado su pago."
 #: model_terms:payment.provider,pending_msg:payment.payment_provider_sepa_direct_debit
 #: model_terms:payment.provider,pending_msg:payment.payment_provider_sips
 #: model_terms:payment.provider,pending_msg:payment.payment_provider_stripe
+#: model_terms:payment.provider,pending_msg:payment.payment_provider_xendit
 #, python-format
 msgid ""
 "Your payment has been successfully processed but is waiting for approval."
@@ -2294,6 +2314,7 @@ msgstr "Su pago se procesó con éxito pero está en espera de aprobación."
 #: model_terms:payment.provider,done_msg:payment.payment_provider_sips
 #: model_terms:payment.provider,done_msg:payment.payment_provider_stripe
 #: model_terms:payment.provider,done_msg:payment.payment_provider_transfer
+#: model_terms:payment.provider,done_msg:payment.payment_provider_xendit
 #, python-format
 msgid "Your payment has been successfully processed."
 msgstr "Su pago se proceso con éxito."
@@ -2304,6 +2325,11 @@ msgid "Your payment has not been processed yet."
 msgstr "Aún no se ha procesado su pago."
 
 #. module: payment
+#: model_terms:ir.ui.view,arch_db:payment.form
+msgid "Your payment methods"
+msgstr "Sus métodos de pago"
+
+#. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.payment_transaction_form
 msgid "ZIP"
 msgstr "C.P."
@@ -2312,16 +2338,6 @@ msgstr "C.P."
 #: model:ir.model.fields,field_description:payment.field_payment_transaction__partner_zip
 msgid "Zip"
 msgstr "Código postal"
-
-#. module: payment
-#: model_terms:ir.ui.view,arch_db:payment.transaction_status
-msgid "danger"
-msgstr "peligro"
-
-#. module: payment
-#: model_terms:ir.ui.view,arch_db:payment.transaction_status
-msgid "info"
-msgstr "info"
 
 #. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.payment_provider_search
@@ -2340,11 +2356,6 @@ msgid "provider"
 msgstr "proveedor"
 
 #. module: payment
-#: model_terms:ir.ui.view,arch_db:payment.transaction_status
-msgid "success"
-msgstr "éxito"
-
-#. module: payment
 #: model_terms:ir.ui.view,arch_db:payment.company_mismatch_warning
 msgid ""
 "to make this\n"
@@ -2352,8 +2363,3 @@ msgid ""
 msgstr ""
 "para realizar este\n"
 "                    pago."
-
-#. module: payment
-#: model_terms:ir.ui.view,arch_db:payment.transaction_status
-msgid "warning"
-msgstr "advertencia"

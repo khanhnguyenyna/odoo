@@ -288,6 +288,14 @@
         }
     }
 
+    .o_form_sheet_bg > .alert {
+        --alert-margin-bottom: #{map-get($spacers, 1)};
+
+        &:nth-last-child(1 of .alert) {
+            --alert-margin-bottom: #{map-get($spacers, 2)};
+        }
+    }
+
     // Statusbar
     .o_form_statusbar {
         > .o_statusbar_status {
@@ -421,7 +429,7 @@
 
     @include media-breakpoint-up(sm) {
         .o_inner_group {
-            grid-template-columns: fit-content(150px) 1fr;
+            grid-template-columns: fit-content(150px) minmax(0, 1fr);
             &.o_form_fw_labels {
                 grid-template-columns: 150px 1fr;
             }
@@ -707,6 +715,11 @@
                 width: 100%;
             }
         }
+    }
+
+    // Prevent table overflow when having long chars in x2many list and the o_field_{one,many}2many class is not applied
+    .o_field_widget:has(.o_field_x2many.o_field_x2many_list) {
+        width: 100%;
     }
 
     // Specific style classes
@@ -1085,14 +1098,11 @@
         overflow: auto;
         display: flex;
         flex-direction: column;
-        flex: 1 1 $o-form-sheet-min-width; // Side chatter is disabled if this has to shrink but this was added for safety
+        flex: 2 1 $o-form-sheet-min-width; // Side chatter is disabled if this has to shrink but this was added for safety
     }
 }
 
 .o_form_view.o_xxs_form_view {
-    .oe_title {
-        word-break: break-all;
-    }
     .o_group {
         .o_inner_group {
             margin-bottom: $o-form-spacing-unit * 4;

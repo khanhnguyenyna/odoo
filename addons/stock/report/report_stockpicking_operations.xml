@@ -64,8 +64,10 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="oe_structure"></div>
+                                <!-- This node is incompatible (in wkhtmltopdf) with its siblings which together take all space. We can't remove it in stable for stability reasons -->
+                                <div class="oe_structure" style="display: none;"></div>
                             </div>
+                            <div class="oe_structure"></div>
                             <h1 t-field="o.name" class="mt0">WH/OUT/00001</h1>
                             <div class="oe_structure"></div>
                             <div class="row mt32 mb32">
@@ -77,7 +79,7 @@
                                     <strong>Status:</strong>
                                     <p t-field="o.state">Draft</p>
                                 </div>
-                                <div class="col-auto" name="div_sched_date">
+                                <div t-if="o.scheduled_date" class="col-auto" name="div_sched_date">
                                     <strong>Scheduled Date:</strong>
                                     <p t-field="o.scheduled_date">2023-09-24</p>
                                 </div>
@@ -96,7 +98,7 @@
                                         <th name="th_from" t-if="o.picking_type_id.code != 'incoming'" align="left" groups="stock.group_stock_multi_locations">
                                             <strong>From</strong>
                                         </th>
-                                        <th name="th_to" t-elif="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">
+                                        <th name="th_to" t-if="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">
                                             <strong>To</strong>
                                         </th>
                                         <th name="th_serial_number" class="text-center" t-if="has_serial_number">
@@ -109,10 +111,10 @@
                                 </thead>
                                 <tbody>
                                     <!-- In case you come across duplicated lines, ask NIM or LAP -->
-                                    <tr t-foreach="o.move_line_ids_without_package" t-as="ml">
+                                    <tr t-foreach="o.move_line_ids_without_package.sorted(lambda ml: (ml.location_id.complete_name, ml.location_dest_id.complete_name))" t-as="ml">
                                         <td>
                                             <span t-field="ml.product_id.display_name">Customizable Desk</span><br/>
-                                            <span t-field="ml.product_id.description_picking">Description on transfer</span>
+                                            <span t-if="ml.product_id.description_picking" t-field="ml.product_id.description_picking">Description on transfer</span>
                                         </td>
                                         <td>
                                             <span t-field="ml.quantity">3.00</span>
@@ -122,7 +124,7 @@
                                                     (<span t-field="ml.product_packaging_qty" t-options='{"widget": "integer"}'/> <span t-field="ml.move_id.product_packaging_id.name"/>)
                                                 </span>
                                                 <span t-if="o.state == 'done'">
-                                                    (<span t-field="ml.product_packaging_quantity" t-options='{"widget": "integer"}'/> <span t-field="ml.move_id.product_packaging_id.name"/>)
+                                                    (<span t-field="ml.product_packaging_qty" t-options='{"widget": "integer"}'/> <span t-field="ml.move_id.product_packaging_id.name"/>)
                                                 </span>
                                             </span>
                                         </td>
@@ -132,11 +134,11 @@
                                                     <span t-field="ml.package_id">Package A</span>
                                                 </t>
                                         </td>
-                                        <td t-elif="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">
+                                        <td t-if="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">
                                             <div>
                                                 <span t-field="ml.location_dest_id">WH/Outgoing</span>
                                                 <t t-if="ml.result_package_id">
-                                                    <span t-field="ml.result_package_id">Shelf 1</span>
+                                                    <span t-field="ml.result_package_id">Package B</span>
                                                 </t>
                                             </div>
                                         </td>
@@ -168,7 +170,7 @@
                                     <tr>
                                         <th name="th_package">Package</th>
                                         <th name="th_pko_from" t-if="o.picking_type_id.code != 'incoming'" groups="stock.group_stock_multi_locations">From</th>
-                                        <th name="th_pki_from" t-elif="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">To</th>
+                                        <th name="th_pki_from" t-if="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">To</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -185,7 +187,7 @@
                                         <td t-if="o.picking_type_id.code != 'incoming'" groups="stock.group_stock_multi_locations">
                                             <span t-field="package.location_id"/>
                                         </td>
-                                        <td t-elif="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">
+                                        <td t-if="o.picking_type_id.code != 'outgoing'" groups="stock.group_stock_multi_locations">
                                             <span t-field="package.location_dest_id"/>
                                         </td>
                                     </tr>

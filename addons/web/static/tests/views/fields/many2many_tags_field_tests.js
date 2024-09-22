@@ -351,14 +351,14 @@ QUnit.module("Fields", (hooks) => {
         assert.containsNone(target, ".badge.dropdown-toggle", "the tags should not be dropdowns");
 
         // click on the tag: should do nothing and open the form view
-        click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
+        await click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
         assert.verifySteps(["selectRecord"]);
         await nextTick();
 
         assert.containsNone(target, ".o_colorlist");
 
         await click(target.querySelectorAll(".o_list_record_selector")[1]);
-        click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
+        await click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
         assert.verifySteps(["selectRecord"]);
         await nextTick();
 
@@ -386,14 +386,14 @@ QUnit.module("Fields", (hooks) => {
         assert.containsNone(target, ".badge.dropdown-toggle", "the tags should not be dropdowns");
 
         // click on the tag: should do nothing and open the form view
-        click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
+        await click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
         assert.verifySteps(["selectRecord"]);
         await nextTick();
 
         assert.containsNone(target, ".o_colorlist");
 
         await click(target.querySelectorAll(".o_list_record_selector")[1]);
-        click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
+        await click(target.querySelector(".o_field_many2many_tags .badge :nth-child(1)"));
         assert.verifySteps([]);
         await nextTick();
 
@@ -1014,7 +1014,8 @@ QUnit.module("Fields", (hooks) => {
         await triggerEvent(input, null, "focus");
         await click(input);
         await editInput(input, null, "go");
-        await triggerEvent(input, null, "blur");
+        await triggerHotkey("tab");
+        await nextTick();
 
         assert.containsNone(document.body, ".modal");
         assert.containsOnce(target, ".o_field_many2many_tags .badge");
@@ -1028,7 +1029,8 @@ QUnit.module("Fields", (hooks) => {
         await click(input);
         await editInput(input, null, "r");
         await triggerEvent(input, null, "keydown", { key: "ArrowDown" });
-        await triggerEvent(input, null, "blur");
+        await triggerHotkey("tab");
+        await nextTick();
         assert.strictEqual(
             target.querySelectorAll(".o_field_many2many_tags .badge")[1].textContent,
             "red",

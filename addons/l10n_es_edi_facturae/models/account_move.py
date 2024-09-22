@@ -57,28 +57,28 @@ class AccountMove(models.Model):
     )
     l10n_es_edi_facturae_reason_code = fields.Selection(
         selection=[
-            ('01', 'Invoice number'),
-            ('02', 'Invoice series'),
-            ('03', 'Date of issue'),
-            ('04', 'Name and surname/company name - Issuer'),
-            ('05', 'Name and surname/company name - Recipient'),
-            ('06', 'Tax identification Issuer/Oblige'),
-            ('07', 'Tax identification Receiver'),
-            ('08', 'Issuer/Oblige Address'),
-            ('09', 'Receiving Address'),
-            ('10', 'Transaction Details'),
-            ('11', 'Tax rate to be applied'),
-            ('12', 'Tax rate to be applied'),
-            ('13', 'Date/Period to apply'),
-            ('14', 'Invoice type'),
-            ('15', 'Statutory letters'),
-            ('16', 'Taxable amount'),
-            ('80', 'Calculation of output quotas'),
-            ('81', 'Calculation of withholding taxes'),
-            ('82', 'Taxable amount modified by return of containers/packaging'),
-            ('83', 'Taxable income modified by discounts and allowances'),
-            ('84', 'Taxable income modified by final, judicial or administrative ruling'),
-            ('85', 'Taxable income modified by unpaid tax assessments. Order of declaration of bankruptcy'),
+            ('01', "Invoice number"),
+            ('02', "Invoice serial number"),
+            ('03', "Issue date"),
+            ('04', "Name and surnames/Corporate name - Issuer (Sender)"),
+            ('05', "Name and surnames/Corporate name - Receiver"),
+            ('06', "Issuer's Tax Identification Number"),
+            ('07', "Receiver's Tax Identification Number"),
+            ('08', "Issuer's address"),
+            ('09', "Receiver's address"),
+            ('10', "Item line"),
+            ('11', "Applicable Tax Rate"),
+            ('12', "Applicable Tax Amount"),
+            ('13', "Applicable Date/Period"),
+            ('14', "Invoice Class"),
+            ('15', "Legal literals"),
+            ('16', "Taxable Base"),
+            ('80', "Calculation of tax outputs"),
+            ('81', "Calculation of tax inputs"),
+            ('82', "Taxable Base modified due to return of packages and packaging materials"),
+            ('83', "Taxable Base modified due to discounts and rebates"),
+            ('84', "Taxable Base modified due to firm court ruling or administrative decision"),
+            ('85', "Taxable Base modified due to unpaid outputs where there is a judgement opening insolvency proceedings"),
         ], string='Spanish Facturae EDI Reason Code', default='10')
 
     def _l10n_es_edi_facturae_get_default_enable(self):
@@ -106,7 +106,7 @@ class AccountMove(models.Model):
 
     def _l10n_es_edi_facturae_get_refunded_invoices(self):
         self.env['account.partial.reconcile'].flush_model()
-        invoices_refunded_mapping = {invoice.id: invoice.reversed_entry_id for invoice in self}
+        invoices_refunded_mapping = {invoice.id: invoice.reversed_entry_id.id for invoice in self}
 
         queries = []
         for source_field, counterpart_field in (('debit', 'credit'), ('credit', 'debit')):
@@ -137,6 +137,11 @@ class AccountMove(models.Model):
     def _l10n_es_edi_facturae_get_corrective_data(self):
         self.ensure_one()
         if self.move_type.endswith('refund'):
+            if not self.reversed_entry_id:
+                raise UserError(_("The credit note/refund appears to have been issued manually. For the purpose of "
+                                  "generating a Facturae document, it's necessary that the credit note/refund is created "
+                                  "directly from the associated invoice/bill."))
+
             refunded_invoice = self.env['account.move'].browse(self._l10n_es_edi_facturae_get_refunded_invoices()[self.id])
             tax_period = refunded_invoice._l10n_es_edi_facturae_get_tax_period()
 
@@ -170,6 +175,28 @@ class AccountMove(models.Model):
                 "EquivalentInEuros": abs(computed_tax_dict["tax_amount"]),
             },
         }
+
+    def _l10n_es_edi_facturae_convert_payment_terms_to_installments(self):
+        """
+        Convert the payments terms to a list of <Installment> elements to be used in the
+        <PaymentDetails> node of the Facturae XML generation.
+
+        For now we only use the hardcoded '04' value (Credit Transfer).
+        """
+        self.ensure_one()
+        installments = []
+        if self.is_inbound() and self.partner_bank_id:
+            for payment_term in self.line_ids.filtered(lambda l: l.display_type == 'payment_term').sorted('date_maturity'):
+                installments.append({
+                    'InstallmentDueDate': payment_term.date_maturity,
+                    'InstallmentAmount': payment_term.amount_residual_currency,
+                    'PaymentMeans': '04',  # Credit Transfer
+                    'AccountToBeCredited': {
+                        'IBAN': self.partner_bank_id.sanitized_acc_number,
+                        'BIC': self.partner_bank_id.bank_bic,
+                    },
+                })
+        return installments
 
     def _l10n_es_edi_facturae_inv_lines_to_items(self, conversion_rate=None):
         """
@@ -207,9 +234,7 @@ class AccountMove(models.Model):
             price_before_discount = sum(to_update['price_subtotal'] for _dummy, to_update in tax_before_discount['base_lines_to_update'])
             discount = max(0., (price_before_discount - line.price_subtotal))
             surcharge = abs(min(0., (price_before_discount - line.price_subtotal)))
-            totals['total_gross_amount'] += price_before_discount
-            totals['total_general_discounts'] += discount
-            totals['total_general_surcharges'] += surcharge
+            totals['total_gross_amount'] += line.price_subtotal
             base_line = self.env['account.tax']._convert_to_tax_base_line_dict(
                 line, partner=line.partner_id, currency=line.currency_id, product=line.product_id, taxes=line.tax_ids,
                 price_unit=line.price_unit, quantity=line.quantity, discount=line.discount, account=line.account_id,
@@ -226,19 +251,28 @@ class AccountMove(models.Model):
             tax_withheld_output = [self._l10n_es_edi_facturae_convert_computed_tax_to_template(tax) for tax in taxes_withheld_computed]
             totals['total_taxes_withheld'] += sum((abs(tax["tax_amount"]) for tax in taxes_withheld_computed))
 
+            receiver_transaction_reference = (
+                line.sale_line_ids.order_id.client_order_ref[:20]
+                if 'sale_line_ids' in line._fields and line.sale_line_ids.order_id.client_order_ref
+                else False
+            )
+
             invoice_line_values.update({
+                'ReceiverTransactionReference': receiver_transaction_reference,
+                'FileReference': self.ref[:20] if self.ref else False,
+                'FileDate': fields.Date.context_today(self),
                 'ItemDescription': line.name,
                 'Quantity': line.quantity,
                 'UnitOfMeasure': line.product_uom_id.l10n_es_edi_facturae_uom_code,
                 'UnitPriceWithoutTax': line.currency_id.round(price_before_discount / line.quantity if line.quantity else 0.),
                 'TotalCost': price_before_discount,
                 'DiscountsAndRebates': [{
-                    'DiscountReason': '',
+                    'DiscountReason': '/',
                     'DiscountRate': f'{line.discount:.2f}',
                     'DiscountAmount': discount
                 }, ] if discount != 0. else [],
                 'Charges': [{
-                    'ChargeReason': '',
+                    'ChargeReason': '/',
                     'ChargeRate': f'{max(0, -line.discount):.2f}',
                     'ChargeAmount': surcharge,
                 }, ] if surcharge != 0. else [],
@@ -257,6 +291,18 @@ class AccountMove(models.Model):
 
         :return: (data needed to render the full template, data needed to render the signature template)
         """
+        def extract_party_name(party):
+            name = {'firstname': 'UNKNOWN', 'surname': 'UNKNOWN', 'surname2': ''}
+            if not party.is_company:
+                name_split = [part for part in party.name.replace(', ', ' ').split(' ') if part]
+                if len(name_split) > 2:
+                    name['firstname'] = ' '.join(name_split[:-2])
+                    name['surname'], name['surname2'] = name_split[-2:]
+                elif len(name_split) == 2:
+                    name['firstname'] = ' '.join(name_split[:-1])
+                    name['surname'] = name_split[-1]
+            return name
+
         self.ensure_one()
         company = self.company_id
         partner = self.commercial_partner_id
@@ -275,16 +321,6 @@ class AccountMove(models.Model):
         legal_literals = self.narration.striptags() if self.narration else False
         legal_literals = legal_literals.split(";") if legal_literals else False
 
-        partner_name = {'firstname': 'UNKNOWN', 'surname': 'UNKNOWN', 'surname2': ''}
-        if not partner.is_company:
-            name_split = [part for part in partner.name.replace(', ', ' ').split(' ') if part]
-            if len(name_split) > 2:
-                partner_name['firstname'] = ' '.join(name_split[:-2])
-                partner_name['surname'], partner_name['surname2'] = name_split[-2:]
-            elif len(name_split) == 2:
-                partner_name['firstname'] = ' '.join(name_split[:-1])
-                partner_name['surname'] = name_split[-1]
-
         invoice_issuer_signature_type = 'supplier' if self.move_type == 'out_invoice' else 'customer'
         need_conv = bool(inv_curr != eur_curr)
         conversion_rate = abs(self.amount_total_in_currency_signed / self.amount_total_signed) if self.amount_total_signed else 0.
@@ -296,10 +332,11 @@ class AccountMove(models.Model):
         template_values = {
             'self_party': company.partner_id,
             'self_party_country_code': COUNTRY_CODE_MAP[company.country_id.code],
+            'self_party_name': extract_party_name(company.partner_id),
             'other_party': partner,
             'other_party_country_code': COUNTRY_CODE_MAP[partner.country_id.code],
             'other_party_phone': partner.phone.translate(PHONE_CLEAN_TABLE) if partner.phone else False,
-            'other_party_name': partner_name,
+            'other_party_name': extract_party_name(partner),
             'is_outstanding': self.move_type.startswith('out_'),
             'float_repr': float_repr,
             'file_currency': inv_curr,
@@ -333,6 +370,9 @@ class AccountMove(models.Model):
                     'ExchangeRateDetails': need_conv,
                     'ExchangeRate': f"{round(conversion_rate, 4):.4f}",
                     'LanguageName': self._context.get('lang', 'en_US').split('_')[0],
+                    'ReceiverTransactionReference': self.ref[:20] if self.ref else False,
+                    'FileReference': self.ref[:20] if self.ref else False,
+                    'ReceiverContractReference': self.ref[:20] if self.ref else False,
                 },
                 'TaxOutputs': taxes,
                 'TaxesWithheld': taxes_withheld,
@@ -353,7 +393,7 @@ class AccountMove(models.Model):
                 } if totals['amounts_withheld'] else False,
                 'TotalExecutableAmount': total_exec_am_in_currency,
                 'Items': items,
-                'PaymentDetails': [],
+                'PaymentDetails': self._l10n_es_edi_facturae_convert_payment_terms_to_installments(),
                 'LegalLiterals': legal_literals,
             }],
         }
@@ -386,7 +426,10 @@ class AccountMove(models.Model):
 
     def _get_edi_decoder(self, file_data, new=False):
         def is_facturae(tree):
-            return tree.tag == '{http://www.facturae.es/Facturae/2014/v3.2.1/Facturae}Facturae'
+            return tree.tag in [
+                '{http://www.facturae.es/Facturae/2014/v3.2.1/Facturae}Facturae',
+                '{http://www.facturae.gob.es/formato/Versiones/Facturaev3_2_2.xml}Facturae',
+            ]
 
         if file_data['type'] == 'xml' and is_facturae(file_data['xml_tree']):
             return self._import_invoice_facturae
@@ -431,7 +474,8 @@ class AccountMove(models.Model):
 
         if not partner and name:
             partner_vals = {'name': name, 'email': mail, 'phone': phone}
-            country = self.env['res.country'].search([('code', '=', country_code.lower())]) if country_code else False
+            country_code = REVERSED_COUNTRY_CODE.get(country_code)
+            country = self.env['res.country'].search([('code', '=', country_code)]) if country_code else False
             if country:
                 partner_vals['country_id'] = country.id
             partner = self.env['res.partner'].create(partner_vals)

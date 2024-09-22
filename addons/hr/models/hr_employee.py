@@ -2,7 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 import base64
-from pytz import UTC
+from pytz import timezone, UTC
 from datetime import datetime, time
 from random import choice
 from string import digits
@@ -37,7 +37,7 @@ class HrEmployeePrivate(models.Model):
     # resource and user
     # required on the resource, make sure required="True" set in the view
     name = fields.Char(string="Employee Name", related='resource_id.name', store=True, readonly=False, tracking=True)
-    user_id = fields.Many2one('res.users', 'User', related='resource_id.user_id', store=True, readonly=False)
+    user_id = fields.Many2one('res.users', 'User', related='resource_id.user_id', store=True, readonly=False, ondelete='restrict')
     user_partner_id = fields.Many2one(related='user_id.partner_id', related_sudo=False, string="User's partner")
     active = fields.Boolean('Active', related='resource_id.active', default=True, store=True, readonly=False)
     resource_calendar_id = fields.Many2one(tracking=True)
@@ -168,16 +168,16 @@ class HrEmployeePrivate(models.Model):
         super()._compute_avatar_128()
 
     def _compute_avatar(self, avatar_field, image_field):
-        employee_wo_user_or_image_ids = []
+        employee_wo_user_and_image = self.env['hr.employee']
         for employee in self:
-            if not (employee.user_id or employee._origin[image_field]):
-                employee_wo_user_or_image_ids.append(employee.id)
+            if not employee.user_id and not employee._origin[image_field]:
+                employee_wo_user_and_image += employee
                 continue
             avatar = employee._origin[image_field]
             if not avatar and employee.user_id:
-                avatar = employee.user_id[avatar_field]
+                avatar = employee.user_id.sudo()[avatar_field]
             employee[avatar_field] = avatar
-        super(HrEmployeePrivate, self.browse(employee_wo_user_or_image_ids))._compute_avatar(avatar_field, image_field)
+        super(HrEmployeePrivate, employee_wo_user_and_image)._compute_avatar(avatar_field, image_field)
 
     @api.depends('name', 'permit_no')
     def _compute_work_permit_name(self):
@@ -285,6 +285,14 @@ class HrEmployeePrivate(models.Model):
         return self.env['hr.employee.public'].get_view(view_id, view_type, **options)
 
     @api.model
+    def get_views(self, views, options=None):
+        if self.check_access_rights('read', raise_exception=False):
+            return super().get_views(views, options)
+        res = self.env['hr.employee.public'].get_views(views, options)
+        res['models'].update({'hr.employee': res['models']['hr.employee.public']})
+        return res
+
+    @api.model
     def _search(self, domain, offset=0, limit=None, order=None, access_rights_uid=None):
         """
             We override the _search because it is the method that checks the access rights
@@ -383,6 +391,12 @@ class HrEmployeePrivate(models.Model):
                 vals.update(self._sync_user(user, bool(vals.get('image_1920'))))
                 vals['name'] = vals.get('name', user.name)
         employees = super().create(vals_list)
+        # Sudo in case HR officer doesn't have the Contact Creation group
+        employees.filtered(lambda e: not e.work_contact_id).sudo()._create_work_contacts()
+        for employee_sudo in employees.sudo():
+            if not employee_sudo.image_1920:
+                employee_sudo.image_1920 = employee_sudo._avatar_generate_svg()
+                employee_sudo.work_contact_id.image_1920 = employee_sudo.image_1920
         if self.env.context.get('salary_simulation'):
             return employees
         employee_departments = employees.department_id
@@ -410,11 +424,11 @@ class HrEmployeePrivate(models.Model):
         if 'work_contact_id' in vals:
             account_ids = vals.get('bank_account_id') or self.bank_account_id.ids
             if account_ids:
-                bank_accounts = self.env['res.partner.bank'].browse(account_ids)
+                bank_accounts = self.env['res.partner.bank'].sudo().browse(account_ids)
                 for bank_account in bank_accounts:
                     if vals['work_contact_id'] != bank_account.partner_id.id:
                         if bank_account.allow_out_payment:
-                            bank_account.sudo().allow_out_payment = False
+                            bank_account.allow_out_payment = False
                         if vals['work_contact_id']:
                             bank_account.partner_id = vals['work_contact_id']
             self.message_unsubscribe(self.work_contact_id.ids)
@@ -514,9 +528,37 @@ class HrEmployeePrivate(models.Model):
         # Returns a dict {employee_id: tz}
         return {emp.id: emp._get_tz() for emp in self}
 
+    def _employee_attendance_intervals(self, start, stop, lunch=False):
+        self.ensure_one()
+        calendar = self.resource_calendar_id or self.company_id.resource_calendar_id
+        if not lunch:
+            return self._get_expected_attendances(start, stop)
+        else:
+            return calendar._attendance_intervals_batch(start, stop, self.resource_id, lunch=True)[self.resource_id.id]
+
+    def _get_expected_attendances(self, date_from, date_to):
+        self.ensure_one()
+        employee_timezone = timezone(self.tz) if self.tz else None
+        calendar = self.resource_calendar_id or self.company_id.resource_calendar_id
+        calendar_intervals = calendar._work_intervals_batch(
+                                date_from,
+                                date_to,
+                                tz=employee_timezone,
+                                resources=self.resource_id,
+                                compute_leaves=True,
+                                domain=[('company_id', 'in', [False, self.company_id.id])])[self.resource_id.id]
+        return calendar_intervals
+
     def _get_calendar_attendances(self, date_from, date_to):
         self.ensure_one()
-        return self.resource_calendar_id.get_work_duration_data(date_from, date_to)
+        employee_timezone = timezone(self.tz) if self.tz else None
+        calendar = self.resource_calendar_id or self.company_id.resource_calendar_id
+        return calendar\
+            .with_context(employee_timezone=employee_timezone)\
+            .get_work_duration_data(
+                date_from,
+                date_to,
+                domain=[('company_id', 'in', [False, self.company_id.id])])
 
     # ---------------------------------------------------------
     # Business Methods

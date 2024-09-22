@@ -19,6 +19,7 @@ import { useSearchBarToggler } from "@web/search/search_bar/search_bar_toggler";
 import { ViewScaleSelector } from "@web/views/view_components/view_scale_selector";
 import { CogMenu } from "@web/search/cog_menu/cog_menu";
 import { browser } from "@web/core/browser/browser";
+import { getWeekNumber } from "./utils";
 
 import { Component, useState } from "@odoo/owl";
 
@@ -55,6 +56,8 @@ export class CalendarController extends Component {
                 resModel: this.props.resModel,
                 domain: this.props.domain,
                 fields: this.props.fields,
+                allFilter: this.props.state?.allFilter ?? {},
+                date: this.props.state?.date,
             },
             {
                 onWillStart: this.onWillStartModel.bind(this),
@@ -137,7 +140,7 @@ export class CalendarController extends Component {
     }
 
     get currentWeek() {
-        return this.date.toFormat("W");
+        return getWeekNumber(this.model.rangeStart);
     }
 
     get rendererProps() {

@@ -23,7 +23,13 @@ class TestSalePrices(SaleCommon):
 
         # Needed when run without demo data
         #   s.t. taxes creation doesn't fail
-        cls.env.company.account_fiscal_country_id = cls.env.ref('base.be')
+        belgium = cls.env.ref('base.be')
+        cls.env.company.account_fiscal_country_id = belgium
+        for model in ('account.tax', 'account.tax.group'):
+            cls.env.add_to_compute(
+                cls.env[model]._fields['country_id'],
+                cls.env[model].search([('company_id', '=', cls.env.company.id)]),
+            )
 
     def _create_discount_pricelist_rule(self, **additional_values):
         return self.env['product.pricelist.item'].create({
@@ -402,6 +408,7 @@ class TestSalePrices(SaleCommon):
 
         pricelist = self.env['product.pricelist'].create({
             'name': 'Test multi-currency',
+            'company_id': False,
             'discount_policy': 'without_discount',
             'currency_id': other_curr.id,
             'item_ids': [
@@ -429,7 +436,7 @@ class TestSalePrices(SaleCommon):
         # product_1.currency != so currency
         # product_2.cost_currency_id = so currency
         sales_order = product_1_ctxt.with_context(mail_notrack=True, mail_create_nolog=True).env['sale.order'].create({
-            'partner_id': self.env.user.partner_id.id,
+            'partner_id': user_in_other_company.partner_id.id,
             'pricelist_id': pricelist.id,
             'order_line': [
                 Command.create({
@@ -456,7 +463,7 @@ class TestSalePrices(SaleCommon):
         # product_2.cost_currency_id != so currency
         pricelist.currency_id = main_curr
         sales_order = product_1_ctxt.with_context(mail_notrack=True, mail_create_nolog=True).env['sale.order'].create({
-            'partner_id': self.env.user.partner_id.id,
+            'partner_id': user_in_other_company.partner_id.id,
             'pricelist_id': pricelist.id,
             'order_line': [
                 # Verify discount is considered in create hack

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from odoo import Command
 from odoo.tests import Form
 from odoo.addons.mrp.tests.common import TestMrpCommon
 from odoo.exceptions import UserError
@@ -896,3 +897,114 @@ class TestUnbuild(TestMrpCommon):
         self.assertEqual(mo_2.unbuild_ids.produce_line_ids[0].lot_ids, finished_product_sn)
         self.assertEqual(mo_2.unbuild_ids.produce_line_ids[1].product_id, component)
         self.assertEqual(mo_2.unbuild_ids.produce_line_ids[1].lot_ids, component_sn)
+
+    def test_unbuild_different_qty(self):
+        """
+        Test that the quantity to unbuild is the qty produced in the MO
+
+        BoM:
+        - 4x final product
+        components:
+        - 2 x (storable)
+        - 4 x (consumable)
+        - Create a MO with 4 final products to produce.
+        - Confirm and validate, then unlock the mo and update the qty produced to 10
+        - open the wizard to unbuild > the quantity proposed should be 10
+        - unbuild 4 units
+        - the move lines should be created with the correct quantity
+        """
+        mo_form = Form(self.env['mrp.production'])
+        mo_form.bom_id = self.bom_1
+        mo = mo_form.save()
+
+        mo.action_confirm()
+        mo.move_finished_ids._do_unreserve()
+        mo_form = Form(mo)
+        mo_form.qty_producing = 4
+        mo = mo_form.save()
+        mo.button_mark_done()
+        self.assertEqual(mo.state, 'done', "Production order should be in done state.")
+        # unlock and update the qty produced
+        mo.action_toggle_is_locked()
+        with Form(mo) as mo_form:
+            mo_form.qty_producing = 10
+        self.assertEqual(mo.qty_producing, 10)
+        #unbuild order
+        unbuild_form = Form(self.env['mrp.unbuild'])
+        unbuild_form.mo_id = mo
+        # check that the quantity to unbuild is the qty produced in the MO
+        self.assertEqual(unbuild_form.product_qty, 10)
+        unbuild_form.product_qty = 3
+        unbuild_order = unbuild_form.save()
+        unbuild_order.action_unbuild()
+        self.assertRecordValues(unbuild_order.produce_line_ids.move_line_ids, [
+            # pylint: disable=bad-whitespace
+            {'product_id': self.bom_1.product_id.id, 'quantity': 3},
+            {'product_id': self.bom_1.bom_line_ids[0].product_id.id, 'quantity': 0.6},
+            {'product_id': self.bom_1.bom_line_ids[1].product_id.id, 'quantity': 1.2},
+        ])
+
+    def test_unbuild_less_quantity_consumed(self):
+        """
+        Tests that you don't unbuild more than you consumed during production.
+        BoM uses component x20, but only 15 are consumed during the production order.
+        Unbuilding the MO should only put 15 components back in stock.
+        """
+        bom = self.env['mrp.bom'].create({
+            'product_id': self.product_2.id,
+            'product_tmpl_id': self.product_2.product_tmpl_id.id,
+            'consumption': 'flexible',
+            'product_qty': 1.0,
+            'type': 'normal',
+            'bom_line_ids': [
+                Command.create({'product_id': self.product_3.id, 'product_qty': 20}),
+            ]
+        })
+
+        with Form(self.env['mrp.production']) as mo_form:
+            mo_form.product_id = self.product_2
+            mo_form.bom_id = bom
+            mo_form.product_qty = 1
+            mo = mo_form.save()
+        mo.action_confirm()
+
+        mo.qty_producing = 1.0
+        mo.move_raw_ids.write({'quantity': 15, 'picked': True})
+        mo.button_mark_done()
+
+        unbuild_action = mo.button_unbuild()
+        unbuild_wizard = Form(self.env[unbuild_action['res_model']].with_context(**unbuild_action['context'])).save()
+        unbuild_wizard.action_validate()
+        self.assertEqual(mo.unbuild_ids.produce_line_ids.filtered(lambda m: m.product_id == self.product_3).product_uom_qty, 15)
+
+    def test_unbuild_mo_different_qty(self):
+        # Test the unbuild of a MO with qty_produced > product_qty
+
+        bom = self.env['mrp.bom'].create({
+            'product_id': self.product_2.id,
+            'product_tmpl_id': self.product_2.product_tmpl_id.id,
+            'consumption': 'flexible',
+            'product_qty': 1.0,
+            'type': 'normal',
+            'bom_line_ids': [Command.create({'product_id': self.product_3.id, 'product_qty': 1})]
+        })
+
+        with Form(self.env['mrp.production']) as mo_form:
+            mo_form.product_id = self.product_2
+            mo_form.bom_id = bom
+            mo_form.product_qty = 10
+            mo = mo_form.save()
+        mo.action_confirm()
+
+        mo.qty_producing = 12
+        mo.move_raw_ids.write({'quantity': 12, 'picked': True})
+        mo.button_mark_done()
+
+        unbuild_action = mo.button_unbuild()
+        unbuild_wizard = Form(self.env[unbuild_action['res_model']].with_context(**unbuild_action['context'])).save()
+        unbuild_wizard.action_validate()
+
+        unbuild_fns_move = mo.unbuild_ids.produce_line_ids.filtered(lambda m: m.product_id == self.product_2)
+        self.assertEqual(len(unbuild_fns_move), 1)
+        self.assertEqual(unbuild_fns_move.state, "done")
+        self.assertEqual(unbuild_fns_move.quantity, 12)

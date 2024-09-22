@@ -2,7 +2,7 @@
 
 import { Record } from "@mail/core/common/record";
 import { htmlToTextContentInline } from "@mail/utils/common/format";
-import { assignDefined, assignIn, onChange } from "@mail/utils/common/misc";
+import { assignDefined, assignIn } from "@mail/utils/common/misc";
 
 import { toRaw } from "@odoo/owl";
 
@@ -19,7 +19,7 @@ export class Message extends Record {
     static records = {};
     static new(data) {
         const message = super.new(data);
-        onChange(message, "isEmpty", () => {
+        Record.onChange(message, "isEmpty", () => {
             if (message.isEmpty && message.isStarred) {
                 message.isStarred = false;
                 const starred = this.store.discuss.starred;
@@ -102,6 +102,11 @@ export class Message extends Record {
     is_discussion;
     /** @type {boolean} */
     is_note;
+    isSeenBySelf = Record.attr(false, {
+        compute() {
+            return this.originThread?.selfMember?.lastSeenMessage?.id >= this.id;
+        },
+    });
     /** @type {boolean} */
     isStarred;
     /** @type {boolean} */
@@ -109,7 +114,16 @@ export class Message extends Record {
     linkPreviews = Record.many("LinkPreview", { inverse: "message" });
     /** @type {number[]} */
     needaction_partner_ids = [];
-    originThread = Record.one("Thread", {
+    /**
+     * Still necessary until custom insert()/update() rely on this.
+     * Fields are computed only at end of update cycle, thus it is not
+     * computed during custom update
+     */
+    get originThread() {
+        return this._store.Thread.get({ model: this.model, id: this.res_id });
+    }
+    /** @deprecated */
+    originThread2 = Record.one("Thread", {
         inverse: "allMessages",
         compute() {
             if (this.model && this.res_id) {
@@ -161,10 +175,18 @@ export class Message extends Record {
     now = DateTime.now().set({ milliseconds: 0 });
 
     /**
+     * True if the backend would technically allow edition
+     * @returns {boolean}
+     */
+    get allowsEdition() {
+        return this._store.user?.isAdmin || this.isSelfAuthored;
+    }
+
+    /**
      * @returns {boolean}
      */
     get editable() {
-        if (!this._store.user?.isAdmin && !this.isSelfAuthored) {
+        if (!this.allowsEdition) {
             return false;
         }
         return this.type === "comment";
@@ -178,12 +200,11 @@ export class Message extends Record {
         return dateDay;
     }
 
-    get datetime() {
-        if (!this._datetime) {
-            this._datetime = toRaw(this.date ? deserializeDateTime(this.date) : this.now);
-        }
-        return this._datetime;
-    }
+    datetime = Record.attr(undefined, {
+        compute() {
+            return toRaw(this.date ? deserializeDateTime(this.date) : this.now);
+        },
+    });
 
     get scheduledDate() {
         return toRaw(

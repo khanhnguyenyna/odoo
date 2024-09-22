@@ -89,11 +89,7 @@ class AccountTax(models.Model):
     def _l10n_it_get_tax_kind(self):
         return ((self.l10n_it_withholding_type and 'withholding')
                 or (self.l10n_it_pension_fund_type and 'pension_fund')
-                or 'vat')
-
-    def _l10n_it_filter_kind(self, kind):
-        """ Filters taxes depending on _l10n_it_get_tax_kind. """
-        return self.filtered(lambda tax: tax._l10n_it_get_tax_kind() == kind)
+                or super()._l10n_it_get_tax_kind())
 
     @api.constrains('amount', 'l10n_it_withholding_type', 'l10n_it_withholding_reason', 'l10n_it_pension_fund_type')
     def _validate_withholding(self):

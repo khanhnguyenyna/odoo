@@ -437,6 +437,44 @@ class TestIrModelEdition(TransactionCase):
             form.related = 'id'
             self.assertEqual(form.ttype, 'integer')
 
+    def test_delete_manual_models_with_base_fields(self):
+        model = self.env["ir.model"].create({
+            "model": "x_test_base_delete",
+            "name": "test base delete",
+            "field_id": [
+                Command.create({
+                    "name": "x_my_field",
+                    "ttype": "char",
+                }),
+                Command.create({
+                  "name": "active",
+                  "ttype": "boolean",
+                  "state": "base",
+                })
+            ]
+        })
+        model2 = self.env["ir.model"].create({
+            "model": "x_test_base_delete2",
+            "name": "test base delete2",
+            "field_id": [
+                Command.create({
+                    "name": "x_my_field2",
+                    "ttype": "char",
+                }),
+                Command.create({
+                  "name": "active",
+                  "ttype": "boolean",
+                  "state": "base",
+                })
+            ]
+        })
+        self.assertTrue(model.exists())
+        self.assertTrue(model2.exists())
+
+        self.env["ir.model"].browse(model.ids + model2.ids).unlink()
+        self.assertFalse(model.exists())
+        self.assertFalse(model2.exists())
+
 @tagged('test_eval_context')
 class TestEvalContext(TransactionCase):
 
@@ -456,6 +494,12 @@ class TestEvalContext(TransactionCase):
 @tagged('-at_install', 'post_install')
 class TestIrModelFieldsTranslation(HttpCase):
     def test_ir_model_fields_translation(self):
+        # If not enabled (like in demo data), landing on res.config will try
+        # to disable module_sale_quotation_builder and raise an warning
+        group_order_template = self.env.ref('sale_management.group_sale_order_template', raise_if_not_found=False)
+        if group_order_template:
+            self.env.ref('base.group_user').write({"implied_ids": [(4, group_order_template.id)]})
+
         # modify en_US translation
         field = self.env['ir.model.fields'].search([('model_id.model', '=', 'res.users'), ('name', '=', 'login')])
         self.assertEqual(field.with_context(lang='en_US').field_description, 'Login')

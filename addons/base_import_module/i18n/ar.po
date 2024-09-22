@@ -4,15 +4,15 @@
 # 
 # Translators:
 # Wil Odoo, 2023
-# Malaz Abuidris <msea@odoo.com>, 2023
+# Malaz Abuidris <msea@odoo.com>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Malaz Abuidris <msea@odoo.com>, 2023\n"
+"Last-Translator: Malaz Abuidris <msea@odoo.com>, 2024\n"
 "Language-Team: Arabic (https://app.transifex.com/odoo/teams/41243/ar/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -21,6 +21,20 @@ msgstr ""
 "Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
 
 #. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid ""
+"\n"
+"You may need the Enterprise version to install the data module. Please visit https://www.odoo.com/pricing-plan for more information.\n"
+"If you need Website themes, it can be downloaded from https://github.com/odoo/design-themes.\n"
+msgstr ""
+"\n"
+"قد تحتاج إلى إصدار أودو للمؤسسات لتثبيت تطبيق البيانات. يُرجى زيارة https://www.odoo.com/pricing-plan للمزيد من المعلومات.\n"
+"إذا كنت بحاجة إلى سمات لموقعك الإلكتروني، يمكنك تنزيلها من https://github.com/odoo/design-themes.\n"
+
+#. module: base_import_module
+#: model_terms:ir.ui.view,arch_db:base_import_module.module_form_apps_inherit
 #: model_terms:ir.ui.view,arch_db:base_import_module.module_view_kanban_apps_inherit
 msgid "Activate"
 msgstr "تفعيل"
@@ -75,12 +89,37 @@ msgid "Created on"
 msgstr "أنشئ في"
 
 #. module: base_import_module
+#: model_terms:ir.ui.view,arch_db:base_import_module.view_base_module_import
+msgid ""
+"Demo data should only be used on test databases. Once they are loaded, they "
+"cannot be entirely removed!"
+msgstr ""
+"لا ينبغي استخدام البيانات التجريبية إلا على قواعد البيانات التجريبية. بمجرد "
+"تحميل البيانات، لا يمكن إزالتها بالكامل! "
+
+#. module: base_import_module
 #: model:ir.model.fields,field_description:base_import_module.field_base_import_module__display_name
 msgid "Display Name"
 msgstr "اسم العرض "
 
 #. module: base_import_module
 #. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid ""
+"Error while importing module '%(module)s'.\n"
+"\n"
+" %(error_message)s \n"
+"\n"
+msgstr ""
+"حدث خطأ أثناء استيراد التطبيق '%(module)s'.\n"
+"\n"
+" %(error_message)s \n"
+"\n"
+
+#. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
 #: code:addons/base_import_module/models/ir_module.py:0
 #, python-format
 msgid "File '%s' exceed maximum allowed file size"
@@ -142,6 +181,13 @@ msgid "Install"
 msgstr "تثبيت"
 
 #. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid "Install an Industry"
+msgstr "تثبيت مجال عمل "
+
+#. module: base_import_module
 #: model_terms:ir.ui.view,arch_db:base_import_module.view_base_module_import
 msgid "Install the application"
 msgstr "تثبيت التطبيق "
@@ -201,6 +247,13 @@ msgstr "التطبيقات الرسمية "
 
 #. module: base_import_module
 #. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid "Only administrators can install data modules."
+msgstr "وحدهم المدراء باستطاعتهم تثبيت تطبيقات البيانات. "
+
+#. module: base_import_module
+#. odoo-python
 #: code:addons/base_import_module/controllers/main.py:0
 #, python-format
 msgid "Only administrators can upload a module"
@@ -236,8 +289,19 @@ msgstr "تخصيصات الاستوديو تتطلب وجود تطبيق الا�
 #. odoo-python
 #: code:addons/base_import_module/models/ir_module.py:0
 #, python-format
-msgid "The following modules will be also installed:\n"
-msgstr "سيتم تثبيت التطبيقات التالية أيضاً: \n"
+msgid "The following modules will also be installed:\n"
+msgstr "سيتم تثبيت التطبيقات التالية أيضاً:\n"
+
+#. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid ""
+"The installation of the data module would fail as the following dependencies"
+" can't be found in the addons-path:\n"
+msgstr ""
+"قد تفشل عملية تثبيت تطبيق البيانات حيث لا يمكن العثور على التبعيات التالية "
+"في مسار الوظائف الإضافية:\n"
 
 #. module: base_import_module
 #. odoo-python
@@ -246,7 +310,7 @@ msgstr "سيتم تثبيت التطبيقات التالية أيضاً: \n"
 msgid ""
 "The list of industry applications cannot be fetched. Please try again later"
 msgstr ""
-"لا يمكن جلب قائمة تطبيقات الصناعة. الرجاء معاودة المحاولة في وقت لاحق "
+"تعذر إحضار قائمة تطبيقات مجال العمل. يُرجى معاودة المحاولة في وقت لاحق "
 
 #. module: base_import_module
 #. odoo-python
@@ -256,6 +320,7 @@ msgid "The module %s cannot be downloaded"
 msgstr "لا يمكن تنزيل تطبيق %s "
 
 #. module: base_import_module
+#: model_terms:ir.ui.view,arch_db:base_import_module.module_form_apps_inherit
 #: model_terms:ir.ui.view,arch_db:base_import_module.module_view_kanban_apps_inherit
 msgid "Upgrade"
 msgstr "ترقية"

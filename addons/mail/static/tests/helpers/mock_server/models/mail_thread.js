@@ -3,6 +3,7 @@
 import { patch } from "@web/core/utils/patch";
 import { MockServer } from "@web/../tests/helpers/mock_server";
 
+import { parseEmail } from "@mail/js/utils";
 import { serializeDateTime, today } from "@web/core/l10n/dates";
 
 patch(MockServer.prototype, {
@@ -90,6 +91,17 @@ patch(MockServer.prototype, {
         return new Map(records.map((record) => [record.id, record.name || ""]));
     },
     /**
+     * Simulates `_get_customer_information` on `mail.thread`.
+     *
+     * @private
+     * @param {string} model
+     * @param {integer[]} ids
+     * @returns {Object}
+     */
+    _mockMailThread_GetCustomerInformation(model, ids) {
+        return {};
+    },
+    /**
      * Simulates `_message_add_suggested_recipient` on `mail.thread`.
      *
      * @private
@@ -106,11 +118,20 @@ patch(MockServer.prototype, {
         model,
         ids,
         result,
-        { email, partner, reason = "" } = {}
+        { email, partner, lang, reason = "" } = {}
     ) {
-        const record = this.getRecords(model, [["id", "in", "ids"]])[0];
-        // for simplicity
-        result[record.id].push([partner, email, reason]);
+        const record = this.getRecords(model, [["id", "in", ids]])[0];
+        if (email !== undefined && partner === undefined) {
+            const partnerInfo = parseEmail(email);
+            partner = this.getRecords("res.partner", [["email", "=", partnerInfo[1]]])[0];
+        }
+        if (partner) {
+            result[record.id].push([partner.id, partner.display_name, lang, reason, {}]);
+        } else {
+            const partnerCreateValues = this._mockMailThread_GetCustomerInformation(model, ids);
+            result[record.id].push([false, email, reason, lang, partnerCreateValues]);
+        }
+
         return result;
     },
     /**
@@ -159,11 +180,12 @@ patch(MockServer.prototype, {
                 const user = this.getRecords("res.users", [["id", "=", record.user_id]]);
                 if (user.partner_id) {
                     const reason = this.models[model].fields["user_id"].string;
-                    this._mockMailThread_MessageAddSuggestedRecipient(
-                        result,
-                        user.partner_id,
-                        reason
-                    );
+                    const partner = this.getRecords("res.partner", [["id", "=", user.partner_id]]);
+                    this._mockMailThread_MessageAddSuggestedRecipient(model, ids, result, {
+                        email: partner.email,
+                        partner,
+                        reason,
+                    });
                 }
             }
         }
@@ -181,6 +203,22 @@ patch(MockServer.prototype, {
      */
     _mockMailThreadMessagePost(model, ids, kwargs, context) {
         const id = ids[0]; // ensure_one
+        if (kwargs.partner_emails) {
+            kwargs.partner_ids = kwargs.partner_ids || [];
+            for (const email of kwargs.partner_emails) {
+                const partner = this.getRecords("res.partner", [["email", "=", email]]);
+                if (partner.length !== 0) {
+                    kwargs.partner_ids.push(partner[0].id);
+                } else {
+                    const partner_id = this.pyEnv["res.partner"].create(
+                        Object.assign({ email }, kwargs.partner_additional_values[email] || {})
+                    );
+                    kwargs.partner_ids.push(partner_id);
+                }
+            }
+        }
+        delete kwargs.partner_emails;
+        delete kwargs.partner_additional_values;
         if (context?.["mail_post_autofollow"] && kwargs["partner_ids"].length > 0) {
             this._mockMailThreadMessageSubscribe(model, ids, kwargs["partner_ids"]);
         }
@@ -224,6 +262,13 @@ patch(MockServer.prototype, {
         });
         delete values.subtype_xmlid;
         const messageId = this.pyEnv["mail.message"].create(values);
+        for (const partnerId of kwargs.partner_ids || []) {
+            this.pyEnv["mail.notification"].create({
+                mail_message_id: messageId,
+                notification_type: "inbox",
+                res_partner_id: partnerId,
+            });
+        }
         this._mockMailThread_NotifyThread(model, ids, messageId, context?.temporary_id);
         return Object.assign(this._mockMailMessageMessageFormat([messageId])[0], {
             temporary_id: context?.temporary_id,
@@ -263,10 +308,10 @@ patch(MockServer.prototype, {
                     });
                 }
                 this.pyEnv[model].write(ids, {
-                    message_follower_ids: [followerId],
+                    message_follower_ids: [[4, followerId]],
                 });
                 this.pyEnv["res.partner"].write([partner_id], {
-                    message_follower_ids: [followerId],
+                    message_follower_ids: [[4, followerId]],
                 });
             }
         }
@@ -286,34 +331,28 @@ patch(MockServer.prototype, {
         const messageFormat = this._mockMailMessageMessageFormat([messageId])[0];
         const notifications = [];
         if (model === "discuss.channel") {
-            // members
             const channels = this.getRecords("discuss.channel", [["id", "=", message.res_id]]);
             for (const channel of channels) {
-                // notify update of last_interest_dt
                 const now = serializeDateTime(today());
-                const members = this.getRecords("discuss.channel.member", [
-                    ["id", "in", channel.channel_member_ids],
-                ]);
-                this.pyEnv["discuss.channel.member"].write(
-                    members.map((member) => member.id),
-                    { last_interest_dt: now }
-                );
-                for (const member of members) {
-                    const target = member.guest_id
-                        ? this.pyEnv["mail.guest"].searchRead([["id", "=", member.guest_id]])[0]
-                        : this.pyEnv["res.partner"].searchRead([["id", "=", member.partner_id]], {
-                              context: { active_test: false },
-                          })[0];
-                    notifications.push([
-                        target,
-                        "discuss.channel/last_interest_dt_changed",
-                        {
+                notifications.push([
+                    [channel, "members"],
+                    "mail.record/insert",
+                    {
+                        Thread: {
                             id: channel.id,
-                            isServerPinned: member.is_pinned,
-                            last_interest_dt: member.last_interest_dt,
+                            is_pinned: true,
+                            model: "discuss.channel",
                         },
-                    ]);
-                }
+                    },
+                ]);
+                notifications.push([
+                    channel,
+                    "discuss.channel/last_interest_dt_changed",
+                    {
+                        id: channel.id,
+                        last_interest_dt: now,
+                    },
+                ]);
                 notifications.push([
                     channel,
                     "discuss.channel/new_message",
@@ -324,6 +363,16 @@ patch(MockServer.prototype, {
                 ]);
                 if (message.author_id === this.pyEnv.currentPartnerId) {
                     this._mockDiscussChannel_ChannelSeen(ids, message.id);
+                }
+            }
+            if (message.partner_ids) {
+                for (const partner_id of message.partner_ids) {
+                    const [partner] = this.getRecords("res.partner", [["id", "=", partner_id]]);
+                    notifications.push([
+                        partner,
+                        "mail.message/inbox",
+                        messageFormat
+                    ]);
                 }
             }
         }

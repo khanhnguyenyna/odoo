@@ -19,7 +19,7 @@
                 </p>
                 <div class="position-absolute bottom-0">
                     <button class="btn fa-stack align-self-end p-0 m-3 rounded-circle fs-1 shadow" t-attf-class="{{ state.audioStream ? 'btn-dark' : 'btn-danger' }}" t-on-click="onClickMic">
-                        <i class="fa fa-stack" t-attf-class="{{ state.audioStream ? 'fa-microphone-slash' : 'fa-microphone' }}"/>
+                        <i class="fa fa-stack" t-attf-class="{{ state.audioStream ? 'fa-microphone' : 'fa-microphone-slash' }}"/>
                     </button>
                     <button class="btn fa-stack align-self-end p-0 m-3 rounded-circle fs-1 shadow" t-attf-class="{{ state.videoStream ? 'btn-dark' : 'btn-danger' }}" t-on-click="onClickVideo">
                         <i class="fa fa-camera fa-stack"/>
@@ -32,7 +32,7 @@
                     <label class="text-center fs-4" >What's your name?</label>
                     <input class="form-control mb-3 bg-white rounded" type="text" placeholder="Your name" t-model="state.userName" t-on-keydown="onKeydownInput"/>
                 </t>
-                <p t-if="store.user" class="fs-4">Logged as <span t-esc="store.user.name"/></p>
+                <p t-if="store.user" class="fs-4" t-esc="getLoggedInAsText()"/>
                 <button class="btn btn-success fa-stack align-self-end p-0 rounded-circle fs-1 shadow" title="Join Channel" t-att-disabled="store.guest and state.userName.trim() === ''" t-on-click="joinChannel">
                     <i class="oi oi-arrow-right"/>
                 </button>

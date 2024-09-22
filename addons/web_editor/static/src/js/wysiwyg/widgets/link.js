@@ -48,6 +48,9 @@ export class Link extends Component {
     ];
     setup() {
         this.state = useState({});
+        // We need to wait for the `onMounted` changes to be done before
+        // accessing `this.$el`.
+        this.mountedPromise = new Promise(resolve => this.mountedResolve = resolve);
 
         onWillStart(() => this._updateState(this.props));
         let started = false;
@@ -82,8 +85,10 @@ export class Link extends Component {
             this.$el.find('[name="url"]').on('change', this._onURLInputChange.bind(this));
 
             await this.start();
+            this.mountedResolve();
         });
-        onWillUpdateProps((newProps) => {
+        onWillUpdateProps(async (newProps) => {
+            await this.mountedPromise;
             this._updateState(newProps);
             this.state.url = newProps.link.getAttribute('href') || '';
             this._setUrl({ shouldFocus: newProps.shouldFocusUrl });
@@ -100,8 +105,8 @@ export class Link extends Component {
 
         this._updateOptionsUI();
 
-        this._setUrl({ shouldFocus: this.props.shouldFocusUrl });
         this.$el[0].querySelector('#o_link_dialog_label_input').value = this.state.originalText;
+        this._setUrl({ shouldFocus: this.props.shouldFocusUrl });
     }
     /**
      * @override
@@ -182,7 +187,7 @@ export class Link extends Component {
      * Focuses the url input.
      */
     focusUrl() {
-        const urlInput = this.linkComponentWrapperRef.el.querySelector('input[name="url"]');
+        const urlInput = this.$el[0].querySelector('input[name="url"]');
         urlInput.focus();
         urlInput.select();
     }
@@ -304,6 +309,7 @@ export class Link extends Component {
         }
         var allWhitespace = /\s+/gi;
         var allStartAndEndSpace = /^\s+|\s+$/gi;
+        const isImage = this.props.link && this.props.link.querySelector('img');
         return {
             content: content,
             url: this._correctLink(this.state.url),
@@ -316,6 +322,7 @@ export class Link extends Component {
             oldAttributes: this.state.oldAttributes,
             isNewWindow: isNewWindow,
             doStripDomain: doStripDomain,
+            isImage,
         };
     }
     /**
@@ -466,17 +473,21 @@ export class Link extends Component {
      */
     _updateLinkContent($link, linkInfos, { force = false } = {}) {
         if (force || (this.props.needLabel && (linkInfos.content !== this.state.originalText || linkInfos.url !== this.state.url))) {
-            if (linkInfos.content === this.state.originalText) {
-                $link.html(this.state.originalHTML);
+            if (linkInfos.content === this.state.originalText || linkInfos.isImage) {
+                $link.html(this.state.originalHTML.replaceAll('\u200B', '').replaceAll('\uFEFF', ''));
             } else if (linkInfos.content && linkInfos.content.length) {
                 let contentWrapperEl = $link[0];
-                // Update the first child element that has the same inner text
+                const text = $link[0].innerText.replaceAll("\u200B", "").replaceAll("\uFEFF", "").trim();
+                // Update the first not ZWS child element that has the same inner text
                 // as the link with the new content while preserving child
                 // elements within the link. (e.g. the link is bold and italic)
-                while (contentWrapperEl.firstElementChild
-                    && (contentWrapperEl.firstElementChild.innerText === $link[0].innerText)) {
-                    contentWrapperEl = contentWrapperEl.firstElementChild;
-                }
+                let child;
+                do {
+                    contentWrapperEl = child || contentWrapperEl;
+                    child = [...contentWrapperEl.children].find(
+                        (element) => !element.hasAttribute("data-o-link-zws")
+                    );
+                } while (child?.innerText.replaceAll('\u200B', '').replaceAll('\uFEFF', '').trim() === text);
                 contentWrapperEl.innerText = linkInfos.content;
             } else {
                 $link.text(linkInfos.url);
@@ -531,7 +542,7 @@ export class Link extends Component {
                 $node = $node.parent();
             }
             const linkNode = this.$link[0] || this.state.range.cloneContents();
-            const linkText = linkNode.innerText;
+            const linkText = weUtils.getLinkLabel(linkNode);
             this.state.originalText = linkText.replace(/[ \t\r\n]+/g, ' ');
             if (linkNode instanceof DocumentFragment) {
                 this.state.originalHTML = $('<fakeEl>').append(linkNode).html();
@@ -554,8 +565,8 @@ export class Link extends Component {
             'text-truncate',
         ];
         const keptClasses = this.state.iniClassName.split(' ').filter(className => classesToKeep.includes(className));
-        const allBtnColorPrefixes = /(^|\s+)(bg|text|border)(-[a-z0-9_-]*)?/gi;
-        const allBtnClassSuffixes = /(^|\s+)btn(-[a-z0-9_-]*)?/gi;
+        const allBtnColorPrefixes = /(^|\s+)(bg|text|border)((-[a-z0-9_-]*)|\b)/gi;
+        const allBtnClassSuffixes = /(^|\s+)btn((-[a-z0-9_-]*)|\b)/gi;
         const allBtnShapes = /\s*(rounded-circle|flat)\s*/gi;
         const btnMarginBottom = /(^|\s+)mb-2(\s+|$)/i;
         this.state.className = this.state.iniClassName

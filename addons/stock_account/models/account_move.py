@@ -178,6 +178,8 @@ class AccountMove(models.Model):
         """ Reconciles the entries made in the interim accounts in anglosaxon accounting,
         reconciling stock valuation move lines with the invoice's.
         """
+        reconcile_plan = []
+        no_exchange_reconcile_plan = []
         for move in self:
             if not move.is_invoice():
                 continue
@@ -214,18 +216,24 @@ class AccountMove(models.Model):
                         lambda line: line.account_id == product_interim_account and not line.reconciled and line.move_id.state == "posted"
                     )
 
-                    stock_aml = product_account_moves.filtered(lambda aml: aml.move_id.sudo().stock_valuation_layer_ids.stock_move_id)
-                    invoice_aml = product_account_moves.filtered(lambda aml: aml.move_id == move)
-                    correction_amls = product_account_moves - stock_aml - invoice_aml
+                    correction_amls = product_account_moves.filtered(
+                        lambda aml: aml.move_id.sudo().stock_valuation_layer_ids.stock_valuation_layer_id or (aml.display_type == 'cogs' and not aml.quantity)
+                    )
+                    invoice_aml = product_account_moves.filtered(lambda aml: aml not in correction_amls and aml.move_id == move)
+                    stock_aml = product_account_moves - correction_amls - invoice_aml
                     # Reconcile.
                     if correction_amls:
                         if sum(correction_amls.mapped('balance')) > 0 or all(aml.is_same_currency for aml in correction_amls):
-                            product_account_moves.with_context(no_exchange_difference=True).reconcile()
+                            no_exchange_reconcile_plan += [product_account_moves]
                         else:
-                            (invoice_aml | correction_amls).with_context(no_exchange_difference=True).reconcile()
-                            (invoice_aml.filtered(lambda aml: not aml.reconciled) | stock_aml).with_context(no_exchange_difference=True).reconcile()
+                            no_exchange_reconcile_plan += [invoice_aml | correction_amls]
+                            moves_to_reconcile = (invoice_aml.filtered(lambda aml: not aml.reconciled) | stock_aml)
+                            if moves_to_reconcile:
+                                no_exchange_reconcile_plan += [moves_to_reconcile]
                     else:
-                        product_account_moves.reconcile()
+                        reconcile_plan += [product_account_moves]
+        self.env['account.move.line']._reconcile_plan(reconcile_plan)
+        self.env['account.move.line'].with_context(no_exchange_difference=True)._reconcile_plan(no_exchange_reconcile_plan)
 
     def _get_invoiced_lot_values(self):
         return []
@@ -236,7 +244,9 @@ class AccountMoveLine(models.Model):
 
     stock_valuation_layer_ids = fields.One2many('stock.valuation.layer', 'account_move_line_id', string='Stock Valuation Layer')
     cogs_origin_id = fields.Many2one(  # technical field used to keep track in the originating line of the anglo-saxon lines
-        "account.move.line", copy=False,
+        comodel_name="account.move.line",
+        copy=False,
+        index="btree_not_null",
     )
 
     def _compute_account_id(self):
@@ -258,18 +268,11 @@ class AccountMoveLine(models.Model):
         return self.product_id.type == 'product' and self.product_id.valuation == 'real_time'
 
     def _get_gross_unit_price(self):
-        price_unit = -self.price_unit if self.move_id.move_type == 'in_refund' else self.price_unit
-        price_unit = price_unit * (1 - (self.discount or 0.0) / 100.0)
-        if not self.tax_ids:
-            return price_unit
-        prec = 1e+6
-        price_unit *= prec
-        price_unit = self.tax_ids.with_context(round=False).compute_all(
-            price_unit, currency=self.move_id.currency_id, quantity=1.0, is_refund=self.move_id.move_type == 'in_refund',
-            fixed_multiplicator=self.move_id.direction_sign,
-        )['total_excluded']
-        price_unit /= prec
-        return price_unit
+        if float_is_zero(self.quantity, precision_rounding=self.product_uom_id.rounding):
+            return self.price_unit
+
+        price_unit = self.price_subtotal / self.quantity
+        return -price_unit if self.move_id.move_type == 'in_refund' else price_unit
 
     def _get_stock_valuation_layers(self, move):
         valued_moves = self._get_valued_in_moves()

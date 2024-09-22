@@ -122,7 +122,7 @@ function getBestPosition(popper, target, { container, margin, position }, iframe
 
     // Retrieve container
     if (!container) {
-        container = target.ownerDocument.documentElement;
+        container = popper.ownerDocument.documentElement;
     } else if (typeof container === "function") {
         container = container();
     }
@@ -322,8 +322,18 @@ export function usePosition(refName, getTarget, options = {}) {
 
     const component = useComponent();
     const bus = component.env[POSITION_BUS] || new EventBus();
-    bus.addEventListener("update", update);
-    onWillDestroy(() => bus.removeEventListener("update", update));
+
+    let executingUpdate = false;
+    const batchedUpdate = async () => {
+        if (!executingUpdate) {
+            executingUpdate = true;
+            update();
+            await Promise.resolve();
+            executingUpdate = false;
+        }
+    };
+    bus.addEventListener("update", batchedUpdate);
+    onWillDestroy(() => bus.removeEventListener("update", batchedUpdate));
 
     const isTopmost = !(POSITION_BUS in component.env);
     if (isTopmost) {

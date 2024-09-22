@@ -29,32 +29,11 @@ def CONTENT_MAXAGE():
     return http.STATIC_CACHE_LONG
 
 
-MOMENTJS_LANG_CODES_MAP = {
-    "sr_RS": "sr_cyrl",
-    "sr@latin": "sr"
-}
-
-
 class WebClient(http.Controller):
 
+    # FIXME: to be removed in master, deprecated since momentjs removal in commit 4327c062d820
     @http.route('/web/webclient/locale/<string:lang>', type='http', auth="none")
     def load_locale(self, lang):
-        lang = MOMENTJS_LANG_CODES_MAP.get(lang, lang)
-        magic_file_finding = [lang.replace("_", '-').lower(), lang.split('_')[0]]
-        for code in magic_file_finding:
-            try:
-                return http.Response(
-                    werkzeug.wsgi.wrap_file(
-                        request.httprequest.environ,
-                        file_open(f'web/static/lib/moment/locale/{code}.js', 'rb')
-                    ),
-                    content_type='application/javascript; charset=utf-8',
-                    headers=[('Cache-Control', f'max-age={http.STATIC_CACHE}')],
-                    direct_passthrough=True,
-                )
-            except IOError:
-                _logger.debug("No moment locale for code %s", code)
-
         return request.make_response("", headers=[
             ('Content-Type', 'application/javascript'),
             ('Cache-Control', f'max-age={http.STATIC_CACHE}'),
@@ -102,6 +81,9 @@ class WebClient(http.Controller):
             mods = mods.split(',')
         elif mods is None:
             mods = list(request.env.registry._init_modules) + (odoo.conf.server_wide_modules or [])
+
+        if lang and lang not in {code for code, _ in request.env['res.lang'].sudo().get_installed()}:
+            lang = None
 
         translations_per_module, lang_params = request.env["ir.http"].get_translations_for_webclient(mods, lang)
 

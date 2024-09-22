@@ -57,7 +57,7 @@ export function jsonrpc(url, params = {}, settings = {}) {
     let rejectFn;
     const promise = new Promise((resolve, reject) => {
         rejectFn = reject;
-        bus?.trigger("RPC:REQUEST", { data, settings });
+        bus?.trigger("RPC:REQUEST", { data, url, settings });
         // handle success
         request.addEventListener("load", () => {
             if (request.status === 502) {
@@ -94,7 +94,11 @@ export function jsonrpc(url, params = {}, settings = {}) {
         });
         // configure and send request
         request.open("POST", url);
-        request.setRequestHeader("Content-Type", "application/json");
+        const headers = settings.headers || {};
+        headers["Content-Type"] = "application/json";
+        for (let [header, value] of Object.entries(headers)) {
+            request.setRequestHeader(header, value);
+        }
         request.send(JSON.stringify(data));
     });
     /**

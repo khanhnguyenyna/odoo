@@ -52,8 +52,8 @@ class AssetNotFound(AssetError):
 
 class AssetsBundle(object):
     rx_css_import = re.compile("(@import[^;{]+;?)", re.M)
-    rx_preprocess_imports = re.compile("""(@import\s?['"]([^'"]+)['"](;?))""")
-    rx_css_split = re.compile("\/\*\! ([a-f0-9-]+) \*\/")
+    rx_preprocess_imports = re.compile(r"""(@import\s?['"]([^'"]+)['"](;?))""")
+    rx_css_split = re.compile(r"\/\*\! ([a-f0-9-]+) \*\/")
 
     TRACKED_BUNDLES = ['web.assets_web']
 
@@ -150,7 +150,7 @@ class AssetsBundle(object):
             self._checksum_cache[asset_type] = hashlib.sha512(unique_descriptor.encode()).hexdigest()[:64]
         return self._checksum_cache[asset_type]
 
-    def get_asset_url(self, unique='%', extension='%', ignore_params=False):
+    def get_asset_url(self, unique=ANY_UNIQUE, extension='%', ignore_params=False):
         direction = '.rtl' if self.is_css(extension) and self.rtl else ''
         bundle_name = f"{self.name}{direction}.{extension}"
         return self.env['ir.asset']._get_asset_bundle_url(bundle_name, unique, self.assets_params, ignore_params)
@@ -197,6 +197,7 @@ class AssetsBundle(object):
         # avoid to invalidate cache if it's already empty (mainly useful for test)
 
         if attachments:
+            _logger.info('Deleting attachments %s (matching %s) because it was replaced with %s', attachments.ids, to_clean_pattern, keep_url)
             self._unlink_attachments(attachments)
             # clear_cache was removed
 
@@ -239,18 +240,14 @@ class AssetsBundle(object):
             fallback_url_pattern = self.get_asset_url(
                 unique=unique,
                 extension=extension,
+                ignore_params=True,
             )
-
             self.env.cr.execute(query, [SUPERUSER_ID, fallback_url_pattern])
             similar_attachment_ids = [r[0] for r in self.env.cr.fetchall()]
             if similar_attachment_ids:
                 similar = self.env['ir.attachment'].sudo().browse(similar_attachment_ids)
                 _logger.info('Found a similar attachment for %s, copying from %s', url_pattern, similar.url)
-                url = self.get_asset_url(
-                    unique=unique,
-                    extension=extension,
-                    ignore_params=True,
-                )
+                url = url_pattern
                 values = {
                     'name': similar.name,
                     'mimetype': similar.mimetype,
@@ -263,6 +260,7 @@ class AssetsBundle(object):
                 }
                 attachment = self.env['ir.attachment'].with_user(SUPERUSER_ID).create(values)
                 attachment_id = attachment.id
+                self._clean_attachments(extension, url)
 
         return self.env['ir.attachment'].sudo().browse(attachment_id)
 
@@ -305,6 +303,8 @@ class AssetsBundle(object):
             'url': url,
         }
         attachment = ira.with_user(SUPERUSER_ID).create(values)
+
+        _logger.info('Generating a new asset bundle attachment %s (id:%s)', attachment.url, attachment.id)
 
         self._clean_attachments(extension, url)
 
@@ -535,7 +535,7 @@ class AssetsBundle(object):
 
         css = self.preprocess_css()
         if self.css_errors:
-            error_message = '\n'.join(self.css_errors).replace('"', r'\\"').replace('\n', r'\A').replace('*', r'\*')
+            error_message = '\n'.join(self.css_errors).replace('"', r'\"').replace('\n', r'\A').replace('*', r'\*')
             previous_attachment = self.get_attachments(extension, ignore_version=True)
             previous_css = previous_attachment.raw.decode() if previous_attachment else ''
             css_error_message_header = '\n\n/* ## CSS error message ##*/'
@@ -601,7 +601,7 @@ css_error_message {
                 content_bundle_list.append(content)
                 content_line_count += len(content.split("\n"))
 
-        content_bundle = '\n'.join(content_bundle_list) + f"\n//*# sourceMappingURL={sourcemap_attachment.url} */"
+        content_bundle = '\n'.join(content_bundle_list) + f"\n/*# sourceMappingURL={sourcemap_attachment.url} */"
         css_attachment = self.save_attachment('css', content_bundle)
 
         generator._file = css_attachment.url
@@ -717,16 +717,18 @@ css_error_message {
             self.css_errors.append(msg)
             return ''
 
-        result = rtlcss.communicate(input=source.encode('utf-8'))
-        if rtlcss.returncode:
-            cmd_output = ''.join(misc.ustr(result))
-            if not cmd_output:
+        stdout, stderr = rtlcss.communicate(input=source.encode('utf-8'))
+        if rtlcss.returncode or (source and not stdout):
+            cmd_output = ''.join(misc.ustr(stderr))
+            if not cmd_output and rtlcss.returncode:
                 cmd_output = "Process exited with return code %d\n" % rtlcss.returncode
+            elif not cmd_output:
+                cmd_output = "rtlcss: error processing payload\n"
             error = self.get_rtlcss_error(cmd_output, source=source)
             _logger.warning(error)
             self.css_errors.append(error)
             return ''
-        rtlcss_result = result[0].strip().decode('utf8')
+        rtlcss_result = stdout.strip().decode('utf8')
         return rtlcss_result
 
     def get_preprocessor_error(self, stderr, source=None):

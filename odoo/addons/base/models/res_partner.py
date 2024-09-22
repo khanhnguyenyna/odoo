@@ -8,6 +8,7 @@ import hashlib
 import pytz
 import threading
 import re
+import warnings
 
 import requests
 from collections import defaultdict
@@ -45,6 +46,15 @@ class FormatAddressMixin(models.AbstractModel):
     _name = "format.address.mixin"
     _description = 'Address Format'
 
+    def _extract_fields_from_address(self, address_line):
+        """
+        Extract keys from the address line.
+        For example, if the address line is "zip: %(zip)s, city: %(city)s.",
+        this method will return ['zip', 'city'].
+        """
+        address_fields = ['%(' + field + ')s' for field in ADDRESS_FIELDS + ('state_code', 'state_name')]
+        return sorted([field[2:-2] for field in address_fields if field in address_line], key=address_line.index)
+
     def _view_get_address(self, arch):
         # consider the country of the user, not the country of the partner we want to display
         address_view_id = self.env.company.country_id.address_view_id.sudo()
@@ -65,12 +75,13 @@ class FormatAddressMixin(models.AbstractModel):
         elif address_format and not self._context.get('no_address_format'):
             # For the zip, city and state fields we need to move them around in order to follow the country address format.
             # The purpose of this is to help the user by following a format he is used to.
-            city_line = [line.split(' ') for line in address_format.split('\n') if 'city' in line]
+            city_line = [self._extract_fields_from_address(line) for line in address_format.split('\n') if 'city' in line]
             if city_line:
-                field_order = [field.replace('%(', '').replace(')s', '') for field in city_line[0]]
+                field_order = city_line[0]
                 for address_node in arch.xpath("//div[hasclass('o_address_format')]"):
-                    concerned_fields = {'zip', 'city', 'state_id'} - {field_order[0]}
-                    current_field = address_node.find(f".//field[@name='{field_order[0]}']")
+                    first_field = field_order[0] if field_order[0] not in ('state_code', 'state_name') else 'state_id'
+                    concerned_fields = {'zip', 'city', 'state_id'} - {first_field}
+                    current_field = address_node.find(f".//field[@name='{first_field}']")
                     # First loop into the fields displayed in the address_format, and order them.
                     for field in field_order[1:]:
                         if field in ('state_code', 'state_name'):
@@ -166,6 +177,8 @@ class Partner(models.Model):
     _name = "res.partner"
     _order = "complete_name ASC, id DESC"
     _rec_names_search = ['complete_name', 'email', 'ref', 'vat', 'company_registry']  # TODO vat must be sanitized the same way for storing/searching
+    _allow_sudo_commands = False
+    _check_company_domain = models.check_company_domain_parent_of
 
     # the partner types that must be added to a partner's complete name, like "Delivery"
     _complete_name_displayed_types = ('invoice', 'delivery', 'other')
@@ -237,7 +250,6 @@ class Partner(models.Model):
         help="- Contact: Use this to organize the contact details of employees of a given company (e.g. CEO, CFO, ...).\n"
              "- Invoice Address: Preferred address for all invoices. Selected by default when you invoice an order that belongs to this company.\n"
              "- Delivery Address: Preferred address for all deliveries. Selected by default when you deliver an order that belongs to this company.\n"
-             "- Private: Private addresses are only visible by authorized users and contain sensitive data (employee home addresses, ...).\n"
              "- Other: Other address for the company (e.g. subsidiary, ...)")
     # address fields
     street = fields.Char()
@@ -333,22 +345,24 @@ class Partner(models.Model):
             return "base/static/img/money.png"
         return super()._avatar_get_placeholder_path()
 
+    def _get_complete_name(self):
+        self.ensure_one()
+
+        displayed_types = self._complete_name_displayed_types
+        type_description = dict(self._fields['type']._description_selection(self.env))
+
+        name = self.name or ''
+        if self.company_name or self.parent_id:
+            if not name and self.type in displayed_types:
+                name = type_description[self.type]
+            if not self.is_company:
+                name = f"{self.commercial_company_name or self.sudo().parent_id.name}, {name}"
+        return name.strip()
+
     @api.depends('is_company', 'name', 'parent_id.name', 'type', 'company_name', 'commercial_company_name')
     def _compute_complete_name(self):
-        displayed_types = self._complete_name_displayed_types
-        # determine the labels of partner types to be included
-        # as 'displayed_types' (without user lang to avoid context dependency)
-        type_description = dict(self._fields['type']._description_selection(self.with_context({}).env))
-
         for partner in self:
-            name = partner.name or ''
-            if partner.company_name or partner.parent_id:
-                if not name and partner.type in displayed_types:
-                    name = type_description[partner.type]
-                if not partner.is_company:
-                    name = f"{partner.commercial_company_name or partner.sudo().parent_id.name}, {name}"
-
-            partner.complete_name = name.strip()
+            partner.complete_name = partner.with_context({})._get_complete_name()
 
     @api.depends('lang')
     def _compute_active_lang_count(self):
@@ -432,8 +446,6 @@ class Partner(models.Model):
 
     @api.model
     def _get_view(self, view_id=None, view_type='form', **options):
-        if (not view_id) and (view_type == 'form') and self._context.get('force_email'):
-            view_id = self.env.ref('base.view_partner_simple_form').id
         arch, view = super()._get_view(view_id, view_type, **options)
         company = self.env.company
         if company.country_id.vat_label:
@@ -841,10 +853,10 @@ class Partner(models.Model):
                 }
 
     @api.depends('complete_name', 'email', 'vat', 'state_id', 'country_id', 'commercial_company_name')
-    @api.depends_context('show_address', 'partner_show_db_id', 'address_inline', 'show_email', 'show_vat')
+    @api.depends_context('show_address', 'partner_show_db_id', 'address_inline', 'show_email', 'show_vat', 'lang')
     def _compute_display_name(self):
         for partner in self:
-            name = partner.complete_name
+            name = partner.with_context(lang=self.env.lang)._get_complete_name()
             if partner._context.get('show_address'):
                 name = name + "\n" + partner._display_address(without_company=True)
             name = re.sub(r'\s+\n', '\n', name)
@@ -924,8 +936,7 @@ class Partner(models.Model):
         return base64.b64encode(res.content)
 
     def _email_send(self, email_from, subject, body, on_error=None):
-        for partner in self.filtered('email'):
-            tools.email_send(email_from, [partner.email], subject, body, on_error)
+        warnings.warn("Partner._email_send has not done anything but raise errors since 15.0", stacklevel=2, category=DeprecationWarning)
         return True
 
     def address_get(self, adr_pref=None):
@@ -1001,7 +1012,7 @@ class Partner(models.Model):
             'company_name': self.commercial_company_name or '',
         })
         for field in self._formatting_address_fields():
-            args[field] = getattr(self, field) or ''
+            args[field] = self[field] or ''
         if without_company:
             args['company_name'] = ''
         elif self.commercial_company_name:
@@ -1057,6 +1068,15 @@ class Partner(models.Model):
     def _get_country_name(self):
         return self.country_id.name or ''
 
+    def _get_all_addr(self):
+        self.ensure_one()
+        return [{
+            'contact_type': self.street,
+            'street': self.street,
+            'zip': self.zip,
+            'city': self.city,
+            'country': self.country_id.code,
+        }]
 
 
 class ResPartnerIndustry(models.Model):

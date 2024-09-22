@@ -27,7 +27,6 @@ registry.category("web_tour.tours").add("PosResTicketScreenTour", {
             Chrome.clickTicketButton(),
             TicketScreen.nthRowContains(2, "-0001"),
             TicketScreen.deleteOrder("-0001"),
-            TicketScreen.clickDiscard(),
 
             // Create 2 items in a table. From floorscreen, delete 1 item. Then select the other item.
             // Correct order and screen should be displayed and the BackToFloorButton is shown.
@@ -64,5 +63,23 @@ registry.category("web_tour.tours").add("PosResTicketScreenTour", {
             FloorScreen.isShown(),
             FloorScreen.clickTable("5"),
             ProductScreen.orderIsEmpty(),
+        ].flat(),
+});
+
+registry.category("web_tour.tours").add("OrderNumberConflictTour", {
+    test: true,
+    steps: () =>
+        [
+            FloorScreen.clickTable("3"),
+            ProductScreen.isShown(),
+            ProductScreen.addOrderline("Coca-Cola", "1", "3"),
+            FloorScreen.backToFloor(),
+            Chrome.clickMenuButton(),
+            Chrome.clickTicketButton(),
+            TicketScreen.nthColumnContains(6, 2, "Order"),
+            TicketScreen.nthColumnContains(6, 3, "01"),
+            TicketScreen.nthColumnContains(7, 2, "Self-Order"),
+            TicketScreen.nthColumnContains(7, 3, "S"),
+            TicketScreen.nthColumnContains(7, 3, "01")
         ].flat(),
 });

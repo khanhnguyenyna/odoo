@@ -372,7 +372,7 @@ class TestOnchange(SavepointCaseWithUserDemo):
         }
         result = model.onchange(values, ['name'], fields_spec)
         self.assertEqual(result['value'], {
-            'messages': [Command.update('virtual1', {'name': '[Stuff] OdooBot'})],
+            'messages': [Command.update('virtual1', {'name': f'[Stuff] {self.env.user.name}'})],
         })
 
     def test_fields_specific(self):
@@ -684,6 +684,30 @@ class TestOnchange(SavepointCaseWithUserDemo):
         self.assertEqual(payment.tag_name, 'Bar')
         self.assertEqual(payment.tag_repeat, 3)
         self.assertEqual(payment.tag_string, 'BarBarBar')
+
+    def test_onchange_inherited_in_one2many(self):
+        move = self.env['test_new_api.move'].create({})
+        view = self.env["ir.ui.view"].create({
+            "model": "test_new_api.move",
+            "type": "form",
+            "arch": """<form>
+                <field name="payment_ids">
+                    <form>
+                        <!-- tag_repeat is inherited from move model -->
+                        <field name="tag_repeat" />
+                    </form>
+                </field>
+            </form>"""
+        })
+
+        with Form(move, view) as form:
+            with form.payment_ids.new() as line:
+                line.tag_repeat = 1
+            self.assertEqual(len(form.payment_ids), 1)
+
+        self.assertEqual(len(move.payment_ids), 1)
+        self.assertEqual(move.payment_ids.move_id, move)
+        self.assertEqual(move.payment_ids.tag_repeat, 1)
 
     def test_display_name(self):
         self.env['ir.ui.view'].create({
@@ -1236,3 +1260,58 @@ class TestComputeOnchange2(common.TransactionCase):
         )
         with Form(record) as form:
             form.precision_rounding = 0.0001
+
+    def test_new_one2many_on_existing_record(self):
+        discussion = self.env['test_new_api.discussion'].create({
+            'messages': [Command.create({'body': 'Required Body', 'important': True})],
+            'name': 'Required field',
+            'participants': [Command.set(self.env.user.ids)],
+        })
+
+        with Form(discussion, 'test_new_api.discussion_form_2') as discussion_form:
+            self.assertEqual(len(discussion_form.messages), 1)
+            with discussion_form.messages.new() as message_form:
+                # this actually checks that during the onchange, the new message
+                # has access to its sibling messages through the discussion
+                self.assertEqual(message_form.has_important_sibling, True)
+                message_form.body = 'Required Body'
+            self.assertEqual(len(discussion_form.messages), 2)
+
+        # Test the same flow but when the important message is archived.
+        # The _compute_has_important_sibling should take in account archived siblings.
+        discussion = self.env['test_new_api.discussion'].create({
+            'messages': [
+                Command.create({'body': 'Archived Important sibling', 'important': True, 'active': False}),
+            ],
+            'name': 'Required field',
+            'participants': [Command.set(self.env.user.ids)],
+        })
+
+        with Form(discussion, 'test_new_api.discussion_form_2') as discussion_form:
+            self.assertEqual(len(discussion_form.messages), 0)
+            with discussion_form.messages.new() as message_form:
+                # this actually checks that during the onchange, the new message
+                # has access to its archived sibling messages through the discussion
+                self.assertEqual(message_form.has_important_sibling, True)
+                message_form.body = 'Required Body'
+            self.assertEqual(len(discussion_form.messages), 1)
+
+    def test_new_one2many_traversing_many2one_second_onchange(self):
+        discussion = self.env['test_new_api.discussion'].create({
+            'name': 'Required field',
+            'messages': [Command.create({'body': 'Msg1: Existing', 'important': True})],
+            'participants': [Command.set(self.env.user.ids)],
+        })
+
+        with Form(discussion, 'test_new_api.discussion_form_2') as discussion_form:
+            self.assertEqual(len(discussion_form.messages), 1)
+            with discussion_form.messages.new() as message_form:
+                # check that Msg1 is visible in the one2many during onchange()
+                self.assertEqual(message_form.has_important_sibling, True)
+                message_form.body = 'Msg2: New'
+
+            self.assertEqual(len(discussion_form.messages), 2)
+            with discussion_form.messages.new() as message_form:
+                # check that Msg1 is visible in the one2many during onchange()
+                self.assertEqual(message_form.has_important_sibling, True)
+                message_form.body = 'Msg3: New'

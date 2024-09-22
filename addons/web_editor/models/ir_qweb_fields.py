@@ -211,7 +211,7 @@ class ManyToOne(models.AbstractModel):
     def attributes(self, record, field_name, options, values):
         attrs = super(ManyToOne, self).attributes(record, field_name, options, values)
         if options.get('inherit_branding'):
-            many2one = getattr(record, field_name)
+            many2one = record[field_name]
             if many2one:
                 attrs['data-oe-many2one-id'] = many2one.id
                 attrs['data-oe-many2one-model'] = many2one._name
@@ -447,6 +447,7 @@ class Image(models.AbstractModel):
     _inherit = 'ir.qweb.field.image'
 
     local_url_re = re.compile(r'^/(?P<module>[^]]+)/static/(?P<rest>.+)$')
+    redirect_url_re = re.compile(r'\/web\/image\/\d+-redirect\/')
 
     @api.model
     def from_html(self, model, field, element):
@@ -470,6 +471,8 @@ class Image(models.AbstractModel):
                 oid = query.get('id', fragments[4])
                 field = query.get('field', fragments[5])
             item = self.env[model].browse(int(oid))
+            if self.redirect_url_re.match(url_object.path):
+                return self.load_remote_url(item.url)
             return item[field]
 
         if self.local_url_re.match(url_object.path):
@@ -622,7 +625,7 @@ def _collapse_whitespace(text):
     """ Collapses sequences of whitespace characters in ``text`` to a single
     space
     """
-    return re.sub('\s+', ' ', text)
+    return re.sub(r'\s+', ' ', text)
 
 
 def _realize_padding(it):

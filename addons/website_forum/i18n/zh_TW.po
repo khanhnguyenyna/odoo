@@ -3,15 +3,16 @@
 # 	* website_forum
 # 
 # Translators:
-# Wil Odoo, 2023
+# Wil Odoo, 2024
+# Tony Ng, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Tony Ng, 2024\n"
 "Language-Team: Chinese (Taiwan) (https://app.transifex.com/odoo/teams/41243/zh_TW/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -384,9 +385,14 @@ msgid "<br/>by"
 msgstr "<br/>由"
 
 #. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.new_question
+msgid "<i class=\"fa fa-angle-left me-2\"/>Back to All Posts"
+msgstr "<i class=\"fa fa-angle-left me-2\"/> 返回所有帖文"
+
+#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_votes
 msgid "<i class=\"fa fa-arrow-right\"/> Go To Forums"
-msgstr ""
+msgstr "<i class=\"fa fa-arrow-right\"/> 前往討論區"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.forum_model_nav
@@ -481,7 +487,7 @@ msgstr "<i class=\"fa fa-flag\"/> 國家/地區"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.moderation_queue
 msgid "<i class=\"fa fa-font\"/> Text"
-msgstr ""
+msgstr "<i class=\"fa fa-font\"/> 文字"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.follow
@@ -611,11 +617,6 @@ msgid ""
 msgstr "<i class=\"oi oi-arrow-right display-inline-block\"/> 返回問題列表"
 
 #. module: website_forum
-#: model_terms:ir.ui.view,arch_db:website_forum.new_question
-msgid "<i class=\"oi oi-chevron-left me-2\"/>Back to All Posts"
-msgstr "<i class=\"oi oi-chevron-left me-2\"/> 返回所有帖文"
-
-#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_profile_sub_nav
 msgid "<i class=\"oi oi-chevron-left small\"/> Back"
 msgstr "<i class=\"oi oi-chevron-left small\"/> 返回"
@@ -629,6 +630,11 @@ msgstr "<small class=\"fw-bold\">正負評</small>"
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_body
 msgid "<small>View all</small>"
 msgstr "<small>查看所有</small>"
+
+#. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.forum_all_all_entries
+msgid "<span class=\"badge bg-dark me-1\">Last post:</span>"
+msgstr "<span class=\"badge bg-dark me-1\">上次發文：</span>"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.contact
@@ -682,6 +688,11 @@ msgstr "<span class=\"text-muted\">目前未有任何活動。</span>"
 #: model_terms:ir.ui.view,arch_db:website_forum.post_description_full
 msgid "<span>Be the first to answer this question</span>"
 msgstr "<span>搶先回答此問題</span>"
+
+#. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.forum_model_nav
+msgid "<span>Moderation</span>"
+msgstr "<span>審核</span>"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.post_description_full
@@ -798,7 +809,7 @@ msgstr "所有論壇"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.no_results_message
 msgid "Animation of a pen checking a checkbox"
-msgstr ""
+msgstr "用筆勾選方格的動畫"
 
 #. module: website_forum
 #. odoo-python
@@ -950,7 +961,7 @@ msgstr "提出沒有驗證的問題"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.new_question
 msgid "Ask your question"
-msgstr ""
+msgstr "發問你的問題"
 
 #. module: website_forum
 #: model_terms:gamification.badge,description:website_forum.badge_26
@@ -1066,7 +1077,7 @@ msgstr "基礎的"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.no_results_message
 msgid "Because there are no posts in this forum yet."
-msgstr ""
+msgstr "因為這個討論區未有貼文。"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.post_display
@@ -1282,7 +1293,7 @@ msgstr "評論者"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.forum_all_oe_structure_forum_all_top
 msgid "Community Forums"
-msgstr ""
+msgstr "社群討論區"
 
 #. module: website_forum
 #: model:gamification.challenge,name:website_forum.challenge_configure_profile
@@ -1579,12 +1590,12 @@ msgstr "編輯您的貼文"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.edit_post
 msgid "Edit your answer"
-msgstr ""
+msgstr "修改你的答案"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.edit_post
 msgid "Edit your question"
-msgstr ""
+msgstr "修改你的問題"
 
 #. module: website_forum
 #: model:gamification.badge,name:website_forum.badge_7
@@ -1601,7 +1612,7 @@ msgstr "編輯工具：圖像和連結"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.no_results_message
 msgid "Empty box"
-msgstr ""
+msgstr "空白方格"
 
 #. module: website_forum
 #: model:gamification.badge,name:website_forum.badge_a_5
@@ -1953,12 +1964,12 @@ msgstr "有帖文待處理"
 #. module: website_forum
 #: model:forum.forum,name:website_forum.forum_help
 msgid "Help"
-msgstr "求助"
+msgstr "支援"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_votes
 msgid "Help moderating the forums by upvoting and downvoting posts. <br/>"
-msgstr ""
+msgstr "對貼文給予正評或負評，協助管理討論區內容。<br/>"
 
 #. module: website_forum
 #: model_terms:forum.forum,faq:website_forum.forum_help
@@ -2277,11 +2288,6 @@ msgid "Moderate posts"
 msgstr "審核貼文"
 
 #. module: website_forum
-#: model_terms:ir.ui.view,arch_db:website_forum.forum_model_nav
-msgid "Moderation"
-msgstr "貼文審核"
-
-#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_body
 msgid "Moderation tools"
 msgstr "審核工具"
@@ -2331,7 +2337,7 @@ msgstr "我的投票"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_body
 msgid "My forums"
-msgstr ""
+msgstr "我的討論區"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_header
@@ -2803,7 +2809,7 @@ msgstr "等級"
 #: model:ir.model.fields,field_description:website_forum.field_forum_post__rating_ids
 #: model:ir.model.fields,field_description:website_forum.field_forum_tag__rating_ids
 msgid "Ratings"
-msgstr "點評"
+msgstr "評分"
 
 #. module: website_forum
 #. odoo-python
@@ -3015,6 +3021,16 @@ msgstr "分享和討論最好的內容及新的營銷理念，建立你的專業
 #. module: website_forum
 #. odoo-javascript
 #: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#, python-format
+msgid "Share on #{media}"
+msgstr "分享至 #{media}"
+
+#. module: website_forum
+#. odoo-javascript
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
 #, python-format
 msgid ""
 "Share this content to increase your chances to be featured on the front page"
@@ -3090,29 +3106,29 @@ msgstr "對不起，這個問題失效了。"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.no_results_message
 msgid "Sorry, we could not find any <b>solved</b> results"
-msgstr ""
+msgstr "對不起，找不到任何「<b>已解決</b>」項目"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.no_results_message
 msgid "Sorry, we could not find any <b>unanswered</b> results"
-msgstr ""
+msgstr "對不起，找不到任何「<b>未有回答</b>」項目"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.no_results_message
 msgid "Sorry, we could not find any <b>unsolved</b> results"
-msgstr ""
+msgstr "對不起，找不到任何「<b>未解決</b>」項目"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.no_results_message
 msgid "Sorry, we could not find any results"
-msgstr ""
+msgstr "對不起，找不到任何結果"
 
 #. module: website_forum
 #. odoo-javascript
 #: code:addons/website_forum/static/src/js/website_forum.js:0
 #, python-format
 msgid "Sorry, you cannot select your own posts as best answer"
-msgstr ""
+msgstr "對不起，不可選擇自己的貼文為最佳答案"
 
 #. module: website_forum
 #. odoo-javascript
@@ -3997,7 +4013,7 @@ msgstr "這是偽裝成問題的抱怨：“______ 糟透了，我說得對嗎�
 #: code:addons/website_forum/static/src/js/website_forum.js:0
 #, python-format
 msgid "karma is required to perform this action. "
-msgstr ""
+msgstr "貢獻值才可執行此操作。"
 
 #. module: website_forum
 #. odoo-javascript

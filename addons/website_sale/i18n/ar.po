@@ -3,17 +3,18 @@
 # 	* website_sale
 # 
 # Translators:
-# Wil Odoo, 2023
 # Martin Trigaux, 2023
-# Malaz Abuidris <msea@odoo.com>, 2023
+# Mohammad Abdulmoneim, 2024
+# Wil Odoo, 2024
+# Malaz Abuidris <msea@odoo.com>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Malaz Abuidris <msea@odoo.com>, 2023\n"
+"Last-Translator: Malaz Abuidris <msea@odoo.com>, 2024\n"
 "Language-Team: Arabic (https://app.transifex.com/odoo/teams/41243/ar/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -47,7 +48,6 @@ msgstr "%s تقييمات "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address_on_payment
-#: model_terms:ir.ui.view,arch_db:website_sale.confirmation
 msgid "&amp; Shipping"
 msgstr "والشحن"
 
@@ -124,7 +124,6 @@ msgstr "<b>قائمة الأسعار</b> "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address_on_payment
-#: model_terms:ir.ui.view,arch_db:website_sale.confirmation
 msgid "<b>Shipping: </b>"
 msgstr "<b>الشحن: </b>"
 
@@ -149,6 +148,15 @@ msgstr ""
 "<br/>\n"
 "                ضمان إرجاع الأموال خلال 30 يوماً<br/>\n"
 "                الشحن: 2-3 أيام عمل "
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.extra_info
+msgid ""
+"<i class=\"fa fa-angle-left me-2 fw-light\"/>\n"
+"                                    Return to shipping"
+msgstr ""
+"<i class=\"fa fa-angle-left me-2 fw-light\"/>\n"
+"                                    العودة إلى الشحن "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.product_buy_now
@@ -345,6 +353,7 @@ msgstr ""
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address
+#: model_terms:ir.ui.view,arch_db:website_sale.extra_info
 #: model_terms:ir.ui.view,arch_db:website_sale.navigation_buttons
 msgid "<span class=\"px-3\">or</span>"
 msgstr "<span class=\"px-3\">أو</span> "
@@ -516,11 +525,6 @@ msgstr ""
 "</tbody>\n"
 "</table>\n"
 "            "
-
-#. module: website_sale
-#: model_terms:ir.ui.view,arch_db:website_sale.product
-msgid "<u class=\"h5\">Documents</u>"
-msgstr "<u class=\"h5\">المستندات</u> "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.product_custom_text
@@ -897,7 +901,6 @@ msgstr "كبير"
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address_on_payment
 #: model_terms:ir.ui.view,arch_db:website_sale.checkout
-#: model_terms:ir.ui.view,arch_db:website_sale.confirmation
 msgid "Billing"
 msgstr "الفوترة "
 
@@ -1002,20 +1005,6 @@ msgstr "هل يمكن تكبير الصورة 1024 "
 #: model:ir.model.fields,field_description:website_sale.field_product_template__can_publish
 msgid "Can Publish"
 msgstr "بإمكانه النشر "
-
-#. module: website_sale
-#. odoo-python
-#: code:addons/website_sale/controllers/main.py:0
-#, python-format
-msgid "Can not resequence a video at first position."
-msgstr "لا يمكن إعادة تسلسل فيديو في الوضع الأول. "
-
-#. module: website_sale
-#. odoo-python
-#: code:addons/website_sale/controllers/main.py:0
-#, python-format
-msgid "Can not resequence embedded image/video with a non compatible image."
-msgstr "لا يمكن إعادة تسلسل الصورة/الفيديو المضمن مع صورة غير متوافقة. "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.snippet_options
@@ -1271,6 +1260,11 @@ msgstr "حساب تكاليف الشحن والشحن عبر Easypost"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
+msgid "Compute shipping cost and ship with Shiprocket"
+msgstr "قم بحساب تكاليف الشحن والشحن عبر Shiprocket "
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
 msgid "Compute shipping costs and ship with DHL"
 msgstr "حساب تكاليف الشحن والشحن عبر DHL"
 
@@ -1359,9 +1353,19 @@ msgstr "المحتوى"
 #. module: website_sale
 #. odoo-python
 #: code:addons/website_sale/models/website.py:0
+#: model_terms:ir.ui.view,arch_db:website_sale.address
 #, python-format
 msgid "Continue checkout"
 msgstr "الاستمرار إلى الدفع والخروج "
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.extra_info
+msgid ""
+"Continue checkout\n"
+"                                    <i class=\"fa fa-angle-right ms-2 fw-light\"/>"
+msgstr ""
+"الاستمرار بعملية الدفع والخروج\n"
+"                                    <i class=\"fa fa-angle-right ms-2 fw-light\"/>"
 
 #. module: website_sale
 #. odoo-python
@@ -1510,6 +1514,11 @@ msgstr "موصل شحن DHL السريع "
 #: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
 msgid "DHL Shipping Methods"
 msgstr "طرق شحن DHL "
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.product
+msgid "DROP BUILDING BLOCKS HERE TO MAKE THEM AVAILABLE ACROSS ALL PRODUCTS"
+msgstr "قم بإفلات الكتل الإنشائية هنا لجعلها متاحة لكافة المنتجات "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.snippet_options
@@ -1691,6 +1700,11 @@ msgstr "لا تملك صلاحيات الوصول. تخط هذه البيانا�
 #, python-format
 msgid "Do you wish to clear your cart before adding products to it?"
 msgstr "هل ترغب في مسح محتوى عربة التسوق الخاصة بك قبل إضافة المنتجات إليها؟ "
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.product
+msgid "Documents"
+msgstr "المستندات "
 
 #. module: website_sale
 #. odoo-python
@@ -2206,6 +2220,13 @@ msgstr ""
 "التوصيل بعد الآن "
 
 #. module: website_sale
+#. odoo-javascript
+#: code:addons/website_sale/static/src/js/website_sale_utils.js:0
+#, python-format
+msgid "Item(s) added to your cart"
+msgstr "عناصر تمت إضافتها إلى عربة تسوقك "
+
+#. module: website_sale
 #: model:ir.model,name:website_sale.model_account_move
 msgid "Journal Entry"
 msgstr "قيد اليومية"
@@ -2454,6 +2475,13 @@ msgid "Name Short"
 msgstr "الاسم المختصر"
 
 #. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/models/product_public_category.py:0
+#, python-format
+msgid "New"
+msgstr "جديد"
+
+#. module: website_sale
 #: model:ir.actions.act_window,name:website_sale.product_product_action_add
 msgid "New Product"
 msgstr "منتج جديد"
@@ -2508,8 +2536,8 @@ msgstr "لم يتم تحديد منتج "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.products
-msgid "No product defined in category \""
-msgstr "لم يتم تحديد منتج في الفئة \""
+msgid "No product defined in this category."
+msgstr "لا توجد منتجات محددة في هذه الفئة. "
 
 #. module: website_sale
 #: model_terms:ir.actions.act_window,help:website_sale.website_sale_visitor_product_action
@@ -2541,6 +2569,13 @@ msgid ""
 msgstr ""
 "لا توجد طريقة توصيل متوفرة لطلبك الحالي وعنوان شحنك. يرجى التواصل معنا "
 "للمزيد من المعلومات. "
+
+#. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/models/sale_order.py:0
+#, python-format
+msgid "No shipping method is selected."
+msgstr "لم يتم اختيار وسيلة شحن"
 
 #. module: website_sale
 #: model:ir.model.fields.selection,name:website_sale.selection__website__product_page_image_spacing__none
@@ -2757,11 +2792,6 @@ msgid "Pay now"
 msgstr "ادفع الآن "
 
 #. module: website_sale
-#: model_terms:ir.ui.view,arch_db:website_sale.payment
-msgid "Pay with"
-msgstr "الدفع عن طريق "
-
-#. module: website_sale
 #. odoo-python
 #: code:addons/website_sale/models/website.py:0
 #, python-format
@@ -2782,6 +2812,11 @@ msgstr "طرق الدفع "
 #: model:ir.ui.menu,name:website_sale.menu_ecommerce_payment_providers
 msgid "Payment Providers"
 msgstr "مزودي الدفع "
+
+#. module: website_sale
+#: model:ir.model,name:website_sale.model_payment_token
+msgid "Payment Token"
+msgstr "رمز الدفع "
 
 #. module: website_sale
 #: model:ir.ui.menu,name:website_sale.menu_ecommerce_payment_tokens
@@ -3469,6 +3504,11 @@ msgid "Sample"
 msgstr "عينة"
 
 #. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.address
+msgid "Save address"
+msgstr "حفظ العنوان "
+
+#. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.view_sales_order_filter_ecommerce_abondand
 msgid "Search Abandoned Sales Orders"
 msgstr "البحث في أوامر البيع المتروكة"
@@ -3522,7 +3562,7 @@ msgstr "إرسال بريد إلكتروني لاسترجاع عربة التس�
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.sale_order_view_form_cart_recovery
 msgid "Send a Recovery Email"
-msgstr "إرسال بريد إلكتروني للاسترحاع "
+msgstr "إرسال بريد إلكتروني للاسترجاع "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
@@ -3597,6 +3637,16 @@ msgstr "طُرُق الشَّحن"
 #: model_terms:ir.ui.view,arch_db:website_sale.address
 msgid "Shipping address"
 msgstr "عنوان الشحن "
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
+msgid "Shiprocket"
+msgstr "Shiprocket"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
+msgid "Shiprocket Shipping Methods"
+msgstr "طرق شحن Shiprocket "
 
 #. module: website_sale
 #: model:website.menu,name:website_sale.menu_shop
@@ -4205,7 +4255,7 @@ msgstr "عرض المنتج "
 
 #. module: website_sale
 #. odoo-javascript
-#: code:addons/website_sale/static/src/js/notification/cart_notification/cart_notification.xml:0
+#: code:addons/website_sale/static/src/js/notification/add_to_cart_notification/add_to_cart_notification.xml:0
 #, python-format
 msgid "View cart"
 msgstr "عرض عربة التسوق "
@@ -4265,10 +4315,13 @@ msgid "Visitor Product Views History"
 msgstr "سجل عرض الزوار للمنتجات "
 
 #. module: website_sale
+#. odoo-javascript
+#: code:addons/website_sale/static/src/js/website_sale_utils.js:0
 #: model:ir.model.fields,field_description:website_sale.field_sale_order__shop_warning
 #: model:ir.model.fields,field_description:website_sale.field_sale_order_line__shop_warning
 #: model_terms:ir.ui.view,arch_db:website_sale.cart_lines
 #: model_terms:ir.ui.view,arch_db:website_sale.checkout_layout
+#, python-format
 msgid "Warning"
 msgstr "تحذير"
 
@@ -4458,6 +4511,13 @@ msgstr ""
 "                                            إذا أردت تعديل عنوان الشحن، أنشئ"
 
 #. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/controllers/main.py:0
+#, python-format
+msgid "You can't use a video as the product's main image."
+msgstr "لا يمكنك استخدام مقطع فيديو كالصورة الرئيسية للمنتج. "
+
+#. module: website_sale
 #: model_terms:ir.actions.act_window,help:website_sale.sale_report_action_carts
 #: model_terms:ir.actions.act_window,help:website_sale.sale_report_action_dashboard
 msgid "You don't have any order from the website"
@@ -4506,6 +4566,17 @@ msgid "Your Name"
 msgstr "اسمك"
 
 #. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/models/website.py:0
+#, python-format
+msgid ""
+"Your account is not allowed to pay in company %s. Please log out and create "
+"a new account for this website, or contact the website administrator."
+msgstr ""
+"لا يُسمَح لحسابك بالدفع في الشركة %s. يُرجى تسجيل الخروج وإنشاء حساب جديد "
+"لهذا الموقع الإلكتروني، أو تواصل مع مدير الموقع الإلكتروني. "
+
+#. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.cart_lines
 #: model_terms:ir.ui.view,arch_db:website_sale.checkout_layout
 msgid "Your cart is empty!"
@@ -4537,11 +4608,6 @@ msgstr "رمز Zip "
 #: model:ir.ui.menu,name:website_sale.menu_delivery_zip_prefix
 msgid "Zip Prefix"
 msgstr "بادئة الرمز البريدي "
-
-#. module: website_sale
-#: model_terms:ir.ui.view,arch_db:website_sale.add_grid_or_list_option
-msgid "active"
-msgstr "نشط "
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
@@ -4599,6 +4665,11 @@ msgstr "مبيعات المتجر الإلكتروني"
 #: model_terms:ir.ui.view,arch_db:website_sale.product_template_form_view
 msgid "eCommerce Shop"
 msgstr "المتجر الإلكتروني "
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.header_cart_link
+msgid "eCommerce cart"
+msgstr "عربة التسويق في المتجر الإلكتروني "
 
 #. module: website_sale
 #: model:ir.actions.server,name:website_sale.ir_cron_send_availability_email_ir_actions_server

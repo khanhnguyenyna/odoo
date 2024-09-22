@@ -16,6 +16,7 @@ import { KanbanRecord } from "./kanban_record";
 import { KanbanRecordQuickCreate } from "./kanban_record_quick_create";
 
 import { Component, onPatched, onWillDestroy, onWillPatch, useRef, useState } from "@odoo/owl";
+import { evaluateExpr } from "@web/core/py_js/py";
 
 const DRAGGABLE_GROUP_TYPES = ["many2one"];
 const MOVABLE_RECORD_TYPES = ["char", "boolean", "integer", "selection", "many2one"];
@@ -96,7 +97,7 @@ export class KanbanRenderer extends Component {
                 // Params
                 ref: this.rootRef,
                 elements: ".o_draggable",
-                ignore: ".dropdown",
+                ignore: ".dropdown,select",
                 groups: () => this.props.list.isGrouped && ".o_kanban_group",
                 connectGroups: () => this.canMoveRecords,
                 cursor: "move",
@@ -224,12 +225,17 @@ export class KanbanRenderer extends Component {
             (fieldNode) => fieldNode.name === groupByField.name
         );
         let isReadonly = this.props.list.fields[groupByField.name].readonly;
-        if (
-            !isReadonly &&
-            fieldNodes.length &&
-            fieldNodes.some((fieldNode) => "readonly" in fieldNode)
-        ) {
-            isReadonly = fieldNodes.every((fieldNode) => fieldNode.readonly === "True");
+        if (!isReadonly && fieldNodes.length) {
+            isReadonly = fieldNodes.every((fieldNode) => {
+                if (!fieldNode.readonly) {
+                    return false;
+                }
+                try {
+                    return evaluateExpr(fieldNode.readonly, this.props.list.evalContext);
+                } catch {
+                    return false;
+                }
+            });
         }
         return !isReadonly && this.isMovableField(groupByField);
     }
@@ -438,11 +444,12 @@ export class KanbanRenderer extends Component {
      */
     async sortGroupDrop(dataGroupId, { previous }) {
         this.toggleProcessing(dataGroupId, true);
-
         const refId = previous ? previous.dataset.id : null;
-        await this.props.list.resequence(dataGroupId, refId);
-
-        this.toggleProcessing(dataGroupId, false);
+        try {
+            await this.props.list.resequence(dataGroupId, refId);
+        } finally {
+            this.toggleProcessing(dataGroupId, false);
+        }
     }
 
     /**
@@ -469,13 +476,15 @@ export class KanbanRenderer extends Component {
             }
             const refId = previous ? previous.dataset.id : null;
             const targetGroupId = parent?.dataset.id;
-            await this.props.list.moveRecord(dataRecordId, dataGroupId, refId, targetGroupId);
+            try {
+                await this.props.list.moveRecord(dataRecordId, dataGroupId, refId, targetGroupId);
+            } finally {
+                this.toggleProcessing(dataRecordId, false);
+            }
             if (dataGroupId !== targetGroupId) {
                 const group = this.props.list.groups.find((g) => g.id === dataGroupId);
                 this.props.progressBarState?.updateAggreagteGroup(group);
             }
-
-            this.toggleProcessing(dataRecordId, false);
         }
     }
 

@@ -11,6 +11,13 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+def archive_products(env):
+    # Archive all existing product to avoid noise during the tours
+    all_pos_product = env['product.product'].search([('available_in_pos', '=', True)])
+    discount = env.ref('point_of_sale.product_product_consumable')
+    tip = env.ref('point_of_sale.product_product_tip')
+    (all_pos_product - discount - tip)._write({'active': False})
+
 class TestPointOfSaleCommon(ValuationReconciliationTestCommon):
 
     @classmethod
@@ -371,13 +378,13 @@ class TestPoSCommon(ValuationReconciliationTestCommon):
         cls.tax_tag_refund_base = create_tag('Refund Base tag')
         cls.tax_tag_refund_tax = create_tag('Refund Tax tag')
 
-        def create_tax(percentage, price_include=False):
+        def create_tax(percentage, price_include=False, include_base_amount=False):
             return cls.env['account.tax'].create({
                 'name': f'Tax {percentage}%',
                 'amount': percentage,
                 'price_include': price_include,
                 'amount_type': 'percent',
-                'include_base_amount': False,
+                'include_base_amount': include_base_amount,
                 'invoice_repartition_line_ids': [
                     (0, 0, {
                         'repartition_type': 'base',
@@ -435,6 +442,8 @@ class TestPoSCommon(ValuationReconciliationTestCommon):
         tax_fixed006 = create_tax_fixed(0.06, price_include=True)
         tax_fixed012 = create_tax_fixed(0.12, price_include=True)
         tax7 = create_tax(7, price_include=False)
+        tax8 = create_tax(8, include_base_amount=True)
+        tax9 = create_tax(9)
         tax10 = create_tax(10, price_include=True)
         tax21 = create_tax(21, price_include=True)
 
@@ -448,6 +457,8 @@ class TestPoSCommon(ValuationReconciliationTestCommon):
 
         return {
             'tax7': tax7,
+            'tax8': tax8,
+            'tax9': tax9,
             'tax10': tax10,
             'tax21': tax21,
             'tax_fixed006': tax_fixed006,
@@ -523,7 +534,7 @@ class TestPoSCommon(ValuationReconciliationTestCommon):
         def create_payment(payment_method, amount):
             return (0, 0, {
                 'amount': amount,
-                'name': fields.Datetime.now(),
+                'name': fields.Datetime.to_string(fields.Datetime.now()),
                 'payment_method_id': payment_method.id,
             })
 
@@ -726,3 +737,12 @@ class TestPoSCommon(ValuationReconciliationTestCommon):
         else:
             # if the expected_account_move_vals is falsy, the account_move should be falsy.
             self.assertFalse(account_move)
+
+    def make_payment(self, order, payment_method, amount):
+        """ Make payment for the order using the given payment method.
+        """
+        payment_context = {"active_id": order.id, "active_ids": order.ids}
+        return self.env['pos.make.payment'].with_context(**payment_context).create({
+            'amount': amount,
+            'payment_method_id': payment_method.id,
+        }).check()

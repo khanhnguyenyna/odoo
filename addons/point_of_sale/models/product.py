@@ -37,16 +37,56 @@ class ProductTemplate(models.Model):
         if not self.sale_ok:
             self.available_in_pos = False
 
+    @api.onchange('detailed_type')
+    def _onchange_detailed_type(self):
+        if self.detailed_type == 'combo':
+            self.taxes_id = None
+
     @api.constrains('available_in_pos')
     def _check_combo_inclusions(self):
         for product in self:
             if not product.available_in_pos:
-                combo_name = self.env['pos.combo.line'].search([('product_id', 'in', product.product_variant_ids.ids)], limit=1).combo_id.name
+                combo_name = self.env['pos.combo.line'].sudo().search([('product_id', 'in', product.product_variant_ids.ids)], limit=1).combo_id.name
                 if combo_name:
                     raise UserError(_('You must first remove this product from the %s combo', combo_name))
 
+    def _create_variant_ids(self):
+        res = super()._create_variant_ids()
+        for template in self:
+            archived_product = self.env['product.product'].search([('product_tmpl_id', '=', template.id), ('active', '=', False)], limit=1)
+            if archived_product:
+                combo_choices_to_delete = self.env['pos.combo.line'].search([
+                    ('product_id', '=', archived_product.id)
+                ])
+                if combo_choices_to_delete:
+                    # Delete old combo line
+                    combo_ids = combo_choices_to_delete.mapped('combo_id')
+                    combo_choices_to_delete.unlink()
+                    # Create new combo line (one for each new variant) in each combo
+                    new_variants = template.product_variant_ids.filtered(lambda v: v.active)
+                    self.env['pos.combo.line'].create([
+                        {
+                            'product_id': variant.id,
+                            'combo_id': combo_id.id,
+                        }
+                        for variant in new_variants for combo_id in combo_ids
+                    ])
+        return res
+
+    @api.onchange('type')
+    def _onchange_type(self):
+        if self.type == "combo" and self.attribute_line_ids:
+            raise UserError(_("Combo products cannot contains variants or attributes"))
+        return super()._onchange_type()
+
+
 class ProductProduct(models.Model):
     _inherit = 'product.product'
+
+    @api.onchange('detailed_type')
+    def _onchange_detailed_type(self):
+        if self.detailed_type == 'combo':
+            self.taxes_id = None
 
     @api.ondelete(at_uninstall=False)
     def _unlink_except_active_pos_session(self):

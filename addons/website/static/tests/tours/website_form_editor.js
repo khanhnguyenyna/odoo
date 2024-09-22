@@ -27,6 +27,7 @@
         });
     }
 
+    // TODO: in master only keep the conversion of the double quotes character.
     // Replace all `"` character by `&quot;`, all `'` character by `&apos;` and
     // all "`" character by `&lsquo;`.
     const getQuotesEncodedName = function (name) {
@@ -222,6 +223,28 @@
             run: () => null,
         },
         ...addExistingField('email_cc', 'text', 'Test conditional visibility', false, {visibility: CONDITIONALVISIBILITY, condition: 'odoo'}),
+        {
+            content: "Ensure that the description has correctly been added on the field",
+            trigger: "iframe .s_website_form_field:contains('Test conditional visibility') .s_website_form_field_description",
+            isCheck: true,
+        },
+        // Check that visibility condition is deleted on dependency type change.
+        ...addCustomField("char", "text", "dependent", false, {visibility: CONDITIONALVISIBILITY}),
+        ...addCustomField("selection", "radio", "dependency", false),
+        ...selectFieldByLabel("dependent"),
+        ...selectButtonByData('data-set-visibility-dependency="dependency"'),
+        ...selectFieldByLabel("dependency"),
+        ...selectButtonByData('data-custom-field="char"'),
+        ...selectFieldByLabel("dependent"),
+        {
+            content: "Open the select",
+            trigger: 'we-select:has(we-button[data-set-visibility="visible"]) we-toggler',
+        },
+        {
+            content: "Check that the field no longer has conditional visibility",
+            trigger: "we-select we-button[data-set-visibility='visible'].active",
+            isCheck: true,
+        },
 
         ...addExistingField('date', 'text', 'Test Date', true),
 
@@ -296,6 +319,16 @@
         }, {
             content: "Mark the field as not required",
             trigger: 'we-button[data-name="required_opt"] we-checkbox',
+            run: function () {
+                // We need this 'setTimeout' to ensure that the 'blur' event of
+                // the input has enough time to be executed. Without it, the
+                // click on the 'we-checkbox' takes priority, and the 'blur'
+                // event is not executed (see the '_onListItemBlurInput'
+                // function of the 'we-list' widget)."
+                setTimeout(() => {
+                    this.$anchor[0].click();
+                }, 500);
+            },
         }, {
             content: "Check the resulting field",
             trigger: "iframe .s_website_form_field.s_website_form_custom:not(.s_website_form_required)" +
@@ -342,10 +375,15 @@
             content: "Check that the input value is the full option value",
             trigger: 'we-list table input:eq(3)',
             run: () => {
-                const addedOptionEl = document.querySelector('iframe.o_iframe').contentDocument.querySelector('.s_website_form_field select option[value="44 - UK"]');
-                if (!addedOptionEl) {
-                    console.error('The number option was not correctly added');
-                }
+                // We need this 'setTimeout' to ensure that the 'input' event of
+                // the input has enough time to be executed (see the
+                // '_onListItemBlurInput' function of the 'we-list' widget).
+                setTimeout(() => {
+                    const addedOptionEl = document.querySelector('iframe.o_iframe').contentDocument.querySelector('.s_website_form_field select option[value="44 - UK"]');
+                    if (!addedOptionEl) {
+                        console.error('The number option was not correctly added');
+                    }
+                }, 500);
             },
         }, {
             content: "Check the resulting snippet",
@@ -434,11 +472,11 @@
         {
             content: "Check that field B prefill text is set",
             trigger: `iframe ${triggerFieldByLabel("field B")}:has(input[value="prefilled"])`,
-            run: () => null, // it's a check
+            isCheck: true,
         }, {
             content: "Check that field A is visible",
             trigger: `iframe .s_website_form:has(${triggerFieldByLabel("field A")}:visible)`,
-            run: () => null, // it's a check
+            isCheck: true,
         },
         // A) Check that if we edit again and save again the default value is
         // not deleted.
@@ -454,6 +492,16 @@
         ...addCustomField("char", "text", "field C", false),
         ...selectFieldByLabel("field B"),
         ...selectButtonByText(CONDITIONALVISIBILITY),
+        ...selectButtonByText(CONDITIONALVISIBILITY),
+        {
+            content: "Check that there is a comparator after two clicks on 'Visible only if'",
+            trigger: "[data-attribute-name='visibilityComparator']",
+            run: function () {
+                if (!this.$anchor[0].querySelector("we-button.active")) {
+                    console.error("A default comparator should be set");
+                }
+            },
+        },
         ...selectButtonByData('data-set-visibility-dependency="field C"'),
         ...selectButtonByData('data-select-data-attribute="set"'),
         ...wTourUtils.clickOnSave(),
@@ -468,7 +516,7 @@
                 `:has(${triggerFieldByLabel("field A")}:not(:visible))` +
                 `:has(${triggerFieldByLabel("field B")}` +
                 `:has(input[value="prefilled"]):not(:visible))`,
-            run: () => null, // it's a check
+            isCheck: true,
         }, {
             content: "Type something in field C",
             trigger: `iframe ${triggerFieldByLabel("field C")} input`,
@@ -477,7 +525,7 @@
             content: "Check that fields A and B are visible",
             trigger: `iframe .s_website_form:has(${triggerFieldByLabel("field B")}:visible)` +
                 `:has(${triggerFieldByLabel("field A")}:visible)`,
-            run: () => null, // it's a check
+            isCheck: true,
         },
 
         // Have field A's visibility tied to field B containing something,
@@ -506,7 +554,7 @@
             content: "Check that field B is visible, but field A is not",
             trigger: `iframe .s_website_form:has(${triggerFieldByLabel("field B")}:visible)` +
                 `:has(${triggerFieldByLabel("field A")}:not(:visible))`,
-            run: () => null, // it's a check
+            isCheck: true,
         }, {
             content: "Insert 'peek-a-boo' in field B",
             trigger: `iframe ${triggerFieldByLabel("field B")} input`,
@@ -514,7 +562,7 @@
         }, {
             content: "Check that field A is visible",
             trigger: `iframe .s_website_form:has(${triggerFieldByLabel("field A")}:visible)`,
-            run: () => null, // it's a check
+            isCheck: true,
         },
         ...wTourUtils.clickOnEditAndWaitEditMode(),
         {
@@ -527,12 +575,78 @@
             trigger: '[data-field-name="email_to"] input',
             run: 'text test@test.test',
         },
+        // Test a field visibility when it's tied to another Date [Time] field
+        // being set.
+        ...addCustomField("char", "text", "field D", false, { visibility: CONDITIONALVISIBILITY }),
+        ...addCustomField("date", "text", "field E", false),
+        ...selectFieldByLabel("field D"),
+        ...selectButtonByData('data-set-visibility-dependency="field E"'),
+        ...selectButtonByData('data-select-data-attribute="after"'),
+        {
+            content: "Enter a date in the date input",
+            trigger: "[data-name='hidden_condition_additional_date'] input",
+            run: "text 03/28/2017",
+        },
+        ...wTourUtils.clickOnSave(),
+        {
+            content: "Enter an invalid date in field E",
+            trigger: `iframe ${triggerFieldByLabel("field E")} input`,
+            run() {
+                this.$anchor[0].value = "25071981";
+                this.$anchor[0].dispatchEvent(new InputEvent("input", {bubbles: true}));
+                // Adds a delay to let the input code run.
+                setTimeout(() => {
+                    this.$anchor[0].classList.add("invalidDate");
+                }, 500);
+            },
+        },
+        {
+            content: "Enter an valid date in field E",
+            trigger: `iframe ${triggerFieldByLabel("field E")} input.invalidDate`,
+            run() {
+                this.$anchor[0].classList.remove("invalidDate");
+                this.$anchor[0].value = "07/25/1981";
+                this.$anchor[0].dispatchEvent(new InputEvent("input", {bubbles: true}));
+                // Adds a delay to let the input code run.
+                setTimeout(() => {
+                    this.$anchor[0].classList.add("validDate");
+                }, 500);
+            },
+        },
+        {
+            content: "Click to open the date picker popover from field E",
+            trigger: `iframe ${triggerFieldByLabel("field E")} input.validDate`,
+            run(actions) {
+                this.$anchor[0].classList.remove("validDate");
+                actions.click();
+            },
+        },
+        {
+            content: "Select today's date from the date picker",
+            trigger: "iframe .o_datetime_picker .o_date_item_cell.o_today",
+        },
+        {
+            content: "Check that field D is visible",
+            trigger: `iframe .s_website_form:has(${triggerFieldByLabel("field D")}:visible)`,
+            isCheck: true,
+        },
+        ...wTourUtils.clickOnEditAndWaitEditMode(),
         // The next four calls to "addCustomField" are there to ensure such
         // characters do not make the form editor crash.
         ...addCustomField("char", "text", "''", false),
         ...addCustomField("char", "text", '""', false),
         ...addCustomField("char", "text", "``", false),
         ...addCustomField("char", "text", "\\", false),
+
+        // Ensure that the description option is working as wanted.
+        ...addCustomField("char", "text", "Check description option", false),
+        wTourUtils.changeOption("WebsiteFieldEditor", "we-button[data-toggle-description] we-checkbox"),
+        {
+            content: "Ensure that the description has correctly been added on the field",
+            trigger: "iframe .s_website_form_field:contains('Check description option') .s_website_form_field_description",
+            isCheck: true,
+        },
+
         ...wTourUtils.clickOnSave(),
         {
             content: 'Verify that the recipient email has been saved',
@@ -575,6 +689,10 @@
             content: "Change a random option",
             trigger: '[data-set-mark] input',
             run: 'text_blur **',
+        }, {
+            content: "Check that the recipient email is correct",
+            trigger: 'we-input[data-field-name="email_to"] input:propValue("website_form_contactus_edition_no_email@mail.com")',
+            isCheck: true,
         },
     ]));
 
@@ -690,6 +808,116 @@
             trigger: 'iframe body:not(:has([data-snippet="s_website_form"])) .fa-check-circle',
             run: () => null,
         }
+    ]);
+
+    wTourUtils.registerWebsitePreviewTour('website_form_contactus_change_random_option', {
+        test: true,
+        url: '/contactus',
+        edition: true,
+    }, () => editContactUs([
+        {
+            content: "Change a random option",
+            trigger: '[data-set-mark] input',
+            run: 'text_blur **',
+        },
+    ]));
+
+    // Check that the editable form content is actually editable.
+    wTourUtils.registerWebsitePreviewTour("website_form_editable_content", {
+        test: true,
+        url: "/",
+        edition: true,
+    }, () => [
+        {
+            ...wTourUtils.dragNDrop({id: "s_website_form", name: "Form"}),
+            run: "drag_and_drop_native iframe #wrap",
+        },
+        {
+            content: "Check that a form field is not editable",
+            extra_trigger: "iframe .s_website_form_field",
+            trigger: "iframe section.s_website_form input",
+            run: function () {
+                if (this.$anchor[0].isContentEditable) {
+                    console.error("A form field should not be editable.");
+                }
+            },
+        },
+        {
+            content: "Go back to blocks",
+            trigger: ".o_we_add_snippet_btn",
+        },
+        wTourUtils.dragNDrop({id: "s_three_columns", name: "Columns"}),
+        {
+            content: "Select the first column",
+            trigger: "iframe .s_three_columns .row > :nth-child(1)",
+        },
+        {
+            content: "Drag and drop the selected column inside the form",
+            trigger: "iframe .o_overlay_move_options .o_move_handle",
+            run: "drag_and_drop_native iframe section.s_website_form",
+        },
+        {
+            content: "Click on the text inside the dropped form column",
+            extra_trigger: "iframe section.s_website_form .col-lg-4[contenteditable=true]",
+            trigger: "iframe section.s_website_form h3.card-title",
+            run: "dblclick",
+        },
+        {
+            // Simulate a user interaction with the editable content.
+            content: "Update the text inside the form column",
+            trigger: "iframe section.s_website_form h3.card-title",
+            run: "text ABC",
+        },
+        {
+            content: "Check that the new text value was correctly set",
+            trigger: "iframe section.s_website_form h3:containsExact(ABC)",
+            run: () => null, // it's a check
+        },
+        {   content: "Remove the dropped column",
+            trigger: "iframe .oe_overlay.oe_active .oe_snippet_remove",
+            run: "click",
+        },
+        ...wTourUtils.clickOnSave(),
+    ]);
+
+    wTourUtils.registerWebsitePreviewTour("website_form_special_characters", {
+        test: true,
+        url: "/",
+        edition: true,
+    }, () => [
+        {
+            ...wTourUtils.dragNDrop({id: "s_website_form", name: "Form"}),
+            run: "drag_and_drop_native iframe #wrap",
+        },
+        {
+            content: "Select form by clicking on an input field",
+            extra_trigger: "iframe .s_website_form_field",
+            trigger: "iframe section.s_website_form input",
+        },
+        ...addCustomField("char", "text", `Test1"'`, false),
+        ...addCustomField("char", "text", 'Test2`\\', false),
+        ...wTourUtils.clickOnSave(),
+        ...essentialFieldsForDefaultFormFillInSteps,
+        {
+            content: "Complete 'Your Question' field",
+            trigger: "iframe textarea[name='description']",
+            run: "text test",
+        }, {
+            content: "Complete the first added field",
+            trigger: "iframe input[name='Test1&quot;&apos;']",
+            run: "text test1",
+        }, {
+            content: "Complete the second added field",
+            trigger: "iframe input[name='Test2&lsquo;&bsol;']",
+            run: "text test2",
+        }, {
+            content: "Click on 'Submit'",
+            trigger: "iframe a.s_website_form_send",
+        }, {
+            content: "Check the form was again sent (success page without form)",
+            trigger: "iframe body:not(:has([data-snippet='s_website_form'])) .fa-check-circle",
+            isCheck: true,
+        },
     ]);
 
     export default {};

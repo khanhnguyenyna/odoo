@@ -2,6 +2,7 @@
 
 import { partnerCompareRegistry } from "@mail/core/common/partner_compare";
 import { cleanTerm } from "@mail/utils/common/format";
+import { toRaw } from "@odoo/owl";
 
 import { registry } from "@web/core/registry";
 
@@ -79,13 +80,14 @@ export class SuggestionService {
      * @returns {{ type: String, mainSuggestions: Array, extraSuggestions: Array }}
      */
     searchSuggestions({ delimiter, term }, { thread, sort = false } = {}) {
+        thread = toRaw(thread);
         const cleanedSearchTerm = cleanTerm(term);
         switch (delimiter) {
             case "@": {
                 return this.searchPartnerSuggestions(cleanedSearchTerm, thread, sort);
             }
             case "#":
-                return this.searchChannelSuggestions(cleanedSearchTerm, thread, sort);
+                return this.searchChannelSuggestions(cleanedSearchTerm, sort);
         }
         return {
             type: undefined,
@@ -118,10 +120,6 @@ export class SuggestionService {
         const mainSuggestionList = [];
         const extraSuggestionList = [];
         for (const partner of partners) {
-            if (partner.eq(this.store.odoobot)) {
-                // ignore archived partners (except OdooBot)
-                continue;
-            }
             if (!partner.name) {
                 continue;
             }
@@ -157,10 +155,18 @@ export class SuggestionService {
         const cleanedSearchTerm = cleanTerm(searchTerm);
         const compareFunctions = partnerCompareRegistry.getAll();
         const context = { recentChatPartnerIds: this.personaService.getRecentChatPartnerIds() };
+        const memberPartnerIds = new Set(
+            thread?.channelMembers
+                .filter((member) => member.persona.type === "partner")
+                .map((member) => member.persona.id)
+        );
         return partners.sort((p1, p2) => {
+            p1 = toRaw(p1);
+            p2 = toRaw(p2);
             for (const fn of compareFunctions) {
                 const result = fn(p1, p2, {
                     env: this.env,
+                    memberPartnerIds,
                     searchTerms: cleanedSearchTerm,
                     thread,
                     context,
@@ -172,24 +178,8 @@ export class SuggestionService {
         });
     }
 
-    searchChannelSuggestions(cleanedSearchTerm, thread, sort) {
-        let threads;
-        if (
-            thread &&
-            (thread.type === "group" ||
-                thread.type === "chat" ||
-                (thread.type === "channel" && thread.authorizedGroupFullName))
-        ) {
-            // Only return the current channel when in the context of a
-            // group restricted channel or group or chat. Indeed, the message with the mention
-            // would appear in the target channel, so this prevents from
-            // inadvertently leaking the private message into the mentioned
-            // channel.
-            threads = [thread];
-        } else {
-            threads = Object.values(this.store.Thread.records);
-        }
-        const suggestionList = threads.filter(
+    searchChannelSuggestions(cleanedSearchTerm, sort) {
+        const suggestionList = Object.values(this.store.Thread.records).filter(
             (thread) =>
                 thread.type === "channel" &&
                 thread.displayName &&

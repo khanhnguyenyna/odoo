@@ -3,16 +3,16 @@
 # 	* hr
 # 
 # Translators:
-# Malaz Abuidris <msea@odoo.com>, 2023
-# Wil Odoo, 2023
+# Malaz Abuidris <msea@odoo.com>, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Arabic (https://app.transifex.com/odoo/teams/41243/ar/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -206,7 +206,7 @@ msgstr "<span class=\"o_stat_text\">متصل منذ</span>"
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.res_partner_view_form
 msgid "<span class=\"o_stat_text\">Employee</span>"
-msgstr "<span class=\"o_stat_text\">الوظف</span> "
+msgstr "<span class=\"o_stat_text\">الموظف</span> "
 
 #. module: hr
 #: model_terms:hr.job,job_details:hr.job_ceo
@@ -367,6 +367,17 @@ msgstr "إضافة خطة جديدة "
 #: model:ir.model.fields,field_description:hr.field_hr_employee__departure_description
 msgid "Additional Information"
 msgstr "معلومات إضافية"
+
+#. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee.py:0
+#, python-format
+msgid ""
+"Additional Information: \n"
+" %(description)s"
+msgstr ""
+"المعلومات الإضافية: \n"
+" %(description)s "
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__additional_note
@@ -873,6 +884,16 @@ msgid "Create a new department"
 msgstr "إنشاء قسم جديد"
 
 #. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_contract_type_action
+msgid "Create a new employment type"
+msgstr "قم بإنشاء نوع توظيف جديد "
+
+#. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
+msgid "Create a new work location"
+msgstr "أنشئ موقع عمل جديد "
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -971,6 +992,8 @@ msgstr ""
 "Keep regular interaction with key clients for better extraction and expansion."
 
 #. module: hr
+#. odoo-javascript
+#: code:addons/hr/static/src/components/avatar_card/avatar_card_popover_patch.xml:0
 #: model:ir.model,name:hr.model_hr_department
 #: model:ir.model.fields,field_description:hr.field_hr_employee__department_id
 #: model:ir.model.fields,field_description:hr.field_hr_employee_base__department_id
@@ -983,6 +1006,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:hr.view_department_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_job_filter
+#, python-format
 msgid "Department"
 msgstr "القسم"
 
@@ -1092,8 +1116,8 @@ msgid ""
 "Display remote work settings for each employee and dedicated reports. "
 "Presence icons will be updated with remote work location."
 msgstr ""
-"عرض إعدادات العمل عن بعد لكل موظف وتقارير مخصصة. سيتم تحديث أيقونات التواجد "
-"بموقع العمل عن بعد. "
+"عرض إعدادات العمل عن بعد لكل موظف بالإضافة إلى التقارير المخصصة. سيتم تحديث "
+"أيقونات التواجد مع موقع العمل عن بعد. "
 
 #. module: hr
 #: model:ir.model.fields.selection,name:hr.selection__hr_employee__marital__divorced
@@ -2090,11 +2114,6 @@ msgid "No Tags found ! Let's create one"
 msgstr "لم يتم العثور على علامات تصنيف! فلننشئها "
 
 #. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid "No Work Locations found ! Let's create one"
-msgstr "لم يتم العثور على مواقع عمل! فلننشئها "
-
-#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2329,19 +2348,6 @@ msgstr "كشوف المرتبات "
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid "Perfect written English"
 msgstr "مهارات كتابية ممتازة باللغة الإنجليزية "
-
-#. module: hr
-#: model_terms:hr.job,description:hr.job_consultant
-#: model_terms:hr.job,description:hr.job_developer
-#: model_terms:hr.job,description:hr.job_marketing
-msgid ""
-"Perform assigned responsibilities, collaborate with team members, and adhere"
-" to company policies. Strong communication, problem-solving, and work ethic "
-"required. Adaptability, initiative, and willingness to learn are valued."
-msgstr ""
-"أداء المسؤوليات المعينة والتعاون مع أعضاء الفريق والالتزام بسياسات الشركة. "
-"مطلوب التواصل القوي وحل المشكلات وأخلاقيات العمل. يتم تقدير القدرة على "
-"التكيف والمبادرة والاستعداد للتعلم. "
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -2839,6 +2845,13 @@ msgid "Software Developer"
 msgstr "مطور برمجيات "
 
 #. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee_base.py:0
+#, python-format
+msgid "Some employee already have a work contact"
+msgstr "يملك بعض الموظفين عقد عمل بالفعل "
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2985,6 +2998,19 @@ msgstr ""
 "يمكنك استخدام هذا الحقل لإجراء بحث سريع."
 
 #. module: hr
+#: model_terms:hr.job,description:hr.job_marketing
+msgid ""
+"The Marketing Manager defines the mid- to long-term marketing strategy for his covered market segments in the World.\n"
+"              He develops and monitors the annual budget in collaboration with Sales.\n"
+"              He defines the products and customers portfolio according to the marketing plan.\n"
+"              This mission requires strong collaboration with Technical Service and Sales."
+msgstr ""
+"The Marketing Manager defines the mid- to long-term marketing strategy for his covered market segments in the World.\n"
+"              He develops and monitors the annual budget in collaboration with Sales.\n"
+"              He defines the products and customers portfolio according to the marketing plan.\n"
+"              This mission requires strong collaboration with Technical Service and Sales."
+
+#. module: hr
 #. odoo-python
 #: code:addons/hr/models/hr_employee.py:0
 #, python-format
@@ -3094,7 +3120,7 @@ msgstr "يُستخدم هذا الحقل لتحديد المنطقة الزمن�
 #: code:addons/hr/models/mail_activity_plan_template.py:0
 #, python-format
 msgid "Those responsible types are limited to Employee plans."
-msgstr "تقتصر هذه الأنواع المسؤولة على خطط الموظفين. "
+msgstr "تقتصر أنواع المسؤولين تلك على خطط الموظفين. "
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__tz
@@ -3232,8 +3258,8 @@ msgstr "عرض الملف التعريفي "
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_expire
 #: model:ir.model.fields,field_description:hr.field_res_users__visa_expire
-msgid "Visa Expire Date"
-msgstr "تاريخ انتهاء التأشيرة"
+msgid "Visa Expiration Date"
+msgstr "تاريخ انتهاء صلاحية التأشيرة "
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_no
@@ -3247,6 +3273,22 @@ msgstr "رقم التأشيرة"
 #, python-format
 msgid "Warning"
 msgstr "تحذير"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_consultant
+msgid ""
+"We are currently looking for someone like that to join our Consultant team."
+msgstr ""
+"We are currently looking for someone like that to join our Consultant team."
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_developer
+msgid ""
+"We are currently looking for someone like that to join our Web team.\n"
+"                Someone who can snap out of coding and perform analysis or meet clients to explain the technical possibilities that can meet their needs."
+msgstr ""
+"We are currently looking for someone like that to join our Web team.\n"
+"                Someone who can snap out of coding and perform analysis or meet clients to explain the technical possibilities that can meet their needs."
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -3356,13 +3398,6 @@ msgstr "مكان العمل"
 #: model:ir.ui.menu,name:hr.menu_hr_work_location_tree
 msgid "Work Locations"
 msgstr "مواقع العمل "
-
-#. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid ""
-"Work Locations are used to define more precisely where your employee is "
-"located everyday."
-msgstr "تُستخدم مواقع العمل لتحديد مواقع موظفيك بدقة كل يوم. "
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__mobile_phone

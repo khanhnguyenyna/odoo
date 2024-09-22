@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tests.common import TransactionCase, Form
 
 
@@ -418,6 +418,7 @@ class TestMultiCompany(TransactionCase):
         intercom_location = self.env.ref('stock.stock_location_inter_wh')
         intercom_location.write({'active': True})
 
+        self.user_a.company_ids = [(6, 0, [self.company_a.id])]
         product_lot = self.env['product.product'].create({
             'type': 'product',
             'tracking': 'lot',
@@ -453,20 +454,20 @@ class TestMultiCompany(TransactionCase):
             })],
         })
 
-        move_from_supplier = self.env['stock.move'].create({
+        move_from_supplier = self.env['stock.move'].with_user(self.user_a).create({
             'company_id': self.company_a.id,
             'name': 'test_from_supplier',
             'location_id': supplier_location.id,
             'location_dest_id': self.stock_location_a.id,
             'product_id': product_lot.id,
             'product_uom': product_lot.uom_id.id,
-            'product_uom_qty': 1.0,
+            'product_uom_qty': 0.1,
             'picking_type_id': self.warehouse_a.in_type_id.id,
         })
         move_from_supplier._action_confirm()
         move_line_1 = move_from_supplier.move_line_ids[0]
         move_line_1.lot_name = 'lot 1'
-        move_line_1.quantity = 1.0
+        move_line_1.quantity = 0.1
         move_from_supplier.picked = True
         move_from_supplier._action_done()
         lot_1 = move_line_1.lot_id
@@ -478,17 +479,17 @@ class TestMultiCompany(TransactionCase):
             'location_dest_id': intercom_location.id,
             'product_id': product_lot.id,
             'product_uom': product_lot.uom_id.id,
-            'product_uom_qty': 1.0,
+            'product_uom_qty': 0.1,
             'picking_type_id': picking_type_to_transit.id,
             'route_ids': [(4, route.id)],
         })
-        move_to_transit._action_confirm()
-        move_to_transit._action_assign()
+        move_to_transit.with_user(self.user_a)._action_confirm()
+        move_to_transit.with_user(self.user_a)._action_assign()
         move_line_2 = move_to_transit.move_line_ids[0]
         self.assertTrue(move_line_2.lot_id, move_line_1.lot_id)
-        move_line_2.quantity = 1.0
+        move_line_2.quantity = 0.1
         move_to_transit.picked = True
-        move_to_transit._action_done()
+        move_to_transit.with_user(self.user_a)._action_done()
 
         move_push = self.env['stock.move'].search([('location_id', '=', intercom_location.id),
                                                    ('product_id', '=', product_lot.id)])
@@ -505,16 +506,16 @@ class TestMultiCompany(TransactionCase):
 
         move_line_3 = move_push.move_line_ids[0]
         move_line_3.lot_name = 'lot 2'
-        move_line_3.quantity = 1.0
+        move_line_3.quantity = 0.1
         picking_receipt.move_ids.picked = True
         picking_receipt.button_validate()
         lot_2 = move_line_3.lot_id
         self.assertEqual(lot_1.company_id, self.company_a)
         self.assertEqual(lot_1.name, 'lot 1')
-        self.assertEqual(self.env['stock.quant']._get_available_quantity(product_lot, intercom_location, lot_1), 1.0)
+        self.assertEqual(self.env['stock.quant']._get_available_quantity(product_lot, intercom_location, lot_1), 0.1)
         self.assertEqual(lot_2.company_id, self.company_b)
         self.assertEqual(lot_2.name, 'lot 2')
-        self.assertEqual(self.env['stock.quant']._get_available_quantity(product_lot, self.stock_location_b, lot_2), 1.0)
+        self.assertEqual(self.env['stock.quant']._get_available_quantity(product_lot, self.stock_location_b, lot_2), 0.1)
 
     def test_intercom_lot_pull(self):
         """Use warehouse of comany a to resupply warehouse of company b. Check
@@ -617,3 +618,32 @@ class TestMultiCompany(TransactionCase):
         self.assertEqual(lot_a.name, 'lot a')
         self.assertEqual(lot_b.company_id, self.company_b)
         self.assertEqual(lot_b.name, 'lot b')
+
+    def test_route_rules_company_consistency(self):
+        route = self.env['stock.route'].create({
+            'name': 'Test Route',
+            'company_id': self.company_a.id,
+            'rule_ids': [
+                (0, 0, {
+                    'name': 'Buy',
+                    'action': 'pull_push',
+                    'company_id': self.company_a.id,
+                    'location_dest_id': self.stock_location_a.id,
+                    'picking_type_id': self.warehouse_a.in_type_id.id,
+                })
+            ]
+        })
+
+        with self.assertRaises(ValidationError):
+            route.write({'company_id': self.company_b.id})
+
+        with self.assertRaises(ValidationError):
+            route.write({'rule_ids': [
+                (0, 0, {
+                    'name': 'Buy',
+                    'action': 'pull_push',
+                    'company_id': self.company_b.id,
+                    'location_dest_id': self.stock_location_b.id,
+                    'picking_type_id': self.warehouse_b.in_type_id.id,
+                })
+            ]})

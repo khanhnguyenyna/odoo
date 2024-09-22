@@ -15,7 +15,7 @@ import base64
 import odoo
 from odoo import api, http
 from odoo.addons import __path__ as ADDONS_PATH
-from odoo.addons.base.models.assetsbundle import AssetsBundle
+from odoo.addons.base.models.assetsbundle import AssetsBundle, ANY_UNIQUE
 from odoo.addons.base.models.ir_asset import AssetPaths
 from odoo.addons.base.models.ir_attachment import IrAttachment
 from odoo.modules.module import get_manifest
@@ -111,7 +111,7 @@ class AddonManifestPatched(TransactionCase):
         }
 
         self.patch(self.env.registry, '_init_modules', self.installed_modules)
-        self.patch(odoo.modules.module, 'get_manifest', Mock(side_effect=lambda module: self.manifests.get(module, {})))
+        self.patch(odoo.modules.module, '_get_manifest_cached', Mock(side_effect=lambda module: self.manifests.get(module, {})))
 
 
 class FileTouchable(AddonManifestPatched):
@@ -147,7 +147,7 @@ class TestJavascriptAssetsBundle(FileTouchable):
         bundle = self.jsbundle_name if extension in ['js', 'min.js'] else self.cssbundle_name
         direction = '.rtl' if rtl else ''
         bundle_name = f"{bundle}{direction}.{extension}"
-        url = self.env['ir.asset']._get_asset_bundle_url(bundle_name, '%', {})
+        url = self.env['ir.asset']._get_asset_bundle_url(bundle_name, ANY_UNIQUE, {})
         domain = [('url', '=like', url)]
         return self.env['ir.attachment'].search(domain)
 
@@ -415,9 +415,20 @@ class TestJavascriptAssetsBundle(FileTouchable):
         # trigger the first generation and, thus, the first save in database
         self.bundle.css()
 
+        # there should be no compilation errors
+        self.assertEqual(len(self.bundle.css_errors), 0)
+
         # there should be one attachment associated to this bundle
         self.assertEqual(len(self._any_ira_for_bundle('min.css', rtl=True)), 1)
         self.assertEqual(len(self.bundle.get_attachments('min.css')), 1)
+
+    def test_15_rtl_invalid_css_generation(self):
+        """ Checks that erroneous css cannot be compiled by rtlcss and that errors are registered """
+        self.bundle = self._get_asset('test_assetsbundle.broken_css', rtl=True)
+        with mute_logger('odoo.addons.base.models.assetsbundle'):
+            self.bundle.css()
+        self.assertEqual(len(self.bundle.css_errors), 1)
+        self.assertIn('rtlcss: error processing payload', self.bundle.css_errors[0])
 
     def test_16_ltr_and_rtl_css_access(self):
         """ Checks that the bundle's cache is working, i.e. that the bundle creates only one
@@ -1991,12 +2002,3 @@ class TestErrorManagement(HttpCase):
         with mute_logger('odoo.addons.base.models.assetsbundle'):
             self.start_tour('/web', 'css_error_tour', login='admin')
 
-    def test_assets_bundle_css_error_frontend(self):
-        self.env['ir.qweb']._get_asset_bundle('web.assets_frontend', assets_params={'website_id': self.env['website'].search([], limit=1).id}).css() # force pregeneration so that we have the base style
-        self.env['ir.asset'].create({
-            'name': 'Css error',
-            'bundle': 'web.assets_frontend',
-            'path': 'test_assetsbundle/static/src/css/test_error.scss',
-        })
-        with mute_logger('odoo.addons.base.models.assetsbundle'):
-            self.start_tour('/', 'css_error_tour_frontend', login='admin')

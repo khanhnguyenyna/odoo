@@ -283,7 +283,11 @@ class Form:
         """ Initialize the form for an existing record. """
         assert self._record.id, "editing unstored records is not supported"
         self._values.clear()
+
         [record_values] = self._record.web_read(self._view['fields_spec'])
+        self._env.flush_all()
+        self._env.clear()  # discard cache and pending recomputations
+
         values = convert_read_to_form(record_values, self._view['fields'])
         self._values.update(values)
 
@@ -655,7 +659,7 @@ class O2MForm(Form):
                 self._get_modifier(field_name, 'column_invisible')
                 or self._get_modifier(field_name, 'invisible')
             ):
-                assert values[field_name] is not False, "{fname!r} is a required field"
+                assert values[field_name] is not False, f"{field_name!r} is a required field"
 
         return values
 
@@ -767,9 +771,13 @@ class O2MValue(X2MValue):
 
 
 class M2MValue(X2MValue):
+    def __init__(self, iterable_of_vals=()):
+        super().__init__(iterable_of_vals)
+        self._given = list(self._data)
+
     def to_commands(self):
-        ids = []
-        result = [Command.set(ids)]
+        given = set(self._given)
+        result = []
         for id_, vals in self._data.items():
             if isinstance(id_, str) and id_.startswith('virtual_'):
                 result.append((Command.CREATE, id_, {
@@ -777,12 +785,16 @@ class M2MValue(X2MValue):
                     for key, val in vals.changed_items()
                 }))
                 continue
-            ids.append(id_)
+            if id_ not in given:
+                result.append(Command.link(id_))
             if vals._changed:
                 result.append(Command.update(id_, {
                     key: val.to_commands() if isinstance(val, X2MValue) else val
                     for key, val in vals.changed_items()
                 }))
+        for id_ in self._given:
+            if id_ not in self._data:
+                result.append(Command.unlink(id_))
         return result
 
 

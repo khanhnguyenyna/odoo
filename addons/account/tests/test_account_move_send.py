@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+import json
 
 from datetime import date
-from dateutil.relativedelta import relativedelta
-from freezegun import freeze_time
 from unittest.mock import patch
 
-from odoo import Command, fields
+from odoo import Command
 from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo.addons.mail.tests.common import MailCommon
 from odoo.exceptions import UserError
-from odoo.tests.common import Form, users, warmup
+from odoo.tests.common import users, warmup
 from odoo.tests import tagged
 from odoo.tools import formataddr, mute_logger
 
@@ -404,6 +403,10 @@ class TestAccountComposerPerformance(AccountTestInvoicingCommon, MailCommon):
         test_move = self.test_account_moves[1].with_env(self.env)
         move_template = self.move_template.with_env(self.env)
 
+        # add a follower to the invoice
+        self.partner_b.email = 'partner_b@example.com'
+        test_move.message_subscribe(self.partner_b.ids)
+
         additional_partner = self.env['res.partner'].create({
             'name': "Additional Partner",
             'email': "additional@example.com",
@@ -428,6 +431,15 @@ class TestAccountComposerPerformance(AccountTestInvoicingCommon, MailCommon):
             author=self.user_account_other.partner_id,
             content='access_token='
         )
+
+        follower_mail = self.assertMailMail(
+            self.partner_b,
+            'sent',
+            author=self.user_account_other.partner_id,
+        )
+
+        self.assertNotIn('access_token=', follower_mail.body_html,
+                      "The followers should not bet sent the access token by default")
 
 @tagged('post_install_l10n', 'post_install', '-at_install')
 class TestAccountMoveSendCommon(AccountTestInvoicingCommon):
@@ -568,7 +580,8 @@ class TestAccountMoveSend(TestAccountMoveSendCommon):
 
         # Process.
         results = wizard.action_send_and_print()
-        self.assertEqual(results['type'], 'ir.actions.act_window_close')
+        self.assertEqual(results['type'], 'ir.actions.client')
+        self.assertEqual(results['params']['next']['type'], 'ir.actions.act_window_close')
         self.assertRecordValues(wizard, [{'mode': 'invoice_multi'}])
 
         # Awaiting the CRON.
@@ -921,3 +934,130 @@ class TestAccountMoveSend(TestAccountMoveSendCommon):
             self.create_send_and_print(invoice_draft)
         with self.assertRaises(UserError):
             self.create_send_and_print(invoice_posted + invoice_draft)
+
+    def test_link_pdf_webservice_fails_after(self):
+        invoice = self.init_invoice("out_invoice", amounts=[1000], post=True)
+        wizard = self.create_send_and_print(invoice)
+
+        def _call_web_service_after_invoice_pdf_render(self, invoices_data):
+            for move_data in invoices_data.values():
+                move_data['error'] = 'service_failed_after'
+
+        # Process.
+        with patch(
+                'odoo.addons.account.wizard.account_move_send.AccountMoveSend._call_web_service_after_invoice_pdf_render',
+                _call_web_service_after_invoice_pdf_render,
+        ):
+            wizard.action_send_and_print(allow_fallback_pdf=True)
+
+        # The PDF is generated and linked
+        self.assertTrue(invoice.invoice_pdf_report_id)
+        # Not a proforma
+        self.assertFalse(self.env['ir.attachment'].search([
+            ('name', '=', invoice._get_invoice_proforma_pdf_report_filename()),
+        ]))
+
+    def test_link_pdf_webservice_fails_before(self):
+        invoice = self.init_invoice("out_invoice", amounts=[1000], post=True)
+        wizard = self.create_send_and_print(invoice)
+
+        def _call_web_service_before_invoice_pdf_render(self, invoices_data):
+            for move_data in invoices_data.values():
+                move_data['error'] = 'service_failed_before'
+
+        # Process.
+        with patch(
+                'odoo.addons.account.wizard.account_move_send.AccountMoveSend._call_web_service_before_invoice_pdf_render',
+                _call_web_service_before_invoice_pdf_render,
+        ):
+            wizard.action_send_and_print(allow_fallback_pdf=True)
+
+        # The PDF is not generated but a proforma.
+        self.assertFalse(invoice.invoice_pdf_report_id)
+        self.assertTrue(self.env['ir.attachment'].search([
+            ('name', '=', invoice._get_invoice_proforma_pdf_report_filename()),
+        ]))
+
+    def test_send_and_print_cron(self):
+        """ Test the cron for generating """
+        invoice_1_1 = self.init_invoice("out_invoice", amounts=[1000], post=True, company=self.company_data['company'])
+        invoice_1_2 = self.init_invoice("out_invoice", amounts=[1000], post=True, company=self.company_data['company'])
+        wizard = self.create_send_and_print(invoice_1_1 + invoice_1_2)
+        wizard.checkbox_download = False
+        wizard.action_send_and_print()  # saves value on moves to be sent asynchronously
+
+        invoice_2_1 = self.init_invoice("out_invoice", amounts=[1000], post=True, company=self.company_data_2['company'])
+        invoice_2_2 = self.init_invoice("out_invoice", amounts=[1000], post=True, company=self.company_data_2['company'])
+        wizard_2 = self.create_send_and_print(invoice_2_1 + invoice_2_2)
+        wizard_2.checkbox_download = False
+        wizard_2.action_send_and_print()
+
+        invoices = invoice_1_1 + invoice_1_2 + invoice_2_1 + invoice_2_2
+        self.assertFalse(invoices.invoice_pdf_report_id)
+        self.assertEqual(invoices.mapped(lambda inv: bool(inv.send_and_print_values)), [True] * len(invoices))
+        self.env.ref('account.ir_cron_account_move_send').method_direct_trigger()  # force processing
+        self.assertTrue(all(invoice.invoice_pdf_report_id for invoice in invoices))
+        self.assertTrue(all(not invoice.send_and_print_values for invoice in invoices))
+
+    def test_cron_notifications(self):
+        invoices_success = (
+                self.init_invoice("out_invoice", amounts=[1000], post=True) +
+                self.init_invoice("out_invoice", amounts=[1000], post=True)
+        )
+        invoices_error = (
+                self.init_invoice("out_invoice", amounts=[1000], post=True) +
+                self.init_invoice("out_invoice", amounts=[1000], post=True)
+        )
+
+        sp_partner_1 = self.env.user.partner_id
+        wizard_partner_1 = self.create_send_and_print(invoices_success)
+        wizard_partner_1.checkbox_download = False
+        wizard_partner_1.action_send_and_print()
+
+        sp_partner_2 = self.env['res.partner'].create({'name': 'Partner 2', 'email': 'test@test.odoo.com'})
+        self.env.user.partner_id = sp_partner_2
+        wizard_partner_2 = self.create_send_and_print(invoices_error)
+        wizard_partner_2.checkbox_download = False
+        wizard_partner_2.action_send_and_print()
+
+        def _hook_invoice_document_before_pdf_report_render(self, invoice, invoice_data):
+            if invoice.id in invoices_error.ids:
+                invoice_data['error'] = 'blblblbl'
+
+        self.assertTrue(all(invoice.send_and_print_values for invoice in invoices_success + invoices_error))
+        self.assertEqual(invoices_success[0].send_and_print_values.get('sp_partner_id'), sp_partner_1.id)
+        self.assertEqual(invoices_error[0].send_and_print_values.get('sp_partner_id'), sp_partner_2.id)
+
+        with patch(
+            'odoo.addons.account.wizard.account_move_send.AccountMoveSend._hook_invoice_document_before_pdf_report_render',
+            _hook_invoice_document_before_pdf_report_render,
+        ):
+            self.env.ref('account.ir_cron_account_move_send').method_direct_trigger()  # force processing
+            self.env.cr.precommit.run()  # trigger the creation of bus.bus records
+
+        bus_1 = self.env['bus.bus'].sudo().search(
+            [('channel', 'like', f'"res.partner",{sp_partner_1.id}')],
+            order='id desc',
+            limit=1,
+        )
+        payload_1 = json.loads(bus_1.message)['payload']
+        self.assertEqual(payload_1['type'], 'success')
+        self.assertEqual(sorted(payload_1['action_button']['res_ids']), invoices_success.ids)
+
+        bus_2 = self.env['bus.bus'].sudo().search(
+            [('channel', 'like', f'"res.partner",{sp_partner_2.id}')],
+            order='id desc',
+            limit=1,
+        )
+        payload_2 = json.loads(bus_2.message)['payload']
+        self.assertEqual(payload_2['type'], 'warning')
+        self.assertEqual(sorted(payload_2['action_button']['res_ids']), invoices_error.ids)
+
+    def test_send_and_print_only(self):
+        invoice = self.init_invoice("out_invoice", amounts=[1000], post=True)
+        option_vals = self.env['account.move.send']._get_wizard_vals_restrict_to({'checkbox_send_mail': True})
+        wizard = self.create_send_and_print(invoice, **option_vals)
+        res = wizard.action_send_and_print()
+
+        self.assertTrue(self._get_mail_message(invoice))  # email was sent
+        self.assertEqual(res['type'], 'ir.actions.act_window_close')  # the download which is a default value didn't happen

@@ -50,6 +50,10 @@
         display: block;
     }
 
+    .availability_messages {
+        display: none;
+    }
+
     .js_add,
     .oe_price,
     .oe_default_price,
@@ -77,12 +81,32 @@ option.css_not_available {
     color: #ccc;
 }
 
+$-arrow-url: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='175' height='100' fill='#000'><polygon points='0,0 100,0 50,50'/></svg>");
+
 select.form-select.css_attribute_select {
-    background-image: str-replace(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='175' height='100' fill='#{$input-color}'><polygon points='0,0 100,0 50,50'/></svg>"), "#", "%23") ;
-    background-size: 20px;
-    background-position: 100% 65%;
-    background-repeat: no-repeat;
     max-width: 400px;
+
+    &:not([multiple]):where(:not([size]), [size="1"]) {
+        background-image: str-replace($-arrow-url, "#000", str-replace(#{$input-color}, "#", "%23"));
+        background-size: 20px;
+        background-position: 100% 65%;
+        background-repeat: no-repeat;
+
+        &:disabled {
+            background-image: str-replace($-arrow-url, "#000", str-replace(#{$form-select-disabled-color}, "#", "%23"));
+        }
+    }
+}
+// In the case of a modal, we cannot rely on '$input-color' to define the color
+// of the select arrow because '$input-color' is set based on the background
+// color of the body. In modals, the input color is adjusted based on the
+// modal's background color (see 'bootstrap_review_frontend.scss').
+@if ($modal-content-color == null) and ($form-select-bg == $body-bg) {
+    .modal-content {
+        select.form-select.css_attribute_select {
+            background-image: str-replace($-arrow-url, "#000", str-replace(#{color-contrast($modal-content-bg)}, "#", "%23"));
+        }
+    }
 }
 
 label, .o_variant_pills {
@@ -102,23 +126,6 @@ label.css_attribute_color.css_not_available {
         background: str-replace(url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='39' height='39'><line y2='0' x2='39' y1='39' x1='0' style='stroke:#{map-get($theme-colors, 'danger')};stroke-width:2'/><line y2='1' x2='40' y1='40' x1='1' style='stroke:rgb(255,255,255);stroke-width:1'/></svg>"), "#", "%23") ;
         background-position: center;
         background-repeat: no-repeat;
-    }
-}
-
-.radio_input_value, select, label {
-    .badge {
-        margin-left: 3px;
-        padding-left: 3px;
-    }
-
-    .sign_badge_price_extra {
-        display: inline-block;
-        width: 1rem;
-        height: 1rem;
-        color: map-get($theme-colors, 'primary');
-        background: white;
-        line-height: 1rem;
-        border-radius: 50%;
     }
 }
 
@@ -204,6 +211,23 @@ label.css_attribute_color.css_not_available {
             opacity: 0;
         }
     }
+
+    .radio_input_value, select, label {
+        .badge {
+            margin-left: 3px;
+            padding-left: 3px;
+        }
+
+        .sign_badge_price_extra {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            color: map-get($theme-colors, 'primary');
+            background: white;
+            line-height: 1rem;
+            border-radius: 50%;
+        }
+    }
 }
 
 .o_product_configurator {
@@ -224,6 +248,12 @@ label.css_attribute_color.css_not_available {
 
 .modal.o_technical_modal .oe_advanced_configurator_modal .btn.js_add_cart_json {
     padding: 0.075rem 0.75rem;
+}
+
+@include media-breakpoint-down(md) {
+    .oe_advanced_configurator_modal th.td-img + th {
+        display: none;
+    }
 }
 
 .js_product {

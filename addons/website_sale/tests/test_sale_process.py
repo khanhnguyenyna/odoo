@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+import logging
+from unittest.mock import patch
+
 from werkzeug.exceptions import Forbidden
 
 import odoo.tests
@@ -9,6 +12,8 @@ from odoo import api, Command
 from odoo.addons.base.tests.common import HttpCaseWithUserDemo, TransactionCaseWithUserDemo, HttpCaseWithUserPortal
 from odoo.addons.website_sale.controllers.main import WebsiteSale
 from odoo.addons.website.tools import MockRequest
+
+_logger = logging.getLogger(__name__)
 
 
 @odoo.tests.tagged('post_install', '-at_install')
@@ -40,6 +45,8 @@ class TestUi(HttpCaseWithUserDemo):
         self.product_product_11_product_template = self.env['product.template'].create({
             'name': 'Conference Chair',
             'list_price': 16.50,
+            'website_published': True,
+            'sale_ok': True,
             'accessory_product_ids': [(4, product_product_7.id)],
         })
         self.env['product.template.attribute.line'].create({
@@ -52,6 +59,9 @@ class TestUi(HttpCaseWithUserDemo):
             'name': 'Chair floor protection',
             'list_price': 12.0,
         })
+        # Crappy hack: But otherwise the "Proceed To Checkout" modal button won't be displayed
+        if 'optional_product_ids' in self.env['product.template']:
+            self.product_product_11_product_template.optional_product_ids = [(6, 0, self.product_product_1_product_template.ids)]
 
         self.env['account.journal'].create({'name': 'Cash - Test', 'type': 'cash', 'code': 'CASH - Test'})
 
@@ -68,6 +78,9 @@ class TestUi(HttpCaseWithUserDemo):
 
     def test_01_admin_shop_tour(self):
         self.start_tour(self.env['website'].get_client_action_url('/shop'), 'shop', login='admin')
+
+    def test_01_cart_update_check(self):
+        self.start_tour('/', 'shop_update_cart', login='admin')
 
     def test_02_admin_checkout(self):
         if self.env['ir.module.module']._get('payment_custom').state != 'installed':
@@ -103,6 +116,7 @@ class TestUi(HttpCaseWithUserDemo):
             'is_published': True,
         })
         transfer_provider._transfer_ensure_pending_msg_is_set()
+        self.env.company.country_id = self.env.ref('base.us')
         tax_group = self.env['account.tax.group'].create({'name': 'Tax 15%'})
         tax = self.env['account.tax'].create({
             'name': 'Tax 15%',
@@ -130,9 +144,21 @@ class TestUi(HttpCaseWithUserDemo):
         self.start_tour("/", 'website_sale_tour_2', login="admin")
 
     def test_05_google_analytics_tracking(self):
+        if not odoo.tests.loaded_demo_data(self.env):
+            _logger.warning("This test relies on demo data. To be rewritten independently of demo data for accurate and reliable results.")
+            return
         self.env['website'].browse(1).write({'google_analytics_key': 'G-XXXXXXXXXXX'})
         self.start_tour("/shop", 'google_analytics_view_item')
         self.start_tour("/shop", 'google_analytics_add_to_cart')
+
+    def test_update_same_address_billing_shipping_edit(self):
+        ''' Phone field should be required when updating an adress for billing and shipping '''
+        self.env['product.product'].create({
+            'name': 'Office Chair Black TEST',
+            'list_price': 12.50,
+            'is_published': True,
+        })
+        self.start_tour("/shop", 'update_billing_shipping_address', login="admin")
 
 
 @odoo.tests.tagged('post_install', '-at_install')
@@ -143,6 +169,9 @@ class TestWebsiteSaleCheckoutAddress(TransactionCaseWithUserDemo, HttpCaseWithUs
 
     def setUp(self):
         super().setUp()
+        self.partner_demo.company_id = self.env.ref('base.main_company')
+        self.website = self.env.ref('website.default_website')
+        self.country_id = self.env.ref('base.be').id
         self.WebsiteSaleController = WebsiteSale()
         self.default_address_values = {
             'name': 'a res.partner address', 'email': 'email@email.email', 'street': 'ooo',
@@ -215,8 +244,8 @@ class TestWebsiteSaleCheckoutAddress(TransactionCaseWithUserDemo, HttpCaseWithUs
         self.env.user.company_id = self.company_a
 
         self.demo_user = self.user_demo
-        self.demo_user.company_ids += self.company_c
-        self.demo_user.company_id = self.company_c
+        self.demo_user.company_ids += self.company_b
+        self.demo_user.company_id = self.company_b
         self.demo_partner = self.demo_user.partner_id
 
         self.portal_user = self.user_portal
@@ -246,7 +275,7 @@ class TestWebsiteSaleCheckoutAddress(TransactionCaseWithUserDemo, HttpCaseWithUs
             # 2. Logged in user/internal user, should not edit name or email address of billing
             self.default_address_values['partner_id'] = self.demo_partner.id
             self.WebsiteSaleController.address(**self.default_billing_address_values)
-            self.assertEqual(self.demo_partner.company_id, self.company_c, "Logged in user edited billing (the partner itself) should not get its company modified.")
+            self.assertEqual(self.demo_partner.company_id, self.company_b, "Logged in user edited billing (the partner itself) should not get its company modified.")
             self.assertNotEqual(self.demo_partner.name, self.default_address_values['name'], "Employee cannot change their name during the checkout process.")
             self.assertNotEqual(self.demo_partner.email, self.default_address_values['email'], "Employee cannot change their email during the checkout process.")
 
@@ -271,6 +300,45 @@ class TestWebsiteSaleCheckoutAddress(TransactionCaseWithUserDemo, HttpCaseWithUs
             self.default_address_values['partner_id'] = new_partner.id
             self.WebsiteSaleController.address(**self.default_billing_address_values)
             self.assertEqual(new_partner.company_id, self.website.company_id, "Public user edited billing (the partner itself) should not get its company modified.")
+
+    def test_03_carrier_rate_on_shipping_address_change(self):
+        """ Test that when a shipping address is changed the price of delivery is recalculated
+        and updated on the order."""
+        # Create a dummy carrier.
+        dummy_delivery_product = self.env['product.product'].create({
+            'name': 'Dummy',
+            'type': 'service',
+            'categ_id': self.env.ref('delivery.product_category_deliveries').id,
+        })
+        carrier = self.env['delivery.carrier'].create({
+            'name': 'Fixed',
+            'product_id': dummy_delivery_product.id,
+            'website_published': True,
+        })
+        partner = self.env.user.partner_id
+        order = self._create_so(partner.id)
+        order.carrier_id = carrier.id  # Set the carrier on the order.
+        shipping_partner_values = {'name': 'dummy', 'parent_id': partner.id, 'type': 'delivery'}
+        shipping_partner = self.env['res.partner'].create(shipping_partner_values)
+        with MockRequest(self.env, website=self.website, sale_order_id=order.id):
+            with patch(
+                'odoo.addons.delivery.models.delivery_carrier.DeliveryCarrier.rate_shipment',
+                return_value={'success': True, 'price': 10, 'warning_message': ''}
+            ) as rate_shipment_mock:
+                # Change a shipping address of the order in the checkout.
+                self.WebsiteSaleController.update_cart_address(
+                    partner_id=shipping_partner.id, mode='shipping'
+                )
+                self.assertGreaterEqual(
+                    rate_shipment_mock.call_count,
+                    1,
+                    msg="The carrier rate must be recalculated when shipping address is changed.",
+                )
+                self.assertEqual(
+                    order.order_line.filtered(lambda l: l.is_delivery)[0].price_unit,
+                    10,
+                    msg="The recalculated delivery price must be updated on the order.",
+                )
 
     def test_04_apply_empty_pl(self):
         ''' Ensure empty pl code reset the applied pl '''
@@ -352,6 +420,11 @@ class TestWebsiteSaleCheckoutAddress(TransactionCaseWithUserDemo, HttpCaseWithUs
         self._setUp_multicompany_env()
         so = self._create_so(self.portal_partner.id)
 
+        self.env['sale.order'].create({
+            'partner_id': self.partner_portal.id,
+            'state': 'sent',
+        })
+
         env = api.Environment(self.env.cr, self.portal_user.id, {})
         # change also website env for `sale_get_order` to not change order partner_id
         with MockRequest(env, website=self.website.with_env(env), sale_order_id=so.id) as req:
@@ -374,16 +447,17 @@ class TestWebsiteSaleCheckoutAddress(TransactionCaseWithUserDemo, HttpCaseWithUs
             Check that the sale order is updated when you change fiscal position.
             Change fiscal position by modifying address during checkout process.
         """
+        self.env.company.country_id = self.env.ref('base.us')
         partner = self.env['res.partner'].create({'name': 'test'})
         be_address_POST, nl_address_POST = [
             {
-                'name': 'Test name', 'email': 'test@email.com', 'street': 'test',
+                'name': 'Test name', 'email': 'test@email.com', 'street': 'test', 'phone': '+333333333333333',
                 'city': 'test', 'zip': '3000', 'country_id': self.env.ref('base.be').id, 'submitted': 1,
                 'partner_id': partner.id,
                 'callback': '/shop/checkout',
             },
             {
-                'name': 'Test name', 'email': 'test@email.com', 'street': 'test',
+                'name': 'Test name', 'email': 'test@email.com', 'street': 'test', 'phone': '+333333333333333',
                 'city': 'test', 'zip': '3000', 'country_id': self.env.ref('base.nl').id, 'submitted': 1,
                 'partner_id': partner.id,
                 'callback': '/shop/checkout',
@@ -683,3 +757,32 @@ class TestWebsiteSaleCheckoutAddress(TransactionCaseWithUserDemo, HttpCaseWithUs
         })
         invoice.action_post()
         self.assertFalse(partner_1._can_edit_name())
+
+    def test_11_payment_term_when_address_change(self):
+        ''' This test ensures that the payment term set when triggering
+            `onchange_partner_id` by changing the address of a website sale
+            order is computed by `sale_get_payment_term`.
+        '''
+        self._setUp_multicompany_env()
+        product_id = self.env['product.product'].create({
+            'name': 'Product A',
+            'list_price': 100,
+            'website_published': True,
+            'sale_ok': True}).id
+
+        env = api.Environment(self.env.cr, self.portal_user.id, {})
+        with MockRequest(env, website=self.website.with_env(env).with_context(website_id=self.website.id)) as req:
+            req.httprequest.method = "POST"
+
+            self.WebsiteSaleController.cart_update(product_id)
+            so = self.portal_user.sale_order_ids[0]
+            self.assertTrue(so.payment_term_id, "A payment term should be set by default on the sale order")
+
+            self.default_address_values['partner_id'] = self.portal_partner.id
+            self.default_address_values['name'] = self.portal_partner.name
+            self.WebsiteSaleController.address(**self.default_address_values)
+            self.assertTrue(so.payment_term_id, "A payment term should still be set on the sale order")
+
+            so.website_id = False
+            self.WebsiteSaleController.address(**self.default_address_values)
+            self.assertFalse(so.payment_term_id, "The website default payment term should not be set on a sale order not coming from the website")

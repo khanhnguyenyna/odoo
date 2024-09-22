@@ -67,14 +67,14 @@
 
             .o_stat_text {
                 @extend %-stat-button-text;
+                
+                .o_field_empty {
+                    display: none;
+                }
             }
 
             .o_stat_value {
                 @extend %-stat-button-value;
-            }
-
-            .o_field_empty {
-                display: none;
             }
         }
 
@@ -138,7 +138,6 @@
         }
 
         .o_dropdown_more {
-            width: 150px;
 
             .oe_stat_button {
                 height: auto;

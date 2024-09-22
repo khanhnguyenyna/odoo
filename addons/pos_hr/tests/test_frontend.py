@@ -24,7 +24,8 @@ class TestPosHrHttpCommon(TestPointOfSaleHttpCommon):
         })
 
         # User employee
-        emp1 = cls.env.ref("hr.employee_han").sudo().copy({
+        emp1 = cls.env['hr.employee'].create({
+            'name': 'Test Employee 1',
             "company_id": cls.env.company.id,
         })
         emp1_user = new_test_user(
@@ -37,7 +38,8 @@ class TestPosHrHttpCommon(TestPointOfSaleHttpCommon):
         emp1.write({"name": "Pos Employee1", "pin": "2580", "user_id": emp1_user.id})
 
         # Non-user employee
-        emp2 = cls.env.ref("hr.employee_jve").sudo().copy({
+        emp2 = cls.env['hr.employee'].create({
+            'name': 'Test Employee 2',
             "company_id": cls.env.company.id,
         })
         emp2.write({"name": "Pos Employee2", "pin": "1234"})
@@ -57,5 +59,15 @@ class TestUi(TestPosHrHttpCommon):
         self.start_tour(
             "/pos/ui?config_id=%d" % self.main_pos_config.id,
             "PosHrTour",
+            login="pos_admin",
+        )
+
+    def test_cashier_stay_logged_in(self):
+        # open a session, the /pos/ui controller will redirect to it
+        self.main_pos_config.with_user(self.pos_admin).open_ui()
+
+        self.start_tour(
+            "/pos/ui?config_id=%d" % self.main_pos_config.id,
+            "CashierStayLogged",
             login="pos_admin",
         )

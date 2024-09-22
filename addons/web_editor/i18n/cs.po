@@ -3,19 +3,21 @@
 # 	* web_editor
 # 
 # Translators:
-# Jiří Podhorecký, 2023
+# Jiří Podhorecký <jirka.p@volny.cz>, 2023
 # Martin Trigaux, 2023
 # Ivana Bartonkova, 2023
 # Jakub Smolka, 2023
-# Wil Odoo, 2023
+# Aleš Fiala <f.ales1@seznam.cz>, 2024
+# Wil Odoo, 2024
+# Tereza Mokrá, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Tereza Mokrá, 2024\n"
 "Language-Team: Czech (https://app.transifex.com/odoo/teams/41243/cs/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -109,7 +111,7 @@ msgstr "1x"
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "2 columns"
-msgstr ""
+msgstr "2 sloupce"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
@@ -134,14 +136,14 @@ msgstr "2x"
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "3 Stars"
-msgstr ""
+msgstr "3 hvězdičky"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "3 columns"
-msgstr ""
+msgstr "3 sloupce"
 
 #. module: web_editor
 #. odoo-javascript
@@ -156,7 +158,7 @@ msgstr "3x"
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "4 columns"
-msgstr ""
+msgstr "4 sloupce"
 
 #. module: web_editor
 #. odoo-javascript
@@ -171,7 +173,7 @@ msgstr "4x"
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "5 Stars"
-msgstr ""
+msgstr "5 hvězdiček"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
@@ -189,27 +191,27 @@ msgstr "5x"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "90"
-msgstr ""
+msgstr "90"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "<span class=\"flex-grow-0 ms-1 text-white-50\">%</span>"
-msgstr ""
+msgstr "<span class=\"flex-grow-0 ms-1 text-white-50\">%</span>"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "<span class=\"flex-grow-0 ms-1 text-white-50\">deg</span>"
-msgstr ""
+msgstr "<span class=\"flex-grow-0 ms-1 text-white-50\">stupňů</span>"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "<span class=\"me-2 ms-3\">Y</span>"
-msgstr ""
+msgstr "<span class=\"me-2 ms-3\">Y</span>"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "<span class=\"me-2\">X</span>"
-msgstr ""
+msgstr "<span class=\"me-2\">X</span>"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
@@ -245,6 +247,13 @@ msgstr "<span>Bloky</span>"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippets
 msgid "<span>Customize</span>"
+msgstr "<span>Přizpůsobit</span>"
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/snippets.xml:0
+#, python-format
+msgid "ACCESS OPTIONS ANYWAY"
 msgstr ""
 
 #. module: web_editor
@@ -259,7 +268,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Above"
-msgstr ""
+msgstr "Výše"
 
 #. module: web_editor
 #. odoo-javascript
@@ -281,17 +290,18 @@ msgstr "Přidat"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Add Column"
-msgstr ""
+msgstr "Přidat sloupec"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Add Row"
-msgstr ""
+msgstr "Přidat řádek"
 
 #. module: web_editor
 #. odoo-javascript
+#: code:addons/web_editor/static/src/components/media_dialog/document_selector.js:0
 #: code:addons/web_editor/static/src/components/media_dialog/image_selector.js:0
 #, python-format
 msgid "Add URL"
@@ -309,7 +319,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Add a button"
-msgstr ""
+msgstr "Přidat tlačítko"
 
 #. module: web_editor
 #. odoo-javascript
@@ -323,7 +333,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Add a link"
-msgstr ""
+msgstr "Přidat odkaz"
 
 #. module: web_editor
 #. odoo-javascript
@@ -331,13 +341,6 @@ msgstr ""
 #, python-format
 msgid "Add an emoji"
 msgstr "Přidat emoji"
-
-#. module: web_editor
-#. odoo-javascript
-#: code:addons/web_editor/static/src/components/media_dialog/document_selector.js:0
-#, python-format
-msgid "Add document"
-msgstr "Přidat dokument"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
@@ -364,17 +367,17 @@ msgstr "Upozornění"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Align Center"
-msgstr ""
+msgstr "Zarovnat na střed"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Align Left"
-msgstr ""
+msgstr "Zarovnat vlevo"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Align Right"
-msgstr ""
+msgstr "Zarovnat vpravo"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
@@ -393,7 +396,7 @@ msgstr "Vše"
 #: code:addons/web_editor/static/src/components/media_dialog/document_selector.js:0
 #, python-format
 msgid "All documents have been loaded"
-msgstr ""
+msgstr "Všechny dokumenty byly načteny"
 
 #. module: web_editor
 #. odoo-javascript
@@ -412,11 +415,11 @@ msgstr ""
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Alt tag"
-msgstr ""
+msgstr "Alt značka"
 
 #. module: web_editor
 #. odoo-javascript
-#: code:addons/web_editor/static/src/components/media_dialog/file_selector.js:0
+#: code:addons/web_editor/static/src/components/media_dialog/image_selector.js:0
 #, python-format
 msgid "An error occurred while fetching the entered URL."
 msgstr ""
@@ -424,7 +427,7 @@ msgstr ""
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Angle"
-msgstr ""
+msgstr "Úhel"
 
 #. module: web_editor
 #. odoo-javascript
@@ -462,7 +465,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/components/media_dialog/file_selector.js:0
 #, python-format
 msgid "Are you sure you want to delete this file?"
-msgstr ""
+msgstr "Opravdu chcete tento soubor odstranit?"
 
 #. module: web_editor
 #. odoo-javascript
@@ -577,14 +580,14 @@ msgstr "Jádro"
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Basic blocks"
-msgstr ""
+msgstr "Základní bloky"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Below"
-msgstr ""
+msgstr "Níže"
 
 #. module: web_editor
 #. odoo-javascript
@@ -644,7 +647,7 @@ msgstr "Barva ohraničení"
 #: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
 #, python-format
 msgid "Border Style"
-msgstr ""
+msgstr "Styl okraje"
 
 #. module: web_editor
 #. odoo-javascript
@@ -673,7 +676,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Bulleted list"
-msgstr ""
+msgstr "Seznam s odrážkami"
 
 #. module: web_editor
 #. odoo-javascript
@@ -727,7 +730,7 @@ msgstr "Kontrolní seznam"
 #: code:addons/web_editor/static/src/js/editor/snippets.options.js:0
 #, python-format
 msgid "Choose a record..."
-msgstr ""
+msgstr "Vyberte záznam..."
 
 #. module: web_editor
 #. odoo-javascript
@@ -881,6 +884,13 @@ msgid "Could not install module %s"
 msgstr ""
 
 #. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/components/upload_progress_toast/upload_service.js:0
+#, python-format
+msgid "Could not load the file \"%s\"."
+msgstr ""
+
+#. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Cover"
 msgstr "Obálka"
@@ -911,7 +921,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Create an URL."
-msgstr ""
+msgstr "Vytvořit URL."
 
 #. module: web_editor
 #: model:ir.model.fields,field_description:web_editor.field_web_editor_converter_test_sub__create_uid
@@ -993,7 +1003,7 @@ msgstr "Výchozí + zaokrouhlit"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Define a custom gradient"
-msgstr ""
+msgstr "Definujte vlastní přechod"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1040,7 +1050,7 @@ msgstr "Zrušit"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippets
 msgid "Discard record"
-msgstr ""
+msgstr "Zahodit záznam"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1117,7 +1127,7 @@ msgstr "Poklepáním upravte"
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "Drag and drop the building block."
-msgstr ""
+msgstr "Přetáhněte stavební blok."
 
 #. module: web_editor
 #. odoo-javascript
@@ -1130,14 +1140,14 @@ msgstr "Duplicitní kontejner"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Dynamic Colors"
-msgstr ""
+msgstr "Dynamické barvy"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/backend/html_field.js:0
 #, python-format
 msgid "Dynamic Placeholder"
-msgstr ""
+msgstr "Dynamický zástupce"
 
 #. module: web_editor
 #. odoo-python
@@ -1161,53 +1171,53 @@ msgstr "Upravit obrázek"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Edit media description"
-msgstr ""
+msgstr "Upravit popis médií"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Embed Image"
-msgstr ""
+msgstr "Vložit obrázek"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Embed Youtube Video"
-msgstr ""
+msgstr "Vložit Youtube video"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Embed the image in the document."
-msgstr ""
+msgstr "Vložit obrázek do dokumentu."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Embed the youtube video in the document."
-msgstr ""
+msgstr "Vložit youtube video do dokumentu."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Emoji"
-msgstr ""
+msgstr "Emoji"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Empty quote"
-msgstr ""
+msgstr "Prázdná citace"
 
 #. module: web_editor
 #. odoo-javascript
-#: code:addons/web_editor/static/src/components/media_dialog/file_selector.js:0
+#: code:addons/web_editor/static/src/components/media_dialog/image_selector.js:0
 #, python-format
 msgid "Error"
 msgstr "Chyba"
@@ -1215,22 +1225,22 @@ msgstr "Chyba"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Extend to the closest corner"
-msgstr ""
+msgstr "Prodloužit k nejbližšímu rohu"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Extend to the closest side"
-msgstr ""
+msgstr "Prodloužit k nejbližší straně"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Extend to the farthest corner"
-msgstr ""
+msgstr "Prodloužit ke vzdálenějšímu rohu"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Extend to the farthest side"
-msgstr ""
+msgstr "Prodloužit ke vzdálenější straně"
 
 #. module: web_editor
 #: model:ir.model,name:web_editor.model_html_field_history_mixin
@@ -1242,7 +1252,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/components/upload_progress_toast/upload_progress_toast.xml:0
 #, python-format
 msgid "File has been uploaded"
-msgstr ""
+msgstr "Soubor byl aktualizován"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1290,12 +1300,12 @@ msgstr "Paušál"
 #: code:addons/web_editor/static/src/js/wysiwyg/widgets/image_crop.js:0
 #, python-format
 msgid "Flexible"
-msgstr ""
+msgstr "Flexibilní"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Flip"
-msgstr ""
+msgstr "Převrátit"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1314,7 +1324,7 @@ msgstr "Převrátit svisle"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Floating shapes"
-msgstr ""
+msgstr "Plovoucí tvary"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1342,7 +1352,7 @@ msgstr "Velikost písma"
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "For technical reasons, this block cannot be dropped here"
-msgstr ""
+msgstr "Z technických důvodů zde tento blok nelze vypustit"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1389,7 +1399,14 @@ msgstr ""
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/wysiwyg/widgets/chatgpt_alternatives_dialog.xml:0
 #, python-format
-msgid "Generating alternatives..."
+msgid "Generating"
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/js/wysiwyg/widgets/chatgpt_alternatives_dialog.xml:0
+#, python-format
+msgid "Generating an alternative..."
 msgstr ""
 
 #. module: web_editor
@@ -1413,7 +1430,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/snippets.xml:0
 #, python-format
 msgid "Gradient"
-msgstr ""
+msgstr "Přechod"
 
 #. module: web_editor
 #: model:ir.model,name:web_editor.model_ir_http
@@ -1497,7 +1514,7 @@ msgstr "Nadpis 6"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Heading 1"
-msgstr ""
+msgstr "Nadpis 1"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1506,7 +1523,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Heading 2"
-msgstr ""
+msgstr "Nadpis 2"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1515,7 +1532,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Heading 3"
-msgstr ""
+msgstr "Nadpis 3"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1523,7 +1540,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Heading 4"
-msgstr ""
+msgstr "Nadpis 4"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1531,7 +1548,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Heading 5"
-msgstr ""
+msgstr "Nadpis 5"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1539,7 +1556,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Heading 6"
-msgstr ""
+msgstr "Nadpis 6"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1555,13 +1572,6 @@ msgstr "Výška"
 #, python-format
 msgid "Hide Dailymotion logo"
 msgstr "Skrýt logo Dailymotion"
-
-#. module: web_editor
-#. odoo-javascript
-#: code:addons/web_editor/static/src/components/media_dialog/video_selector.js:0
-#, python-format
-msgid "Hide Youtube logo"
-msgstr "Skrýt Youtube logo"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1630,42 +1640,42 @@ msgstr "Ikona"
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "Icon Formatting"
-msgstr ""
+msgstr "Formátování ikony"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Icon size 1x"
-msgstr ""
+msgstr "Ikona velikost 1x"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Icon size 2x"
-msgstr ""
+msgstr "Ikona velikost 2x"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Icon size 3x"
-msgstr ""
+msgstr "Ikona velikost 3x"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Icon size 4x"
-msgstr ""
+msgstr "Ikona velikost 4x"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Icon size 5x"
-msgstr ""
+msgstr "Ikona velikost 5x"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1699,7 +1709,7 @@ msgstr "Obrázek"
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "Image Formatting"
-msgstr ""
+msgstr "Formátování obrázku"
 
 #. module: web_editor
 #: model:ir.model.fields,field_description:web_editor.field_ir_attachment__image_height
@@ -1721,7 +1731,7 @@ msgstr "Image Width"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Image padding"
-msgstr ""
+msgstr "Výplň obrázku"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
@@ -1733,7 +1743,7 @@ msgstr "Inkwell"
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "Inline Text"
-msgstr ""
+msgstr "Vložený text"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1749,7 +1759,7 @@ msgstr "Vložit"
 #: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
 #, python-format
 msgid "Insert a Link / Button"
-msgstr ""
+msgstr "Vložit odkaz / tlačítko"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1798,7 +1808,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Insert a video"
-msgstr ""
+msgstr "Vložit video"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1812,14 +1822,14 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Insert above"
-msgstr ""
+msgstr "Vložit výše"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Insert an image"
-msgstr ""
+msgstr "Vložit obrázek"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1833,42 +1843,44 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Insert below"
-msgstr ""
+msgstr "Vložit níže"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
+#: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Insert left"
-msgstr ""
+msgstr "Vložit vlevo"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Insert media"
-msgstr ""
+msgstr "Vložit média"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Insert or edit link"
-msgstr ""
+msgstr "Vložit nebo upravit odkaz"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/backend/html_field.js:0
 #, python-format
 msgid "Insert personalized content"
-msgstr ""
+msgstr "Vložit personalizovaný obsah"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
+#: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Insert right"
-msgstr ""
+msgstr "Vložit vpravo"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1896,7 +1908,7 @@ msgstr "Instalovat %s"
 #: code:addons/web_editor/models/ir_ui_view.py:0
 #, python-format
 msgid "Invalid field value for %s: %s"
-msgstr ""
+msgstr "Neplatná hodnota pole pro %s: %s"
 
 #. module: web_editor
 #. odoo-javascript
@@ -1951,7 +1963,7 @@ msgstr "Vlevo"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Light"
-msgstr ""
+msgstr "Světlo"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
@@ -1999,7 +2011,7 @@ msgstr "Styl odkazu"
 #: code:addons/web_editor/static/src/js/wysiwyg/widgets/link_popover_widget.js:0
 #, python-format
 msgid "Link copied to clipboard."
-msgstr ""
+msgstr "Odkaz byl zkopírován do schránky."
 
 #. module: web_editor
 #. odoo-javascript
@@ -2035,14 +2047,14 @@ msgstr "Smyčka"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Main Color"
-msgstr ""
+msgstr "Hlavní barva"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/backend/html_field.js:0
 #, python-format
 msgid "Marketing Tools"
-msgstr ""
+msgstr "Marketingové nástroje"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
@@ -2102,10 +2114,11 @@ msgstr "Více informací o této aplikaci."
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Move down"
-msgstr ""
+msgstr "Přesunout dolů"
 
 #. module: web_editor
 #. odoo-javascript
+#: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Move left"
@@ -2113,6 +2126,7 @@ msgstr "Pohyb doleva"
 
 #. module: web_editor
 #. odoo-javascript
+#: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Move right"
@@ -2123,7 +2137,7 @@ msgstr "Pohyb vpravo"
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Move up"
-msgstr ""
+msgstr "Přesunout nahoru"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2144,7 +2158,7 @@ msgstr "Název"
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Navigation"
-msgstr ""
+msgstr "Navigace"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2158,7 +2172,7 @@ msgstr "Ne"
 #: code:addons/web_editor/static/src/js/wysiwyg/widgets/link_popover_widget.js:0
 #, python-format
 msgid "No URL specified"
-msgstr ""
+msgstr "Nebyla zadána žádná adresa URL"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2172,7 +2186,7 @@ msgstr "Nebyly nalezeny žádné dokumenty."
 #: code:addons/web_editor/static/src/components/history_dialog/history_dialog.xml:0
 #, python-format
 msgid "No history"
-msgstr ""
+msgstr "Žádná historie"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2193,21 +2207,21 @@ msgstr "Žádné místo k vložení"
 #: code:addons/web_editor/static/src/js/editor/snippets.options.js:0
 #, python-format
 msgid "No more records"
-msgstr ""
+msgstr "Žádné další záznamy"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/components/media_dialog/icon_selector.xml:0
 #, python-format
 msgid "No pictograms found."
-msgstr ""
+msgstr "Nebyly nalezeny žádné piktogramy."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/backend/html_field.js:0
 #, python-format
 msgid "No videos"
-msgstr ""
+msgstr " Žádná videa"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2235,12 +2249,12 @@ msgstr "Normální"
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Numbered list"
-msgstr ""
+msgstr "Číslovaný seznam"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.tests
 msgid "Odoo Editor Tests"
-msgstr ""
+msgstr "Testy Odoo editoru"
 
 #. module: web_editor
 #. odoo-python
@@ -2273,7 +2287,7 @@ msgstr "Originální (neoptimalizovaná, nezměněná) příloha"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Origins"
-msgstr ""
+msgstr "Zdroje"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2289,7 +2303,7 @@ msgstr "Obrys"
 #: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
 #, python-format
 msgid "Outline + Rounded"
-msgstr ""
+msgstr "Obrys + zaoblený"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2301,14 +2315,14 @@ msgstr ""
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Padding"
-msgstr ""
+msgstr "Výplň"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "Page Options"
-msgstr ""
+msgstr "Možnosti stránky"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
@@ -2327,18 +2341,25 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Paste as URL"
-msgstr ""
+msgstr "Vložit adresu URL"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Patterns"
-msgstr ""
+msgstr "Vzory"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Position"
 msgstr "Pozice"
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/snippets.xml:0
+#, python-format
+msgid "Preset #{number}"
+msgstr ""
 
 #. module: web_editor
 #. odoo-javascript
@@ -2356,6 +2377,13 @@ msgstr "Náhled"
 #, python-format
 msgid "Primary"
 msgstr "Hlavní"
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/components/upload_progress_toast/upload_progress_toast.xml:0
+#, python-format
+msgid "Progress bar"
+msgstr ""
 
 #. module: web_editor
 #: model:ir.model.fields.selection,name:web_editor.selection__web_editor_converter_test__selection_str__c
@@ -2466,9 +2494,16 @@ msgid "Qweb Field qweb"
 msgstr "QWeb pole qweb"
 
 #. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/snippets.xml:0
+#, python-format
+msgid "REPLACE BY NEW VERSION"
+msgstr ""
+
+#. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Radial"
-msgstr ""
+msgstr "Radiální"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2480,14 +2515,14 @@ msgstr "Pole jen pro čtení"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Redirect the user elsewhere when he clicks on the media."
-msgstr ""
+msgstr "Přesměrovat uživatele jinam, když klikne na média."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Remove (DELETE)"
-msgstr ""
+msgstr "Odebrat (SMAZAT)"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2502,33 +2537,33 @@ msgstr "Odstranit blok"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Remove Current"
-msgstr ""
+msgstr "Odebrat aktuální"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.colorpicker
 msgid "Remove Selected Color"
-msgstr ""
+msgstr "Odebrat vybranou barvu"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Remove columns"
-msgstr ""
+msgstr "Odebrat sloupec"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Remove format"
-msgstr ""
+msgstr "Odebrat formát"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Remove link"
-msgstr ""
+msgstr "Odebrat odkaz"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2572,7 +2607,7 @@ msgstr "Resetovat"
 #: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
 #, python-format
 msgid "Reset Image"
-msgstr ""
+msgstr "Obnovit obrázek"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2580,17 +2615,17 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Reset Size"
-msgstr ""
+msgstr "Obnovit velikost"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Reset crop"
-msgstr ""
+msgstr "Obnovit ořez"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Reset transformation"
-msgstr ""
+msgstr "Obnovit transformaci"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2605,7 +2640,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 #, python-format
 msgid "Resize Default"
-msgstr ""
+msgstr "Změnit výchozí velikost"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2613,7 +2648,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 #, python-format
 msgid "Resize Full"
-msgstr ""
+msgstr "Změnit velikost celého"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2675,7 +2710,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Row"
-msgstr ""
+msgstr "Řádek"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2714,7 +2749,7 @@ msgstr "Uložit a obnovit"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippets
 msgid "Save record"
-msgstr ""
+msgstr "Uložit záznam"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2740,28 +2775,28 @@ msgstr "Hledejte obrázek"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippets
 msgid "Search for a block (e.g. numbers, image wall, ...)"
-msgstr ""
+msgstr "Hledat blok (např. čísla, obrázková zeď, ...)"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/snippets.options.js:0
 #, python-format
 msgid "Search for records..."
-msgstr ""
+msgstr "Hledat záznamy..."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/snippets.options.js:0
 #, python-format
 msgid "Search more..."
-msgstr ""
+msgstr "Vyhledat více..."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/js/editor/snippets.options.js:0
 #, python-format
 msgid "Search to show more records"
-msgstr ""
+msgstr "Vyhledejte pro zobrazení více záznamů"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2775,14 +2810,14 @@ msgstr "Sekundární"
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "Select a block on your page to style it."
-msgstr ""
+msgstr "Vyberte blok na stránce, který chcete upravit."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/components/media_dialog/media_dialog.js:0
 #, python-format
 msgid "Select a media"
-msgstr ""
+msgstr "Vyberte média"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2828,7 +2863,7 @@ msgstr "Tvar"
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 #, python-format
 msgid "Shape: Circle"
-msgstr ""
+msgstr "Tvar: Kruh"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2836,7 +2871,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 #, python-format
 msgid "Shape: Rounded"
-msgstr ""
+msgstr "Tvar: Kulatý"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2844,7 +2879,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 #, python-format
 msgid "Shape: Thumbnail"
-msgstr ""
+msgstr "Tvar: Miniatura"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
@@ -2861,7 +2896,7 @@ msgstr "Zobrazit optimalizované obrázky"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Show/Hide on Mobile"
-msgstr ""
+msgstr "Zobrazit/Skrýt v mobilu"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2884,27 +2919,27 @@ msgstr "Velikost"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Size 1x"
-msgstr ""
+msgstr "Velikost 1x"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Size 2x"
-msgstr ""
+msgstr "Velikost 2x"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Size 3x"
-msgstr ""
+msgstr "Velikost 3x"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Size 4x"
-msgstr ""
+msgstr "Velikost 4x"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Size 5x"
-msgstr ""
+msgstr "Velikost 5x"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2942,7 +2977,7 @@ msgstr "Pevný"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Solids"
-msgstr ""
+msgstr "Pevné"
 
 #. module: web_editor
 #. odoo-javascript
@@ -2952,6 +2987,8 @@ msgid ""
 "Someone with escalated rights previously modified this area, you are "
 "therefore not able to modify it yourself."
 msgstr ""
+"Někdo s eskalovanými právy dříve upravil tuto oblast, nemůžete ji proto "
+"upravit sami."
 
 #. module: web_editor
 #. odoo-python
@@ -2970,7 +3007,7 @@ msgstr ""
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Specials"
-msgstr ""
+msgstr "Speciální"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3028,7 +3065,7 @@ msgstr "Návrhy"
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Switch direction"
-msgstr ""
+msgstr "Přepnout směr"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3049,7 +3086,7 @@ msgstr "Tabulka"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Table Options"
-msgstr ""
+msgstr "Možnosti tabulky"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3072,14 +3109,14 @@ msgstr "Barva textu"
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Text align"
-msgstr ""
+msgstr "Zarovnání textu"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Text style"
-msgstr ""
+msgstr "Styl textu"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3100,7 +3137,7 @@ msgstr "Zdá se, že adresa URL je platná."
 #: code:addons/web_editor/models/ir_qweb_fields.py:0
 #, python-format
 msgid "The datetime %s does not match the format %s"
-msgstr ""
+msgstr "Datum a čas %s neodpovídá formátu %s"
 
 #. module: web_editor
 #. odoo-python
@@ -3110,6 +3147,8 @@ msgid ""
 "The document was already saved from someone with a different history for "
 "model %r, field %r with id %r."
 msgstr ""
+"Dokument již byl uložen od někoho s jinou historií pro model %r, pole %r s "
+"id %r."
 
 #. module: web_editor
 #. odoo-javascript
@@ -3123,7 +3162,7 @@ msgstr "Zadaná adresa URL neodkazuje na žádné podporované video"
 #: code:addons/web_editor/tools.py:0
 #, python-format
 msgid "The provided url is invalid"
-msgstr ""
+msgstr "Zadaná adresa URL je neplatná"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3160,7 +3199,7 @@ msgstr "Barvy motivu"
 #: code:addons/web_editor/static/src/js/wysiwyg/conflict_dialog.xml:0
 #, python-format
 msgid "There is a conflict between your version and the one in the database."
-msgstr ""
+msgstr "Mezi vaší verzí a verzí v databázi je konflikt."
 
 #. module: web_editor
 #. odoo-javascript
@@ -3174,14 +3213,14 @@ msgstr ""
 #: code:addons/web_editor/static/src/js/wysiwyg/widgets/link_popover_widget.js:0
 #, python-format
 msgid "This URL is invalid. Preview couldn't be updated."
-msgstr ""
+msgstr "Tato adresa URL je neplatná. Náhled se nepodařilo aktualizovat."
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/snippets.xml:0
 #, python-format
-msgid "This block is outdated"
-msgstr "Tento blok je zastaralý"
+msgid "This block is outdated."
+msgstr ""
 
 #. module: web_editor
 #. odoo-javascript
@@ -3233,18 +3272,7 @@ msgstr "Název"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Title tag"
-msgstr ""
-
-#. module: web_editor
-#. odoo-javascript
-#: code:addons/web_editor/static/src/xml/snippets.xml:0
-#, python-format
-msgid ""
-"To make changes, drop this block and use the new options in the last "
-"version."
-msgstr ""
-"Chcete-li provést změny, zrušte tento blok a použijte nové možnosti v "
-"poslední verzi."
+msgstr "Štítek názvu"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3267,14 +3295,14 @@ msgstr "Úkolníček"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
 msgid "Toaster"
-msgstr ""
+msgstr "Toastovač"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle bold"
-msgstr ""
+msgstr "Přepnout tučné"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3282,21 +3310,21 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle checklist"
-msgstr ""
+msgstr "Přepnout kontrolní seznam"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle icon spin"
-msgstr ""
+msgstr "Přepnout otáčení ikon"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle italic"
-msgstr ""
+msgstr "Přepnout kurzívu"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3304,21 +3332,21 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle ordered list"
-msgstr ""
+msgstr "Přepnout seřazený seznam"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle strikethrough"
-msgstr ""
+msgstr "Přepnout přeškrtnuté"
 
 #. module: web_editor
 #. odoo-javascript
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle underline"
-msgstr ""
+msgstr "Přepnout podtržení"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3326,7 +3354,7 @@ msgstr ""
 #: code:addons/web_editor/static/src/xml/editor.xml:0
 #, python-format
 msgid "Toggle unordered list"
-msgstr ""
+msgstr "Přepnout neseřazený seznam"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3341,17 +3369,17 @@ msgstr "Kontextová nápověda"
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Track tasks with a checklist"
-msgstr ""
+msgstr "Sledovat úkoly pomocí kontrolního seznamu"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Transform"
-msgstr ""
+msgstr "Transformovat"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Transform the picture"
-msgstr ""
+msgstr "Transformovat obrázek"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3380,7 +3408,7 @@ msgstr "Průhledná barva"
 #: code:addons/web_editor/static/src/components/media_dialog/icon_selector.xml:0
 #, python-format
 msgid "Try searching with other keywords."
-msgstr ""
+msgstr "Zkuste hledat pomocí jiných klíčových slov."
 
 #. module: web_editor
 #. odoo-javascript
@@ -3395,7 +3423,7 @@ msgstr "Typ"
 #: code:addons/web_editor/static/src/js/editor/odoo-editor/src/OdooEditor.js:0
 #, python-format
 msgid "Type \"/\" for commands"
-msgstr ""
+msgstr "Zadejte \"/\" pro příkazy"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3407,7 +3435,7 @@ msgstr "URL nebo e-mail"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "Unalign"
-msgstr ""
+msgstr "Nesrovnat"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3428,14 +3456,14 @@ msgstr "Nahrát obrázek"
 #: code:addons/web_editor/static/src/components/media_dialog/image_selector.js:0
 #, python-format
 msgid "Uploaded image's format is not supported. Try with: "
-msgstr ""
+msgstr "Formát nahraného obrázku není podporován. Zkuste s: "
 
 #. module: web_editor
 #. odoo-python
 #: code:addons/web_editor/controllers/main.py:0
 #, python-format
 msgid "Uploaded image's format is not supported. Try with: %s"
-msgstr ""
+msgstr "Formát nahraného obrázku není podporován. Zkuste s: %s"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
@@ -3460,7 +3488,7 @@ msgstr "Video"
 #: code:addons/web_editor/static/src/js/editor/snippets.editor.js:0
 #, python-format
 msgid "Video Formatting"
-msgstr ""
+msgstr "Formátování videa"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3491,7 +3519,7 @@ msgstr "Vimeo"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
 msgid "Walden"
-msgstr ""
+msgstr "Walden"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3501,11 +3529,13 @@ msgid ""
 "Warning: after closing this dialog, the version you were working on will be "
 "discarded and will never be available anymore."
 msgstr ""
+"Varování: po zavření tohoto dialogu bude verze, na které jste pracovali, "
+"zahozena a již nikdy nebude dostupná."
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
 msgid "Wavy"
-msgstr ""
+msgstr "Vlnitý"
 
 #. module: web_editor
 #: model:ir.model,name:web_editor.model_web_editor_converter_test_sub
@@ -3525,7 +3555,7 @@ msgstr "Test konvertoru webového editoru"
 #: code:addons/web_editor/static/src/js/wysiwyg/wysiwyg.js:0
 #, python-format
 msgid "Widgets"
-msgstr ""
+msgstr "Widgety"
 
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_background_options
@@ -3578,6 +3608,13 @@ msgstr "Ano"
 
 #. module: web_editor
 #. odoo-javascript
+#: code:addons/web_editor/static/src/xml/snippets.xml:0
+#, python-format
+msgid "You can still access the block options but it might be ineffective."
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
 #: code:addons/web_editor/static/src/components/media_dialog/document_selector.xml:0
 #, python-format
 msgid ""
@@ -3586,6 +3623,22 @@ msgid ""
 msgstr ""
 "Dokumenty můžete nahrávat pomocí tlačítka umístěného v levé horní části "
 "obrazovky."
+
+#. module: web_editor
+#. odoo-python
+#: code:addons/web_editor/controllers/main.py:0
+#, python-format
+msgid ""
+"You have reached the maximum number of requests for this service. Try again "
+"later."
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/snippets.xml:0
+#, python-format
+msgid "You might not be able to customize it anymore."
+msgstr ""
 
 #. module: web_editor
 #. odoo-python
@@ -3607,7 +3660,7 @@ msgstr "Youku"
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 #, python-format
 msgid "Your URL"
-msgstr ""
+msgstr "Vaše URL"
 
 #. module: web_editor
 #. odoo-javascript
@@ -3644,6 +3697,20 @@ msgstr "přidat"
 
 #. module: web_editor
 #. odoo-javascript
+#: code:addons/web_editor/static/src/components/media_dialog/file_selector.xml:0
+#, python-format
+msgid "all"
+msgstr "vše"
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/js/wysiwyg/widgets/chatgpt_alternatives_dialog.xml:0
+#, python-format
+msgid "alternatives..."
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
 #: code:addons/web_editor/static/src/components/media_dialog/video_selector.xml:0
 #, python-format
 msgid "and"
@@ -3660,8 +3727,43 @@ msgid "darken"
 msgstr "ztmavit"
 
 #. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/components/media_dialog/file_selector.xml:0
+#, python-format
+msgid "database"
+msgstr "databáze"
+
+#. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
 msgid "exclusion"
+msgstr "vyloučení"
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "fill"
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "fill,rounded-circle"
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "flat"
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "lg"
 msgstr ""
 
 #. module: web_editor
@@ -3670,8 +3772,29 @@ msgid "lighten"
 msgstr "světlejší"
 
 #. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/components/media_dialog/file_selector.xml:0
+#, python-format
+msgid "media-library"
+msgstr ""
+
+#. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
 msgid "multiply"
+msgstr "násobit"
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "outline"
+msgstr ""
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "outline,rounded-circle"
 msgstr ""
 
 #. module: web_editor
@@ -3687,9 +3810,23 @@ msgid "px"
 msgstr "px"
 
 #. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "rounded-circle"
+msgstr ""
+
+#. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options_image_optimization_widgets
 msgid "screen"
 msgstr "screen"
+
+#. module: web_editor
+#. odoo-javascript
+#: code:addons/web_editor/static/src/xml/wysiwyg.xml:0
+#, python-format
+msgid "sm"
+msgstr ""
 
 #. module: web_editor
 #. odoo-javascript
@@ -3706,4 +3843,4 @@ msgstr "zpráva zpracování websocketu"
 #. module: web_editor
 #: model_terms:ir.ui.view,arch_db:web_editor.snippet_options
 msgid "www.example.com"
-msgstr ""
+msgstr "www.priklad.com"

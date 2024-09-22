@@ -27,7 +27,7 @@ publicWidget.registry.websiteForum = publicWidget.Widget.extend({
         'click .o_wforum_validation_queue a[href*="/validate"]': '_onValidationQueueClick',
         'click .o_wforum_validate_toggler:not(.karma_required)': '_onAcceptAnswerClick',
         'click .o_wforum_favourite_toggle': '_onFavoriteQuestionClick',
-        'click .comment_delete': '_onDeleteCommentClick',
+        'click .comment_delete:not(.karma_required)': '_onDeleteCommentClick',
         'click .js_close_intro': '_onCloseIntroClick',
         'click .answer_collapse': '_onExpandAnswerClick',
         'submit .js_wforum_submit_form:has(:not(.karma_required).o_wforum_submit_post)': '_onSubmitForm',
@@ -346,7 +346,7 @@ publicWidget.registry.websiteForum = publicWidget.Widget.extend({
             } else if (data.success) {
                 const child = elem.firstElementChild;
                 if (data.success === 'post_flagged_moderator') {
-                    const countFlaggedPosts = this.el.querySelector('#count_flagged_posts');
+                    const countFlaggedPosts = this.el.querySelector('#count_posts_queue_flagged');
                     elem.innerText = _t(' Flagged');
                     elem.prepend(child);
                     if (countFlaggedPosts) {
@@ -357,11 +357,13 @@ publicWidget.registry.websiteForum = publicWidget.Widget.extend({
                     }
                     $(elem).nextAll('.flag_validator').removeClass('d-none');
                 } else if (data.success === 'post_flagged_non_moderator') {
-                    const forumAnswer = elem.closest('.forum_answer');
                     elem.innerText = _t(' Flagged');
                     elem.prepend(child);
-                    forumAnswer.fadeIn(1000);
-                    forumAnswer.slideUp(1000);
+                    const $forumAnswer = $(elem).closest('.o_wforum_answer');
+                    if ($forumAnswer) {
+                        $forumAnswer.fadeIn(1000);
+                        $forumAnswer.slideUp(1000);
+                    }
                 }
             }
         });

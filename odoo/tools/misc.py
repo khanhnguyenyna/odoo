@@ -13,6 +13,7 @@ import hmac as hmac_lib
 import hashlib
 import io
 import itertools
+import logging
 import os
 import pickle as pickle_
 import re
@@ -40,13 +41,14 @@ import markupsafe
 import passlib.utils
 import pytz
 import werkzeug.utils
-from lxml import etree
+from lxml import etree, objectify
 
 import odoo
 import odoo.addons
 # get_encodings, ustr and exception_to_unicode were originally from tools.misc.
 # There are moved to loglevels until we refactor tools.
 from odoo.loglevels import get_encodings, ustr, exception_to_unicode     # noqa
+from odoo.tools.float_utils import float_round
 from . import pycompat
 from .cache import *
 from .config import config
@@ -61,6 +63,9 @@ SKIPPED_ELEMENT_TYPES = (etree._Comment, etree._ProcessingInstruction, etree.Com
 
 # Configure default global parser
 etree.set_default_parser(etree.XMLParser(resolve_entities=False))
+default_parser = etree.XMLParser(resolve_entities=False, remove_blank_text=True)
+default_parser.set_element_class_lookup(objectify.ObjectifyElementClassLookup())
+objectify.set_default_parser(default_parser)
 
 NON_BREAKING_SPACE = u'\N{NO-BREAK SPACE}'
 
@@ -851,7 +856,7 @@ class lower_logging(logging.Handler):
             record.levelname = f'_{record.levelname}'
             record.levelno = self.to_level
             self.had_error_log = True
-            record.args = tuple(arg.replace('Traceback (most recent call last):', '_Traceback_ (most recent call last):') if type(arg) is str else arg for arg in record.args)  # pylint: disable=unidiomatic-typecheck
+            record.args = tuple(arg.replace('Traceback (most recent call last):', '_Traceback_ (most recent call last):') if isinstance(arg, str) else arg for arg in record.args)
 
         if logging.getLogger(record.name).isEnabledFor(record.levelno):
             for handler in self.old_handlers:
@@ -939,7 +944,7 @@ class ConstantMapping(Mapping):
         return self._value
 
 
-def dumpstacks(sig=None, frame=None, thread_idents=None):
+def dumpstacks(sig=None, frame=None, thread_idents=None, log_level=logging.INFO):
     """ Signal handler: dump a stack trace for each existing thread or given
     thread(s) specified through the ``thread_idents`` sequence.
     """
@@ -967,7 +972,7 @@ def dumpstacks(sig=None, frame=None, thread_idents=None):
             query_time = thread_info.get('query_time')
             perf_t0 = thread_info.get('perf_t0')
             remaining_time = None
-            if query_time and perf_t0:
+            if query_time is not None and perf_t0:
                 remaining_time = '%.3f' % (time.time() - perf_t0 - query_time)
                 query_time = '%.3f' % query_time
             # qc:query_count qt:query_time pt:python_time (aka remaining time)
@@ -993,7 +998,7 @@ def dumpstacks(sig=None, frame=None, thread_idents=None):
             for line in extract_stack(ob.gr_frame):
                 code.append(line)
 
-    _logger.info("\n".join(code))
+    _logger.log(log_level, "\n".join(code))
 
 def freehash(arg):
     try:
@@ -1372,36 +1377,66 @@ def babel_locale_parse(lang_code):
         except:
             return babel.Locale.parse("en_US")
 
-def formatLang(env, value, digits=None, grouping=True, monetary=False, dp=False, currency_obj=False):
+def formatLang(env, value, digits=2, grouping=True, monetary=False, dp=None, currency_obj=None, rounding_method='HALF-EVEN', rounding_unit='decimals'):
     """
-        Assuming 'Account' decimal.precision=3:
-            formatLang(value) -> digits=2 (default)
-            formatLang(value, digits=4) -> digits=4
-            formatLang(value, dp='Account') -> digits=3
-            formatLang(value, digits=5, dp='Account') -> digits=5
+    This function will format a number `value` to the appropriate format of the language used.
+
+    :param Object env: The environment.
+    :param float value: The value to be formatted.
+    :param int digits: The number of decimals digits.
+    :param bool grouping: Usage of language grouping or not.
+    :param bool monetary: Usage of thousands separator or not.
+        .. deprecated:: 13.0
+    :param str dp: Name of the decimals precision to be used. This will override ``digits``
+                   and ``currency_obj`` precision.
+    :param Object currency_obj: Currency to be used. This will override ``digits`` precision.
+    :param str rounding_method: The rounding method to be used:
+        **'HALF-UP'** will round to the closest number with ties going away from zero,
+        **'HALF-DOWN'** will round to the closest number with ties going towards zero,
+        **'HALF_EVEN'** will round to the closest number with ties going to the closest
+        even number,
+        **'UP'** will always round away from 0,
+        **'DOWN'** will always round towards 0.
+    :param str rounding_unit: The rounding unit to be used:
+        **decimals** will round to decimals with ``digits`` or ``dp`` precision,
+        **units** will round to units without any decimals,
+        **thousands** will round to thousands without any decimals,
+        **lakhs** will round to lakhs without any decimals,
+        **millions** will round to millions without any decimals.
+
+    :returns: The value formatted.
+    :rtype: str
     """
-
-    if digits is None:
-        digits = DEFAULT_DIGITS = 2
-        if dp:
-            decimal_precision_obj = env['decimal.precision']
-            digits = decimal_precision_obj.precision_get(dp)
-        elif currency_obj:
-            digits = currency_obj.decimal_places
-
-    if isinstance(value, str) and not value:
+    # We don't want to return 0
+    if value == '':
         return ''
 
-    lang_obj = get_lang(env)
+    if rounding_unit == 'decimals':
+        if dp:
+            digits = env['decimal.precision'].precision_get(dp)
+        elif currency_obj:
+            digits = currency_obj.decimal_places
+    else:
+        digits = 0
 
-    res = lang_obj.format('%.' + str(digits) + 'f', value, grouping=grouping, monetary=monetary)
+    rounding_unit_mapping = {
+        'decimals': 1,
+        'thousands': 10**3,
+        'lakhs': 10**5,
+        'millions': 10**6,
+    }
+
+    value /= rounding_unit_mapping.get(rounding_unit, 1)
+
+    rounded_value = float_round(value, precision_digits=digits, rounding_method=rounding_method)
+    formatted_value = get_lang(env).format(f'%.{digits}f', rounded_value, grouping=grouping, monetary=monetary)
 
     if currency_obj and currency_obj.symbol:
-        if currency_obj.position == 'after':
-            res = '%s%s%s' % (res, NON_BREAKING_SPACE, currency_obj.symbol)
-        elif currency_obj and currency_obj.position == 'before':
-            res = '%s%s%s' % (currency_obj.symbol, NON_BREAKING_SPACE, res)
-    return res
+        arguments = (formatted_value, NON_BREAKING_SPACE, currency_obj.symbol)
+
+        return '%s%s%s' % (arguments if currency_obj.position == 'after' else arguments[::-1])
+
+    return formatted_value
 
 
 def format_date(env, value, lang_code=False, date_format=False):
@@ -1698,7 +1733,7 @@ class DotDict(dict):
     """
     def __getattr__(self, attrib):
         val = self.get(attrib)
-        return DotDict(val) if type(val) is dict else val
+        return DotDict(val) if isinstance(val, dict) else val
 
 
 def get_diff(data_from, data_to, custom_style=False, dark_color_scheme=False):

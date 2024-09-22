@@ -48,6 +48,7 @@ export class AnalyticDistribution extends Component {
 
     setup(){
         this.orm = useService("orm");
+        this.batchedOrm = useService("batchedOrm");
 
         this.state = useState({
             showDropdown: false,
@@ -101,9 +102,9 @@ export class AnalyticDistribution extends Component {
     async willStart() {
         if (this.editingRecord) {
             // for performance in list views, plans are not retrieved until they are required.
-            await this.fetchAllPlans();
+            await this.fetchAllPlans(this.props);
         }
-        await this.jsonToData();
+        await this.jsonToData(this.props.record.data[this.props.name]);
     }
 
     async willUpdateRecord(record) {
@@ -120,11 +121,11 @@ export class AnalyticDistribution extends Component {
         const productChanged = !shallowEqual(this.lastProduct, currentProduct);
         if (valueChanged || accountChanged || productChanged) {
             if (!this.props.force_applicability) {
-                await this.fetchAllPlans();
+                await this.fetchAllPlans({ record });
             }
             this.lastAccount = accountChanged && currentAccount || this.lastAccount;
             this.lastProduct = productChanged && currentProduct || this.lastProduct;
-            await this.jsonToData();
+            await this.jsonToData(record.data[this.props.name]);
         }
         this.currentValue = record.data[this.props.name];
     }
@@ -217,8 +218,7 @@ export class AnalyticDistribution extends Component {
         }));
     }
 
-    async jsonToData() {
-        const jsonFieldValue = this.props.record.data[this.props.name];
+    async jsonToData(jsonFieldValue) {
         const analyticAccountIds = jsonFieldValue ? Object.keys(jsonFieldValue).map((key) => key.split(',')).flat().map((id) => parseInt(id)) : [];
         const analyticAccountDict = analyticAccountIds.length ? await this.fetchAnalyticAccounts([["id", "in", analyticAccountIds]]) : [];
 
@@ -323,8 +323,7 @@ export class AnalyticDistribution extends Component {
     }
 
     // ORM
-    fetchPlansArgs() {
-        const { record, name } = this.props;
+    fetchPlansArgs({ record }) {
         let args = {};
         if (this.props.business_domain_compute) {
             args['business_domain'] = evaluateExpr(this.props.business_domain_compute, record.evalContext);
@@ -341,7 +340,7 @@ export class AnalyticDistribution extends Component {
         if (this.props.force_applicability) {
             args['applicability'] = this.props.force_applicability;
         }
-        const existing_account_ids = Object.keys(record.data[name]).map((k) => k.split(",")).flat().map((i) => parseInt(i));
+        const existing_account_ids = Object.keys(record.data[this.props.name]).map((k) => k.split(",")).flat().map((i) => parseInt(i));
         if (existing_account_ids.length) {
             args['existing_account_ids'] = existing_account_ids;
         }
@@ -351,8 +350,8 @@ export class AnalyticDistribution extends Component {
         return args;
     }
 
-    async fetchAllPlans() {
-        const argsPlan = this.fetchPlansArgs();
+    async fetchAllPlans(props) {
+        const argsPlan = this.fetchPlansArgs(props);
         this.allPlans = await this.orm.call("account.analytic.plan", "get_relevant_plans", [], argsPlan);
     }
 
@@ -363,7 +362,7 @@ export class AnalyticDistribution extends Component {
             context: [],
         }
         // batched call
-        const records = await this.props.record.model.orm.read("account.analytic.account", domain[0][2], args.fields, {});
+        const records = await this.batchedOrm.read("account.analytic.account", domain[0][2], args.fields, {});
         return Object.assign({}, ...records.map((r) => {
             const {id, ...rest} = r;
             return {[id]: rest};
@@ -460,8 +459,12 @@ export class AnalyticDistribution extends Component {
 
     onSaveNew() {
         this.closeAnalyticEditor();
+        const { record, product_field, account_field } = this.props;
         this.openTemplate({ resId: false, context: {
             'default_analytic_distribution': this.dataToJson(),
+            'default_partner_id': record.data['partner_id'] ? record.data['partner_id'][0] : undefined,
+            'default_product_id': product_field ? record.data[product_field][0] : undefined,
+            'default_account_prefix': account_field ? record.data[account_field][1].substr(0, 3) : undefined,
         }});
     }
 
@@ -480,8 +483,8 @@ export class AnalyticDistribution extends Component {
 
     async openAnalyticEditor() {
         if (!this.allPlans.length) {
-            await this.fetchAllPlans();
-            await this.jsonToData();
+            await this.fetchAllPlans(this.props);
+            await this.jsonToData(this.props.record.data[this.props.name]);
         }
         if (!this.state.formattedData.length) {
             await this.addLine();
@@ -563,7 +566,8 @@ export class AnalyticDistribution extends Component {
                 if (this.isDropdownOpen) {
                     const closestCell = ev.target.closest("td, th");
                     const row = closestCell.parentElement;
-                    if (this.adjacentElementToFocus("next") == this.addLineButton.el && this.lineIsValid(this.state.formattedData[parseInt(row.id)])) {
+                    const line = this.state.formattedData[parseInt(row.id)];
+                    if (this.adjacentElementToFocus("next") == this.addLineButton.el && line && this.lineIsValid(line)) {
                         this.addLine();
                         break;
                     }
@@ -601,12 +605,23 @@ export class AnalyticDistribution extends Component {
     }
 
     onWindowClick(ev) {
-        //TODO: dragging the search more dialog should not close the popup either
-        const modal = document.querySelector(".modal");
-        const clickedInSearchMoreDialog = modal && modal.querySelector('.o_list_view') && modal.contains(ev.target);
+        /*
+        Dropdown should be closed only if all these condition are true:
+            - dropdown is open
+            - click is outside widget element (widgetRef)
+            - there is no active modal containing a list/kanban view (search more modal)
+            - there is no popover (click is not in search modal's search bar menu)
+            - click is not targeting document dom element (drag and drop search more modal)
+        */
+
+        const selectors = [
+            ".o_popover",
+            ".modal:not(.o_inactive_modal):not(:has(.o_act_window))",
+        ];
         if (this.isDropdownOpen
             && !this.widgetRef.el.contains(ev.target)
-            && !clickedInSearchMoreDialog
+            && !ev.target.closest(selectors.join(","))
+            && !ev.target.isSameNode(document.documentElement)
            ) {
             this.forceCloseEditor();
         }

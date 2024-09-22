@@ -68,6 +68,7 @@ class Project(models.Model):
             task_counts_per_project_id[project.id]['closed_task_count' if state in CLOSED_STATES else 'open_task_count'] += count
         for project in self:
             open_task_count, closed_task_count = task_counts_per_project_id[project.id].values()
+            project.open_task_count = open_task_count
             project.closed_task_count = closed_task_count
             project.task_count = open_task_count + closed_task_count
 
@@ -126,16 +127,18 @@ class Project(models.Model):
         string='Members')
     is_favorite = fields.Boolean(compute='_compute_is_favorite', inverse='_inverse_is_favorite', search='_search_is_favorite',
         compute_sudo=True, string='Show Project on Dashboard')
-    label_tasks = fields.Char(string='Use Tasks as', default='Tasks', translate=True,
+    label_tasks = fields.Char(string='Use Tasks as', default=lambda s: _('Tasks'), translate=True,
         help="Name used to refer to the tasks of your project e.g. tasks, tickets, sprints, etc...")
     tasks = fields.One2many('project.task', 'project_id', string="Task Activities")
     resource_calendar_id = fields.Many2one(
         'resource.calendar', string='Working Time', compute='_compute_resource_calendar_id')
     type_ids = fields.Many2many('project.task.type', 'project_task_type_rel', 'project_id', 'type_id', string='Tasks Stages')
     task_count = fields.Integer(compute='_compute_task_count', string="Task Count")
+    open_task_count = fields.Integer(compute='_compute_task_count', string="Open Task Count")
+    # [XBO] TODO: remove me in master
     closed_task_count = fields.Integer(compute='_compute_task_count', string="Closed Task Count")
     task_ids = fields.One2many('project.task', 'project_id', string='Tasks',
-                               domain=[('state', 'not in', list(CLOSED_STATES))])
+                               domain=lambda self: [('state', 'in', self.env['project.task'].OPEN_STATES)])
     color = fields.Integer(string='Color Index')
     user_id = fields.Many2one('res.users', string='Project Manager', default=lambda self: self.env.user, tracking=True)
     alias_id = fields.Many2one(help="Internal email associated with this project. Incoming emails are automatically synchronized "
@@ -241,12 +244,14 @@ class Project(models.Model):
     def _compute_allow_rating(self):
         self.allow_rating = self.env.user.has_group('project.group_project_rating')
 
-    @api.depends('analytic_account_id.company_id')
+    @api.depends('analytic_account_id.company_id', 'partner_id.company_id')
     def _compute_company_id(self):
         for project in self:
-            # if a new restriction is put on the account, the restriction on the project is updated.
+            # if a new restriction is put on the account or the customer, the restriction on the project is updated.
             if project.analytic_account_id.company_id:
                 project.company_id = project.analytic_account_id.company_id
+            if not project.company_id and project.partner_id.company_id:
+                project.company_id = project.partner_id.company_id
 
     @api.depends_context('company')
     @api.depends('company_id', 'company_id.resource_calendar_id')
@@ -261,7 +266,7 @@ class Project(models.Model):
         """
         for project in self:
             account = project.analytic_account_id
-            if project.partner_id and project.partner_id.company_id and project.company_id and project.company_id != project.partner_id.company_id:
+            if project.partner_id and project.partner_id.company_id and project.company_id != project.partner_id.company_id:
                 raise UserError(_('The project and the associated partner must be linked to the same company.'))
             if not account or not account.company_id:
                 continue
@@ -378,12 +383,10 @@ class Project(models.Model):
             else:
                 project.access_instruction_message = ''
 
+    # TODO: Remove in master
     @api.onchange('date_start', 'date')
     def _onchange_planned_date(self):
-        if not self.date and self.date_start:
-            self.date_start = False
-        elif not self.date_start and self.date:
-            self.date = False
+        return
 
     @api.model
     def _map_tasks_default_valeus(self, task, project):
@@ -412,6 +415,11 @@ class Project(models.Model):
         subtasks_not_displayed = all_subtasks.filtered(
             lambda task: not task.display_in_project
         )
+        all_subtasks.filtered(
+            lambda child: child.project_id == self
+        ).write({
+            'project_id': project.id
+        })
         project.write({'tasks': [Command.set(new_tasks.ids)]})
         subtasks_not_displayed.write({
             'display_in_project': False
@@ -627,6 +635,19 @@ class Project(models.Model):
                 res -= waiting_subtype
         return res
 
+    def _notify_get_recipients_groups(self, message, model_description, msg_vals=None):
+        """ Give access to the portal user/customer if the project visibility is portal. """
+        groups = super()._notify_get_recipients_groups(message, model_description, msg_vals=msg_vals)
+        if not self:
+            return groups
+
+        self.ensure_one()
+        portal_privacy = self.privacy_visibility == 'portal'
+        for group_name, _group_method, group_data in groups:
+            if group_name in ['portal', 'portal_customer'] and not portal_privacy:
+                group_data['has_button_access'] = False
+        return groups
+
     # ---------------------------------------------------
     #  Actions
     # ---------------------------------------------------
@@ -664,6 +685,7 @@ class Project(models.Model):
             'delete': False,
             'search_default_open_tasks': True,
             'active_id_chatter': self.id,
+            'allow_milestones': self.allow_milestones,
         }
         action['display_name'] = self.name
         return action
@@ -758,14 +780,16 @@ class Project(models.Model):
         self.ensure_one()
         if not self.user_has_groups('project.group_project_user'):
             return {}
+        show_profitability = self._show_profitability()
         panel_data = {
             'user': self._get_user_values(),
             'buttons': sorted(self._get_stat_buttons(), key=lambda k: k['sequence']),
             'currency_id': self.currency_id.id,
+            'show_project_profitability_helper': show_profitability and self._show_profitability_helper(),
         }
         if self.allow_milestones:
             panel_data['milestones'] = self._get_milestones()
-        if self._show_profitability():
+        if show_profitability:
             profitability_items = self._get_profitability_items()
             if self._get_profitability_sequence_per_invoice_type() and profitability_items and 'revenues' in profitability_items and 'costs' in profitability_items:  # sort the data values
                 profitability_items['revenues']['data'] = sorted(profitability_items['revenues']['data'], key=lambda k: k['sequence'])
@@ -798,6 +822,9 @@ class Project(models.Model):
     def _show_profitability(self):
         self.ensure_one()
         return True
+
+    def _show_profitability_helper(self):
+        return self.user_has_groups('analytic.group_analytic_accounting')
 
     def _get_profitability_aal_domain(self):
         return [('account_id', 'in', self.analytic_account_id.ids)]
@@ -887,27 +914,27 @@ class Project(models.Model):
     @api.model
     def _create_analytic_account_from_values(self, values):
         company = self.env['res.company'].browse(values.get('company_id', False))
-        project_plan, _other_plans = self.env['account.analytic.plan']._get_all_plans()
+        project_plan_id = int(self.env['ir.config_parameter'].sudo().get_param('analytic.analytic_plan_projects'))
+
+        if not project_plan_id:
+            project_plan, _other_plans = self.env['account.analytic.plan']._get_all_plans()
+            project_plan_id = project_plan.id
+
         analytic_account = self.env['account.analytic.account'].create({
             'name': values.get('name', _('Unknown Analytic Account')),
             'company_id': company.id,
             'partner_id': values.get('partner_id'),
-            'plan_id': project_plan.id,
+            'plan_id': project_plan_id,
         })
         return analytic_account
 
     def _create_analytic_account(self):
         for project in self:
-            company_id = project.company_id.id
-            project_plan, _other_plans = self.env['account.analytic.plan']._get_all_plans()
-            analytic_account = self.env['account.analytic.account'].create({
+            project.analytic_account_id = self._create_analytic_account_from_values({
+                'company_id': project.company_id.id,
                 'name': project.name,
-                'company_id': company_id,
-                'partner_id': project.partner_id.id,
-                'plan_id': project_plan.id,
-                'active': True,
+                'partner_id': project.partner_id.id
             })
-            project.write({'analytic_account_id': analytic_account.id})
 
     def _get_projects_to_make_billable_domain(self):
         return [('partner_id', '!=', False)]

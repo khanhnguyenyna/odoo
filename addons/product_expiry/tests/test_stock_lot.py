@@ -615,3 +615,62 @@ class TestStockLot(TestStockCommon):
         picking_out.action_confirm()
         picking_out.action_assign()
         self.assertEqual(picking_out.move_ids.state, 'assigned', 'Wrong state of move line.')
+
+    def test_no_lot(self):
+        """
+        Try to reserve a move that for an expirable product that has both quants with and without lot attached.
+        """
+        # Set the removal strategy to 'First Expiry First Out'
+        fefo_strategy = self.env['product.removal'].search(
+            [('method', '=', 'fefo')])
+        self.apple_product.categ_id.removal_strategy_id = fefo_strategy.id
+
+        apple_lot = self.LotObj.create({
+            'name': 'LOT001',
+            'product_id': self.apple_product.id,
+            'company_id': self.env.company.id,
+        })
+
+        self.StockQuantObj.with_context(inventory_mode=True).create([{
+            'product_id': self.apple_product.id,
+            'location_id': self.stock_location,
+            'quantity': 100,
+        }, {
+            'product_id': self.apple_product.id,
+            'location_id': self.stock_location,
+            'quantity': 100,
+            'lot_id': apple_lot.id,
+        }])
+
+        with Form(self.PickingObj) as picking_form:
+            picking_form.picking_type_id = self.env.ref('stock.picking_type_out')
+            with picking_form.move_ids_without_package.new() as move:
+                move.product_id = self.apple_product
+                move.product_uom_qty = 10
+            picking_out = picking_form.save()
+
+        picking_out.action_assign()
+        self.assertEqual(picking_out.move_line_ids.lot_id, apple_lot)
+
+    def test_compute_expiration_date_from_scheduled_date(self):
+        partner = self.env['res.partner'].create({
+            'name': 'Apple\'s Joe',
+            'company_id': self.env.ref('base.main_company').id,
+        })
+
+        delta = timedelta(seconds=10)
+        new_date = datetime.today() + timedelta(days=42)
+        expiration_date = new_date + timedelta(days=self.apple_product.expiration_time)
+
+        picking_form = Form(self.env['stock.picking'])
+        picking_form.partner_id = partner
+        picking_form.scheduled_date = new_date
+        picking_form.picking_type_id = self.env.ref('stock.picking_type_in')
+
+        with picking_form.move_ids_without_package.new() as move:
+            move.product_id = self.apple_product
+            move.product_uom_qty = 4
+        delivery = picking_form.save()
+        delivery.action_confirm()
+
+        self.assertAlmostEqual(delivery.move_line_ids[0].expiration_date, expiration_date, delta=delta)

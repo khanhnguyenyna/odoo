@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo.addons.stock.tests.common import TestStockCommon
+from odoo.tests.common import Form
 
 class TestReturnPicking(TestStockCommon):
 
@@ -143,3 +144,67 @@ class TestReturnPicking(TestStockCommon):
         res = return_wizard.create_returns()
         return_picking = self.PickingObj.browse(res["res_id"])
         self.assertEqual(return_picking.location_dest_id, return_location)
+
+    def test_return_incoming_picking(self):
+        """
+            Test returns of incoming pickings have the same partner assigned to them
+        """
+        partner = self.env['res.partner'].create({'name': 'Jean'})
+        receipt = self.env['stock.picking'].create({
+            'picking_type_id': self.picking_type_in,
+            'location_id': self.supplier_location,
+            'location_dest_id': self.stock_location,
+            'partner_id': partner.id,
+            'move_ids': [(0, 0, {
+                'name': self.UnitA.name,
+                'product_id': self.UnitA.id,
+                'product_uom_qty': 1,
+                'product_uom': self.uom_unit.id,
+                'location_id': self.stock_location,
+                'location_dest_id': self.customer_location,
+            })],
+        })
+        receipt.button_validate()
+        # create a return picking
+        stock_return_picking_form = Form(self.env['stock.return.picking']
+            .with_context(active_ids=receipt.ids, active_id=receipt.ids[0],
+            active_model='stock.picking'))
+        stock_return_picking = stock_return_picking_form.save()
+        stock_return_picking.product_return_moves.quantity = 1.0
+        stock_return_picking_action = stock_return_picking.create_returns()
+        return_picking = self.env['stock.picking'].browse(stock_return_picking_action['res_id'])
+        return_picking.button_validate()
+        self.assertEqual(return_picking.move_ids[0].partner_id.id, receipt.partner_id.id)
+
+    def test_return_wizard_with_partial_delivery(self):
+        """
+        Create a picking for 10 grams, deliver 0.01, and do not backorder the remaining quantity.
+        Then, attempt to return the quantity that was delivered. The quantity should be properly verified
+        to not be equal to 0 and the return should be created.
+        """
+        delivery_picking = self.PickingObj.create({
+            'picking_type_id': self.picking_type_out,
+            'location_id': self.stock_location,
+            'location_dest_id': self.customer_location,
+        })
+        out_move = self.MoveObj.create({
+            'name': "OUT move",
+            'product_id': self.gB.id,
+            'product_uom_qty': 10,
+            'picking_id': delivery_picking.id,
+            'location_id': self.stock_location,
+            'location_dest_id': self.customer_location,
+        })
+        delivery_picking.action_confirm()
+        out_move.quantity = 0.01
+        # No backorder
+        res_dict = delivery_picking.with_context(picking_ids_not_to_backorder=delivery_picking.id).button_validate()
+
+        self.env['stock.backorder.confirmation'].with_context(res_dict['context']).process()
+        self.assertEqual(delivery_picking.state, 'done', "Pickings should be set as done")
+        # Create return
+        stock_return_picking_form = Form(self.env['stock.return.picking']
+            .with_context(active_ids=delivery_picking.ids, active_id=delivery_picking.ids[0],
+            active_model='stock.picking'))
+        stock_return_picking = stock_return_picking_form.save()
+        self.assertEqual(stock_return_picking.product_return_moves.quantity, 0.01)

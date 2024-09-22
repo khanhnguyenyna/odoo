@@ -1,5 +1,6 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from odoo.exceptions import ValidationError
 from odoo.fields import Command
 from odoo.tests import tagged
 
@@ -43,7 +44,7 @@ class TestSaleOrderDiscount(SaleCommon):
         self.wizard.action_apply_discount()
 
         discount_line = self.sale_order.order_line[-1]
-        self.assertAlmostEqual(discount_line.price_unit, -amount_before_discount*0.5)
+        self.assertAlmostEqual(discount_line.price_unit, -amount_before_discount * 0.5)
         self.assertFalse(discount_line.tax_id)
         self.assertEqual(discount_line.product_uom_qty, 1.0)
 
@@ -55,7 +56,7 @@ class TestSaleOrderDiscount(SaleCommon):
 
         discount_line = self.sale_order.order_line - solines
         discount_line.ensure_one()
-        self.assertAlmostEqual(discount_line.price_unit, -amount_before_discount*0.5)
+        self.assertAlmostEqual(discount_line.price_unit, -amount_before_discount * 0.5)
         self.assertEqual(discount_line.tax_id, dumb_tax)
         self.assertEqual(discount_line.product_uom_qty, 1.0)
 
@@ -83,3 +84,26 @@ class TestSaleOrderDiscount(SaleCommon):
             all(line.discount == 50 for line in self.sale_order.order_line)
         )
         self.assertAlmostEqual(self.sale_order.amount_untaxed, so_amount*0.5)
+
+        self.wizard.write({'discount_percentage': -0.5})
+        self.wizard.action_apply_discount()
+
+        self.assertTrue(
+            all(line.discount == -50 for line in self.sale_order.order_line)
+        )
+        self.assertAlmostEqual(self.sale_order.amount_untaxed, so_amount*1.5)
+
+    def test_sol_discount_removal(self):
+        so_amount = self.sale_order.amount_untaxed
+        self.wizard.write({'discount_percentage': 0.5, 'discount_type': 'sol_discount'})
+        self.wizard.action_apply_discount()
+
+        self.wizard.write({'discount_percentage': 0})
+        self.wizard.action_apply_discount()
+
+        self.assertFalse(self.sale_order.order_line.filtered('discount'))
+        self.assertAlmostEqual(self.sale_order.amount_untaxed, so_amount)
+
+    def test_percent_discount_above_100(self):
+        with self.assertRaises(ValidationError):
+            self.wizard.write({'discount_percentage': 1.1, 'discount_type': 'sol_discount'})

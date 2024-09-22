@@ -3,16 +3,16 @@
 # 	* website_sale
 # 
 # Translators:
-# Wil Odoo, 2023
-# Larissa Manderfeld, 2023
+# Larissa Manderfeld, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Larissa Manderfeld, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: German (https://app.transifex.com/odoo/teams/41243/de/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -46,7 +46,6 @@ msgstr "%s Rezensionen"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address_on_payment
-#: model_terms:ir.ui.view,arch_db:website_sale.confirmation
 msgid "&amp; Shipping"
 msgstr "&amp; Versand"
 
@@ -58,7 +57,7 @@ msgstr "&amp;nbsp;(<i>Um Ihre Versandadresse wird später gebeten)</i>"
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.checkout_layout
 msgid "&amp;nbsp;item(s)&amp;nbsp;-&amp;nbsp;"
-msgstr "&amp;nbsp;item(s)&amp;nbsp;-&amp;nbsp;"
+msgstr "&amp;nbsp;Artikel&amp;nbsp;-&amp;nbsp;"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.products
@@ -123,7 +122,6 @@ msgstr "<b>Preisliste</b>"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address_on_payment
-#: model_terms:ir.ui.view,arch_db:website_sale.confirmation
 msgid "<b>Shipping: </b>"
 msgstr "<b>Versand: </b>"
 
@@ -148,6 +146,15 @@ msgstr ""
 "<br/>\n"
 "                30-Tage-Geld-zurück-Garantie<br/>\n"
 "                Versand: 2-3 Geschäftstage"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.extra_info
+msgid ""
+"<i class=\"fa fa-angle-left me-2 fw-light\"/>\n"
+"                                    Return to shipping"
+msgstr ""
+"<i class=\"fa fa-angle-left me-2 fw-light\"/>\n"
+"                                    Zurück zum Versand"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.product_buy_now
@@ -323,7 +330,7 @@ msgid ""
 "name=\"price\">Select to compute delivery rate</span>"
 msgstr ""
 "<span class=\"o_wsale_delivery_badge_price float-end fw-bold\" "
-"name=\"price\">Auswählen, um Versandtarif berechnen</span>"
+"name=\"price\">Auswählen, um Versandtarif zu berechnen</span>"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.shop_product_carousel
@@ -345,6 +352,7 @@ msgstr ""
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address
+#: model_terms:ir.ui.view,arch_db:website_sale.extra_info
 #: model_terms:ir.ui.view,arch_db:website_sale.navigation_buttons
 msgid "<span class=\"px-3\">or</span>"
 msgstr "<span class=\"px-3\">oder</span>"
@@ -519,11 +527,6 @@ msgstr ""
 "</tbody>\n"
 "</table>\n"
 "            "
-
-#. module: website_sale
-#: model_terms:ir.ui.view,arch_db:website_sale.product
-msgid "<u class=\"h5\">Documents</u>"
-msgstr "<u class=\"h5\">Dokumente</u>"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.product_custom_text
@@ -912,7 +915,6 @@ msgstr "Groß"
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.address_on_payment
 #: model_terms:ir.ui.view,arch_db:website_sale.checkout
-#: model_terms:ir.ui.view,arch_db:website_sale.confirmation
 msgid "Billing"
 msgstr "Abrechnung"
 
@@ -1018,22 +1020,6 @@ msgstr "Kann Bild 1024 gezoomt werden"
 #: model:ir.model.fields,field_description:website_sale.field_product_template__can_publish
 msgid "Can Publish"
 msgstr "Kann veröffentlichen"
-
-#. module: website_sale
-#. odoo-python
-#: code:addons/website_sale/controllers/main.py:0
-#, python-format
-msgid "Can not resequence a video at first position."
-msgstr "An der ersten Stelle kann ein Video nicht neu geordnet werden."
-
-#. module: website_sale
-#. odoo-python
-#: code:addons/website_sale/controllers/main.py:0
-#, python-format
-msgid "Can not resequence embedded image/video with a non compatible image."
-msgstr ""
-"Das eingebettete Bild/Video kann nicht mit einem nicht kompatiblen Bild "
-"resequenziert werden."
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.snippet_options
@@ -1157,7 +1143,7 @@ msgstr ""
 #: code:addons/website_sale/models/website.py:0
 #, python-format
 msgid "Checkout"
-msgstr "Kassiervorgang"
+msgstr "Zur Kasse"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.snippet_options
@@ -1293,6 +1279,11 @@ msgstr "Versandkosten für Easypost berechnen und versenden"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
+msgid "Compute shipping cost and ship with Shiprocket"
+msgstr "Versandkosten für Shiprocket berechnen und versenden"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
 msgid "Compute shipping costs and ship with DHL"
 msgstr "Versandkosten für DHL berechnen und versenden"
 
@@ -1381,9 +1372,19 @@ msgstr "Inhalt"
 #. module: website_sale
 #. odoo-python
 #: code:addons/website_sale/models/website.py:0
+#: model_terms:ir.ui.view,arch_db:website_sale.address
 #, python-format
 msgid "Continue checkout"
 msgstr "Kassiervorgang fortsetzen"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.extra_info
+msgid ""
+"Continue checkout\n"
+"                                    <i class=\"fa fa-angle-right ms-2 fw-light\"/>"
+msgstr ""
+"Kassiervorgang fortsetzen\n"
+"                                    <i class=\"fa fa-angle-right ms-2 fw-light\"/>"
 
 #. module: website_sale
 #. odoo-python
@@ -1532,6 +1533,11 @@ msgstr "DHL-Express-Konnektor"
 #: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
 msgid "DHL Shipping Methods"
 msgstr "DHL-Versandmethoden"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.product
+msgid "DROP BUILDING BLOCKS HERE TO MAKE THEM AVAILABLE ACROSS ALL PRODUCTS"
+msgstr "BAUSTEINE HIER PLATZIEREN, DAMIT SIE FÜR ALLE PRODUKTE VERFÜGBAR SIND"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.snippet_options
@@ -1718,6 +1724,11 @@ msgstr ""
 msgid "Do you wish to clear your cart before adding products to it?"
 msgstr ""
 "Möchten Sie Ihren Warenkorb leeren, bevor Sie ihm Produkte hinzufügen?"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.product
+msgid "Documents"
+msgstr "Dokumente"
 
 #. module: website_sale
 #. odoo-python
@@ -2248,6 +2259,13 @@ msgstr ""
 "können die Liefermethode nicht mehr ändern"
 
 #. module: website_sale
+#. odoo-javascript
+#: code:addons/website_sale/static/src/js/website_sale_utils.js:0
+#, python-format
+msgid "Item(s) added to your cart"
+msgstr "Artikel im Warenkorb"
+
+#. module: website_sale
 #: model:ir.model,name:website_sale.model_account_move
 msgid "Journal Entry"
 msgstr "Journalbuchung"
@@ -2498,6 +2516,13 @@ msgid "Name Short"
 msgstr "Kurzname"
 
 #. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/models/product_public_category.py:0
+#, python-format
+msgid "New"
+msgstr "Neu"
+
+#. module: website_sale
 #: model:ir.actions.act_window,name:website_sale.product_product_action_add
 msgid "New Product"
 msgstr "Neues Produkt"
@@ -2552,8 +2577,8 @@ msgstr "Kein Produkt definiert"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.products
-msgid "No product defined in category \""
-msgstr "Kein Produkt definiert in der Kategorie „"
+msgid "No product defined in this category."
+msgstr "Kein Produkt in dieser Kategorie definiert."
 
 #. module: website_sale
 #: model_terms:ir.actions.act_window,help:website_sale.website_sale_visitor_product_action
@@ -2586,6 +2611,13 @@ msgstr ""
 "Momentan steht keine Versandmethode für Ihre aktuelle Bestellung und der "
 "damit verbundenen Lieferadresse zur Verfügung. Bitte kontaktieren Sie uns "
 "für weitere Informationen."
+
+#. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/models/sale_order.py:0
+#, python-format
+msgid "No shipping method is selected."
+msgstr "Es wurde keine Versandmethode ausgewählt."
 
 #. module: website_sale
 #: model:ir.model.fields.selection,name:website_sale.selection__website__product_page_image_spacing__none
@@ -2764,7 +2796,7 @@ msgstr "Auf der Website angezeigte Auftragspositionen"
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.cart
 msgid "Order overview"
-msgstr "Auftragsübersicht"
+msgstr "Bestellübersicht"
 
 #. module: website_sale
 #: model:ir.actions.act_window,name:website_sale.action_orders_ecommerce
@@ -2806,11 +2838,6 @@ msgid "Pay now"
 msgstr "Jetzt bezahlen"
 
 #. module: website_sale
-#: model_terms:ir.ui.view,arch_db:website_sale.payment
-msgid "Pay with"
-msgstr "Bezahlen mit"
-
-#. module: website_sale
 #. odoo-python
 #: code:addons/website_sale/models/website.py:0
 #, python-format
@@ -2831,6 +2858,11 @@ msgstr "Zahlungsmethoden"
 #: model:ir.ui.menu,name:website_sale.menu_ecommerce_payment_providers
 msgid "Payment Providers"
 msgstr "Zahlungsanbieter"
+
+#. module: website_sale
+#: model:ir.model,name:website_sale.model_payment_token
+msgid "Payment Token"
+msgstr "Zahlungs-Token"
 
 #. module: website_sale
 #: model:ir.ui.menu,name:website_sale.menu_ecommerce_payment_tokens
@@ -3518,6 +3550,11 @@ msgid "Sample"
 msgstr "Beispiel"
 
 #. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.address
+msgid "Save address"
+msgstr "Adresse speichern"
+
+#. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.view_sales_order_filter_ecommerce_abondand
 msgid "Search Abandoned Sales Orders"
 msgstr "Abgebrochene Verkaufsaufträge suchen"
@@ -3648,6 +3685,16 @@ msgstr "Versandmethoden"
 #: model_terms:ir.ui.view,arch_db:website_sale.address
 msgid "Shipping address"
 msgstr "Lieferadresse"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
+msgid "Shiprocket"
+msgstr "Shiprocket"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
+msgid "Shiprocket Shipping Methods"
+msgstr "Shiprocket-Versandmethoden"
 
 #. module: website_sale
 #: model:website.menu,name:website_sale.menu_shop
@@ -4271,7 +4318,7 @@ msgstr "Produkt ansehen"
 
 #. module: website_sale
 #. odoo-javascript
-#: code:addons/website_sale/static/src/js/notification/cart_notification/cart_notification.xml:0
+#: code:addons/website_sale/static/src/js/notification/add_to_cart_notification/add_to_cart_notification.xml:0
 #, python-format
 msgid "View cart"
 msgstr "Warenkorb anzeigen"
@@ -4331,10 +4378,13 @@ msgid "Visitor Product Views History"
 msgstr "Historie der Produktansichten von Besuchern"
 
 #. module: website_sale
+#. odoo-javascript
+#: code:addons/website_sale/static/src/js/website_sale_utils.js:0
 #: model:ir.model.fields,field_description:website_sale.field_sale_order__shop_warning
 #: model:ir.model.fields,field_description:website_sale.field_sale_order_line__shop_warning
 #: model_terms:ir.ui.view,arch_db:website_sale.cart_lines
 #: model_terms:ir.ui.view,arch_db:website_sale.checkout_layout
+#, python-format
 msgid "Warning"
 msgstr "Warnung"
 
@@ -4524,6 +4574,13 @@ msgstr ""
 "                                          Wenn Sie Ihre Lieferadresse ändern möchten, erstellen Sie eine"
 
 #. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/controllers/main.py:0
+#, python-format
+msgid "You can't use a video as the product's main image."
+msgstr "Sie können kein Video als das Hauptbild des Produkts verwenden"
+
+#. module: website_sale
 #: model_terms:ir.actions.act_window,help:website_sale.sale_report_action_carts
 #: model_terms:ir.actions.act_window,help:website_sale.sale_report_action_dashboard
 msgid "You don't have any order from the website"
@@ -4572,6 +4629,18 @@ msgid "Your Name"
 msgstr "Ihr Name"
 
 #. module: website_sale
+#. odoo-python
+#: code:addons/website_sale/models/website.py:0
+#, python-format
+msgid ""
+"Your account is not allowed to pay in company %s. Please log out and create "
+"a new account for this website, or contact the website administrator."
+msgstr ""
+"Ihr Konto kann nicht zum Bezahlen im Unternehmen %s verwendet werden. Bitte "
+"melden Sie sich ab und erstellen Sie ein neues Konto für diese Website oder "
+"kontaktieren Sie den Website-Administrator."
+
+#. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.cart_lines
 #: model_terms:ir.ui.view,arch_db:website_sale.checkout_layout
 msgid "Your cart is empty!"
@@ -4605,11 +4674,6 @@ msgstr "PLZ"
 #: model:ir.ui.menu,name:website_sale.menu_delivery_zip_prefix
 msgid "Zip Prefix"
 msgstr "PLZ-Präfix"
-
-#. module: website_sale
-#: model_terms:ir.ui.view,arch_db:website_sale.add_grid_or_list_option
-msgid "active"
-msgstr "aktiv"
 
 #. module: website_sale
 #: model_terms:ir.ui.view,arch_db:website_sale.res_config_settings_view_form
@@ -4667,6 +4731,11 @@ msgstr "E-Commerce-Verkäufe"
 #: model_terms:ir.ui.view,arch_db:website_sale.product_template_form_view
 msgid "eCommerce Shop"
 msgstr "E-Commerce-Shop"
+
+#. module: website_sale
+#: model_terms:ir.ui.view,arch_db:website_sale.header_cart_link
+msgid "eCommerce cart"
+msgstr "E-Commerce-Warenkorb"
 
 #. module: website_sale
 #: model:ir.actions.server,name:website_sale.ir_cron_send_availability_email_ir_actions_server

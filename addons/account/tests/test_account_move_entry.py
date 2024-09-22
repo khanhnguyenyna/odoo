@@ -68,10 +68,10 @@ class TestAccountMove(AccountTestInvoicingCommon):
         nb_invoices = self.env['account.move'].search_count(domain=[])
         self.test_move.auto_post = 'at_date'
         self.test_move.date = fields.Date.today()
-        with freeze_time(fields.Date.today() - relativedelta(days=1)):
+        with freeze_time(self.test_move.date - relativedelta(days=1)):
             self.env.ref('account.ir_cron_auto_post_draft_entry').method_direct_trigger()
             self.assertEqual(self.test_move.state, 'draft')  # can't be posted before its date
-        with freeze_time(fields.Date.today() + relativedelta(days=1)):
+        with freeze_time(self.test_move.date + relativedelta(days=1)):
             self.env.ref('account.ir_cron_auto_post_draft_entry').method_direct_trigger()
             self.assertEqual(self.test_move.state, 'posted')  # can be posted after its date
         self.assertEqual(nb_invoices, self.env['account.move'].search_count(domain=[]))
@@ -1130,3 +1130,77 @@ class TestAccountMove(AccountTestInvoicingCommon):
             [("account_id", "=", account.id)], ["balance:sum"], ["account_root_id"]
         )[0]["balance"]
         self.assertEqual(balance, 500)
+
+    def test_line_steal(self):
+        honest_move = self.env['account.move'].create({
+            'line_ids': [
+                Command.create({
+                    'name': 'receivable',
+                    'account_id': self.company_data['default_account_receivable'].id,
+                    'balance': 500.0,
+                }),
+                Command.create({
+                    'name': 'tax',
+                    'account_id': self.company_data['default_account_tax_sale'].id,
+                    'balance': -500.0,
+                }),
+            ]
+        })
+        honest_move.action_post()
+
+        with self.assertRaisesRegex(UserError, 'not balanced'), self.env.cr.savepoint():
+            self.env['account.move'].create({'line_ids': [Command.set(honest_move.line_ids[0].ids)]})
+
+        with self.assertRaisesRegex(UserError, 'not balanced'), self.env.cr.savepoint():
+            self.env['account.move'].create({'line_ids': [Command.link(honest_move.line_ids[0].id)]})
+
+        stealer_move = self.env['account.move'].create({})
+        with self.assertRaisesRegex(UserError, 'not balanced'), self.env.cr.savepoint():
+            stealer_move.write({'line_ids': [Command.set(honest_move.line_ids[0].ids)]})
+
+        with self.assertRaisesRegex(UserError, 'not balanced'), self.env.cr.savepoint():
+            stealer_move.write({'line_ids': [Command.link(honest_move.line_ids[0].id)]})
+
+    def test_validate_move_wizard_with_auto_post_entry(self):
+        """ Test that the wizard to validate a move with auto_post is working fine. """
+        self.test_move.date = fields.Date.today() + relativedelta(months=3)
+        self.test_move.auto_post = 'at_date'
+        wizard = self.env['validate.account.move'].with_context(active_model='account.move', active_ids=self.test_move.ids).create({})
+        wizard.force_post = True
+        wizard.validate_move()
+        self.assertTrue(self.test_move.state == 'posted')
+
+    def test_cumulated_balance(self):
+        move = self.env['account.move'].create({
+            'line_ids': [Command.create({
+                'balance': 100,
+                'account_id': self.company_data['default_account_receivable'].id,
+            }), Command.create({
+                'balance': 100,
+                'account_id': self.company_data['default_account_tax_sale'].id,
+            }), Command.create({
+                'balance': -200,
+                'account_id': self.company_data['default_account_revenue'].id,
+            })]
+        })
+
+        for order, expected in [
+            ('balance DESC', [
+                (100, 0),
+                (100, -100),
+                (-200, -200),
+            ]),
+            ('balance ASC', [
+                (-200, 0),
+                (100, 200),
+                (100, 100),
+            ]),
+        ]:
+            read_results = self.env['account.move.line'].search_read(
+                domain=[('move_id', '=', move.id)],
+                fields=['balance', 'cumulated_balance'],
+                order=order,
+            )
+            for (balance, cumulated_balance), read_result in zip(expected, read_results):
+                self.assertAlmostEqual(balance, read_result['balance'])
+                self.assertAlmostEqual(cumulated_balance, read_result['cumulated_balance'])

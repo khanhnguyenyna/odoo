@@ -3,37 +3,39 @@
 import { SaleOrderLineProductField } from '@sale/js/sale_product_field';
 import { serializeDateTime } from "@web/core/l10n/dates";
 import { x2ManyCommands } from "@web/core/orm_service";
+import { WarningDialog } from "@web/core/errors/error_dialogs";
 import { useService } from "@web/core/utils/hooks";
 import { patch } from "@web/core/utils/patch";
 import { ProductConfiguratorDialog } from "./product_configurator_dialog/product_configurator_dialog";
 
 async function applyProduct(record, product) {
     // handle custom values & no variants
-    const contextRecords = [];
+    const customAttributesCommands = [
+        x2ManyCommands.set([]),  // Command.clear isn't supported in static_list/_applyCommands
+    ];
     for (const ptal of product.attribute_lines) {
         const selectedCustomPTAV = ptal.attribute_values.find(
             ptav => ptav.is_custom && ptal.selected_attribute_value_ids.includes(ptav.id)
         );
         if (selectedCustomPTAV) {
-            contextRecords.push({
-                default_custom_product_template_attribute_value_id: selectedCustomPTAV.id,
-                default_custom_value: ptal.customValue,
-            });
+            customAttributesCommands.push(
+                x2ManyCommands.create(undefined, {
+                    custom_product_template_attribute_value_id: [selectedCustomPTAV.id, "we don't care"],
+                    custom_value: ptal.customValue,
+                })
+            );
         };
     }
 
-    const proms = [];
-    proms.push(record.data.product_custom_attribute_value_ids.createAndReplace(contextRecords));
-
     const noVariantPTAVIds = product.attribute_lines.filter(
-        ptal => ptal.create_variant === "no_variant" && ptal.attribute_values.length > 1
+        ptal => ptal.create_variant === "no_variant"
     ).flatMap(ptal => ptal.selected_attribute_value_ids);
 
-    await Promise.all(proms);
     await record.update({
         product_id: [product.id, product.display_name],
         product_uom_qty: product.quantity,
         product_no_variant_attribute_value_ids: [x2ManyCommands.set(noVariantPTAVIds)],
+        product_custom_attribute_value_ids: customAttributesCommands,
     });
 };
 
@@ -43,6 +45,7 @@ patch(SaleOrderLineProductField.prototype, {
         super.setup(...arguments);
 
         this.dialog = useService("dialog");
+        this.notification = useService("notification");
         this.orm = useService("orm");
     },
 
@@ -68,6 +71,21 @@ patch(SaleOrderLineProductField.prototype, {
                 }
             }
         } else {
+            if (result && result.sale_warning) {
+                const {type, title, message} = result.sale_warning
+                if (type === 'block') {
+                    // display warning block, and remove blocking product
+                    this.dialog.add(WarningDialog, { title, message });
+                    this.props.record.update({'product_template_id': false})
+                    return
+                } else if (type == 'warning') {
+                    // show the warning but proceed with the configurator opening
+                    this.notification.add(message, {
+                        title,
+                        type: "warning",
+                    });
+                }
+            }
             if (!result.mode || result.mode === 'configurator') {
                 this._openProductConfigurator();
             } else {

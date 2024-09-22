@@ -23,7 +23,6 @@ from odoo.tools.misc import get_lang
 from . import crm_stage
 
 _logger = logging.getLogger(__name__)
-_schema = logging.getLogger('odoo.schema')
 
 
 CRM_LEAD_FIELDS_TO_MERGE = [
@@ -297,7 +296,8 @@ class Lead(models.Model):
                 continue
             team_domain = [('use_leads', '=', True)] if lead.type == 'lead' else [('use_opportunities', '=', True)]
             team = self.env['crm.team']._get_default_team_id(user_id=user.id, domain=team_domain)
-            lead.team_id = team.id
+            if lead.team_id != team:
+                lead.team_id = team.id
 
     @api.depends('user_id', 'team_id', 'partner_id')
     def _compute_company_id(self):
@@ -345,12 +345,14 @@ class Lead(models.Model):
     @api.depends('user_id')
     def _compute_date_open(self):
         for lead in self:
-            lead.date_open = self.env.cr.now() if lead.user_id else False
+            if not lead.date_open and lead.user_id:
+                lead.date_open = self.env.cr.now()
 
     @api.depends('stage_id')
     def _compute_date_last_stage_update(self):
         for lead in self:
-            lead.date_last_stage_update = self.env.cr.now()
+            if not lead.date_last_stage_update:
+                lead.date_last_stage_update = self.env.cr.now()
 
     @api.depends('create_date', 'date_open')
     def _compute_day_open(self):
@@ -606,7 +608,7 @@ class Lead(models.Model):
             # check for "same commercial entity" duplicates
             if lead.partner_id and lead.partner_id.commercial_partner_id:
                 duplicate_lead_ids |= lead.with_context(active_test=False).search(common_lead_domain + [
-                    ("partner_id", "child_of", lead.partner_id.commercial_partner_id.id)
+                    ("partner_id", "child_of", lead.partner_id.commercial_partner_id.ids)
                 ])
             # check the phone number duplicates, based on phone_sanitized. Only
             # exact matches are found, and the single one stored in phone_sanitized
@@ -738,17 +740,6 @@ class Lead(models.Model):
                            self._table, ['user_id', 'team_id', 'type'])
         tools.create_index(self._cr, 'crm_lead_create_date_team_id_idx',
                            self._table, ['create_date', 'team_id'])
-        phone_pattern = r'[\s\\./\(\)\-]'
-        for field_name in ('phone', 'mobile'):
-            index_name = f'crm_lead_{field_name}_partial_tgm'
-            if tools.index_exists(self._cr, index_name):
-                continue
-            regex_expression = f"regexp_replace(({field_name}::text), %s::text, ''::text, 'g'::text)"
-            self._cr.execute(
-                f'CREATE INDEX "{index_name}" ON "{self._table}" ({regex_expression}) WHERE {field_name} IS NOT NULL',
-                (phone_pattern,)
-            )
-            _schema.debug("Table %r: created index %r (%s)", self._table, index_name, regex_expression)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -767,13 +758,27 @@ class Lead(models.Model):
         if vals.get('website'):
             vals['website'] = self.env['res.partner']._clean_website(vals['website'])
 
-        stage_updated, stage_is_won = vals.get('stage_id'), False
-        # stage change: update date_last_stage_update
-        if stage_updated:
-            stage = self.env['crm.stage'].browse(vals['stage_id'])
-            if stage.is_won:
-                vals.update({'probability': 100, 'automated_probability': 100})
-                stage_is_won = True
+        now = self.env.cr.now()
+        stage_updated, stage_is_won = False, False
+        # stage change (or reset): update date_last_stage_update if at least one
+        # lead does not have the same stage
+        if 'stage_id' in vals:
+            stage_updated = any(lead.stage_id.id != vals['stage_id'] for lead in self)
+            if stage_updated:
+                vals['date_last_stage_update'] = now
+            if stage_updated and vals.get('stage_id'):
+                stage = self.env['crm.stage'].browse(vals['stage_id'])
+                if stage.is_won:
+                    vals.update({'probability': 100, 'automated_probability': 100})
+                    stage_is_won = True
+        # user change; update date_open if at least one lead does not
+        # have the same user
+        if 'user_id' in vals and not vals.get('user_id'):
+            vals['date_open'] = False
+        elif vals.get('user_id'):
+            user_updated = any(lead.user_id.id != vals['user_id'] for lead in self)
+            if user_updated:
+                vals['date_open'] = now
 
         # stage change with new stage: update probability and date_closed
         if vals.get('probability', 0) >= 100 or not vals.get('active', True):
@@ -1285,15 +1290,18 @@ class Lead(models.Model):
             help_title = _('Create a new lead')
         else:
             help_title = _('Create an opportunity to start playing with your pipeline.')
-        alias_record = self.env['mail.alias'].search([
-            ('alias_name', '!=', False),
-            ('alias_name', '!=', ''),
-            ('alias_model_id.model', '=', 'crm.lead'),
-            ('alias_parent_model_id.model', '=', 'crm.team'),
-            ('alias_force_thread_id', '=', False)
-        ], limit=1)
-
-        if alias_record.alias_domain and alias_record.alias_name:
+        alias_domain = [
+            ('company_id', '=', self.env.company.id),
+            ('alias_id.alias_name', '!=', False),
+            ('alias_id.alias_name', '!=', ''),
+            ('alias_id.alias_model_id.model', '=', 'crm.lead'),
+        ]
+        # sort by use_leads, then by our membership of the team
+        alias_records = self.env['crm.team'].search(alias_domain).sorted(
+            lambda r: (r.use_leads, self.env.user in r.member_ids), reverse=True
+        )
+        alias_record = alias_records[0] if alias_records else None
+        if alias_record and alias_record.alias_domain and alias_record.alias_name:
             sub_title = Markup(_('Use the <i>New</i> button, or send an email to %(email_link)s to test the email gateway.')) % {
                 'email_link': Markup("<b><a href='mailto:%s'>%s</a></b>") % (alias_record.display_name, alias_record.display_name),
             }
@@ -1429,7 +1437,12 @@ class Lead(models.Model):
             if merged_data.get('stage_id') not in team_stage_ids.ids:
                 merged_data['stage_id'] = team_stage_ids[0].id if team_stage_ids else False
 
-        # write merged data into first opportunity
+        # write merged data into first opportunity; remove some keys if already
+        # set on opp to avoid useless recomputes
+        if 'user_id' in merged_data and opportunities_head.user_id.id == merged_data['user_id']:
+            merged_data.pop('user_id')
+        if 'team_id' in merged_data and opportunities_head.team_id.id == merged_data['team_id']:
+            merged_data.pop('team_id')
         opportunities_head.write(merged_data)
 
         # delete tail opportunities
@@ -1683,7 +1696,6 @@ class Lead(models.Model):
         new_team_id = team_id if team_id else self.team_id.id
         upd_values = {
             'type': 'opportunity',
-            'date_open': self.env.cr.now(),
             'date_conversion': self.env.cr.now(),
         }
         if customer != self.partner_id:
@@ -1863,7 +1875,7 @@ class Lead(models.Model):
 
         for record in self.filtered('email_normalized'):
             values = email_normalized_to_values.setdefault(record.email_normalized, {})
-            contact_name = record.contact_name or record.partner_name or parse_contact_from_email(record.email_from)[0]
+            contact_name = record.contact_name or record.partner_name or parse_contact_from_email(record.email_from)[0] or record.email_from
             # Note that we don't attempt to create the parent company even if partner name is set
             values.update(record._prepare_customer_values(contact_name, is_company=False))
             values['company_name'] = record.partner_name
@@ -1902,7 +1914,7 @@ class Lead(models.Model):
             'is_company': is_company,
             'type': 'contact'
         }
-        if self.lang_id:
+        if self.lang_id.active:
             res['lang'] = self.lang_id.code
         return res
 
@@ -2057,8 +2069,10 @@ class Lead(models.Model):
         contact_name is "Raoul" and email is "raoul@raoul.fr", suggest
         "Raoul" <raoul@raoul.fr> as recipient. """
         result = super(Lead, self)._message_partner_info_from_emails(emails, link_mail=link_mail)
+        if not (self.partner_name or self.contact_name) or not self.email_from:
+            return result
         for email, partner_info in zip(emails, result):
-            if partner_info.get('partner_id') or not email or not (self.partner_name or self.contact_name):
+            if partner_info.get('partner_id') or not email:
                 continue
             # reformat email if no name information
             name_emails = tools.email_split_tuples(email)

@@ -7,6 +7,7 @@ import { useHotkey } from '@web/core/hotkeys/hotkey_hook';
 import { Wysiwyg } from "@web_editor/js/wysiwyg/wysiwyg";
 import weUtils from '@web_editor/js/common/utils';
 import { isMediaElement } from '@web_editor/js/editor/odoo-editor/src/utils/utils';
+import { cloneContentEls } from "@website/js/utils";
 
 import { EditMenuDialog, MenuDialog } from "../dialog/edit_menu";
 import { WebsiteDialog } from '../dialog/dialog';
@@ -46,6 +47,25 @@ function toggleDropdown($toggles, show) {
 }
 
 /**
+ * Checks if the classes that changed during the mutation are all to be ignored.
+ * (The mutation can be discarded if it is the case, when filtering the mutation
+ * records).
+ *
+ * @param {Object} record the current mutation
+ * @param {Array} excludedClasses the classes to ignore
+ * @returns {Boolean}
+ */
+function checkForExcludedClasses(record, excludedClasses) {
+    const classBefore = (record.oldValue && record.oldValue.split(" ")) || [];
+    const classAfter = [...record.target.classList];
+    const changedClasses = [
+        ...classBefore.filter(c => c && !classAfter.includes(c)),
+        ...classAfter.filter(c => c && !classBefore.includes(c)),
+    ];
+    return changedClasses.every(c => excludedClasses.includes(c));
+}
+
+/**
  * This component adapts the Wysiwyg widget from @web_editor/wysiwyg.js.
  * It encapsulate it so that this legacy widget can work in an OWL framework.
  */
@@ -80,7 +100,8 @@ export class WysiwygAdapterComponent extends Wysiwyg {
 
         this.oeStructureSelector = '#wrapwrap .oe_structure[data-oe-xpath][data-oe-id]';
         this.oeFieldSelector = '#wrapwrap [data-oe-field]:not([data-oe-sanitize-prevent-edition])';
-        this.oeCoverSelector = '#wrapwrap .s_cover[data-res-model], #wrapwrap .o_record_cover_container[data-res-model]';
+        this.oeRecordCoverSelector = "#wrapwrap .o_record_cover_container[data-res-model]";
+        this.oeCoverSelector = `#wrapwrap .s_cover[data-res-model], ${this.oeRecordCoverSelector}`;
         if (this.props.savableSelector) {
             this.savableSelector = this.props.savableSelector;
         } else {
@@ -91,6 +112,15 @@ export class WysiwygAdapterComponent extends Wysiwyg {
         useHotkey('control+k', () => {});
 
         onWillStart(() => {
+            // Destroy the widgets before instantiating the wysiwyg.
+            // grep: RESTART_WIDGETS_EDIT_MODE
+            // TODO ideally this should be done as close as the restart as
+            // as possible to avoid long flickering when entering edit mode. At
+            // moment some RPC are awaited before the restart so it is not
+            // ideal. But this has to be done before adding o_editable classes
+            // in the DOM. To review once everything is OWLified.
+            this._websiteRootEvent("widgets_stop_request");
+
             const pageOptionEls = this.websiteService.pageDocument.querySelectorAll('.o_page_option_data');
             for (const pageOptionEl of pageOptionEls) {
                 const optionName = pageOptionEl.name;
@@ -149,16 +179,22 @@ export class WysiwygAdapterComponent extends Wysiwyg {
     async startEdition() {
         this.props.removeWelcomeMessage();
 
+        // Bind the _onPageClick handler to click event: to close the dropdown if clicked outside.
+        this.__onPageClick = this._onPageClick.bind(this);
+        this.$editable[0].addEventListener("click", this.__onPageClick, { capture: true });
+
         this.options.toolbarHandler = $('#web_editor-top-edit');
         // Do not insert a paragraph after each column added by the column commands:
         this.options.insertParagraphAfterColumns = false;
 
         const $editableWindow = this.$editable[0].ownerDocument.defaultView;
         // Dropdown menu initialization: handle dropdown openings by hand
-        var $dropdownMenuToggles = $editableWindow.$('.o_mega_menu_toggle, #o_main_nav .dropdown-toggle');
+        // TODO in master: remove the selector with the `#o_main_nav` id.
+        const $dropdownMenuToggles = $editableWindow.$(".o_mega_menu_toggle, #o_main_nav .dropdown-toggle, .o_main_nav .dropdown-toggle");
         $dropdownMenuToggles.removeAttr('data-bs-toggle').dropdown('dispose');
+        // Since bootstrap 5.1.3, removing bsToggle is not sufficient anymore.
+        $dropdownMenuToggles.siblings(".dropdown-menu").addClass("o_wysiwyg_submenu");
         $dropdownMenuToggles.on('click.wysiwyg_megamenu', ev => {
-            this.odooEditor.observerUnactive();
             var $toggle = $(ev.currentTarget);
 
             // Each time we toggle a dropdown, we will destroy the dropdown
@@ -175,8 +211,7 @@ export class WysiwygAdapterComponent extends Wysiwyg {
                     if (!this.options.enableTranslation) {
                         this._toggleMegaMenu($toggle[0]);
                     }
-                })
-                .then(() => this.odooEditor.observerActive());
+                });
         });
 
         // Ensure :blank oe_structure elements are in fact empty as ':blank'
@@ -188,6 +223,83 @@ export class WysiwygAdapterComponent extends Wysiwyg {
         }
         await super.startEdition();
 
+        // Overriding the `filterMutationRecords` function so it can be used to
+        // filter website-specific mutations.
+        const webEditorFilterMutationRecords = this.odooEditor.options.filterMutationRecords;
+        Object.assign(this.odooEditor.options, {
+            /**
+             * @override
+             */
+            filterMutationRecords(records) {
+                const filteredRecords = webEditorFilterMutationRecords(records);
+
+                // Dropdown attributes to ignore.
+                const dropdownClasses = ["show"];
+                const dropdownToggleAttributes = ["aria-expanded"];
+                const dropdownMenuAttributes = ["data-popper-placement", "style", "data-bs-popper"];
+                // Offcanvas attributes to ignore.
+                const offcanvasClasses = ["show"];
+                const offcanvasAttributes = ["aria-modal", "aria-hidden", "role", "style"];
+                // Carousel attributes to ignore.
+                const carouselSlidingClasses = ["carousel-item-start", "carousel-item-end",
+                    "carousel-item-next", "carousel-item-prev", "active"];
+                const carouselIndicatorAttributes = ["aria-current"];
+
+                return filteredRecords.filter(record => {
+                    if (record.type === "attributes") {
+                        if (record.target.closest("header#top")) {
+                            // Do not record when showing/hiding a dropdown.
+                            if (record.target.matches(".dropdown-toggle, .dropdown-menu")
+                                    && record.attributeName === "class") {
+                                if (checkForExcludedClasses(record, dropdownClasses)) {
+                                    return false;
+                                }
+                            } else if (record.target.matches(".dropdown-menu")
+                                    && dropdownMenuAttributes.includes(record.attributeName)) {
+                                return false;
+                            } else if (record.target.matches(".dropdown-toggle")
+                                    && dropdownToggleAttributes.includes(record.attributeName)) {
+                                return false;
+                            }
+
+                            // Do not record when showing/hiding an offcanvas.
+                            if (record.target.matches(".offcanvas, .offcanvas-backdrop")
+                                    && record.attributeName === "class") {
+                                if (checkForExcludedClasses(record, offcanvasClasses)) {
+                                    return false;
+                                }
+                            } else if (record.target.matches(".offcanvas")
+                                    && offcanvasAttributes.includes(record.attributeName)) {
+                                return false;
+                            }
+                        }
+
+                        // Do not record some carousel attributes changes.
+                        if (record.target.closest(":not(section) > .carousel")) {
+                            if (record.target.matches(".carousel-item, .carousel-indicators > li")
+                                    && record.attributeName === "class") {
+                                if (checkForExcludedClasses(record, carouselSlidingClasses)) {
+                                    return false;
+                                }
+                            } else if (record.target.matches(".carousel-indicators > li")
+                                    && carouselIndicatorAttributes.includes(record.attributeName)) {
+                                return false;
+                            }
+                        }
+                    } else if (record.type === "childList") {
+                        const addedOrRemovedNode = record.addedNodes[0] || record.removedNodes[0];
+                        // Do not record the addition/removal of the offcanvas
+                        // backdrop.
+                        if (addedOrRemovedNode.nodeType === Node.ELEMENT_NODE
+                                && addedOrRemovedNode.matches(".offcanvas-backdrop")) {
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+            }
+        });
+
         // Disable OdooEditor observer's while setting up classes
         this.odooEditor.observerUnactive();
         this._addEditorMessages();
@@ -196,6 +308,7 @@ export class WysiwygAdapterComponent extends Wysiwyg {
         }
         // The jquery instance inside the iframe needs to be aware of the wysiwyg.
         this.websiteService.contentWindow.$('#wrapwrap').data('wysiwyg', this);
+        // grep: RESTART_WIDGETS_EDIT_MODE
         await new Promise((resolve, reject) => this._websiteRootEvent('widgets_start_request', {
             editableMode: true,
             onSuccess: resolve,
@@ -328,6 +441,7 @@ export class WysiwygAdapterComponent extends Wysiwyg {
         const formOptionsMod = await odoo.loader.modules.get('@website/snippets/s_website_form/options')[Symbol.for('default')];
         formOptionsMod.clearAllFormsInfo();
 
+        this.$editable[0].removeEventListener("click", this.__onPageClick, { capture: true });
         return super.destroy(...arguments);
     }
 
@@ -357,6 +471,8 @@ export class WysiwygAdapterComponent extends Wysiwyg {
                 showChecklist: false,
                 showAnimateText: true,
                 showTextHighlights: true,
+                showFontSize: false,
+                useFontSizeInput: true,
             },
             context: this._context,
             editable: this.$editable,
@@ -397,11 +513,27 @@ export class WysiwygAdapterComponent extends Wysiwyg {
             // generated a new stack and break the "redo" of the editor.
             this.odooEditor.automaticStepSkipStack();
             for (const record of records) {
-                const $savable = $(record.target).closest(this.savableSelector);
-
                 if (record.attributeName === 'contenteditable') {
                     continue;
                 }
+
+                const $savable = $(record.target).closest(this.savableSelector);
+                if (!$savable.length) {
+                    continue;
+                }
+
+                // Do not mark the editable dirty when simply adding/removing
+                // link zwnbsp since these are just technical nodes that aren't
+                // part of the user's editing of the document.
+                if (record.type === 'childList' &&
+                    [...record.addedNodes, ...record.removedNodes].every(node => (
+                        node.nodeType === Node.TEXT_NODE && node.textContent === '\ufeff')
+                    )) {
+                    continue;
+                }
+
+                // Mark any savable element dirty if any tracked mutation occurs
+                // inside of it.
                 $savable.not('.o_dirty').each(function () {
                     if (!this.hasAttribute('data-oe-readonly')) {
                         this.classList.add('o_dirty');
@@ -473,7 +605,13 @@ export class WysiwygAdapterComponent extends Wysiwyg {
             .not('input, [data-oe-readonly], ' +
                  '[data-oe-type="monetary"], [data-oe-many2one-id], [data-oe-field="arch"]:empty')
             .filter((_, el) => {
-                return !$(el).closest('.o_not_editable').length;
+                // The whole record cover is considered editable by the editor,
+                // which makes it possible to add content (text, images,...)
+                // from the text tools. To fix this issue, we need to reduce the
+                // editable area to its editable fields only, but first, we need
+                // to remove the cover along with its descendants from the
+                // initial editable zones.
+                return !$(el).closest('.o_not_editable').length && !el.closest(this.oeRecordCoverSelector);
             });
 
         // TODO migrate in master. This stable fix restores the possibility to
@@ -499,7 +637,8 @@ export class WysiwygAdapterComponent extends Wysiwyg {
         // oe_structure editable. This avoids having a selection range span
         // over all further inactive tabs when using Chrome.
         // grep: .s_tabs
-        $extraEditableZones = $extraEditableZones.add($editableSavableZones.find('.tab-pane > .oe_structure'));
+        $extraEditableZones = $extraEditableZones.add($editableSavableZones.find('.tab-pane > .oe_structure'))
+            .add(this.websiteService.pageDocument.querySelectorAll(`${this.oeRecordCoverSelector} [data-oe-field]:not([data-oe-field="arch"])`));
 
         return $editableSavableZones.add($extraEditableZones).toArray();
     }
@@ -756,6 +895,13 @@ export class WysiwygAdapterComponent extends Wysiwyg {
      * @returns {boolean} true if the page has been altered.
      */
     _isDirty() {
+        // TODO improve in master: the way we check if the page is dirty should
+        // match the fact the save will actually do something or not. Right now,
+        // this check checks the whole page, including the non editable parts,
+        // regardless of the fact something can be saved inside or not. It is
+        // also thus of course considering the page dirty too often by mistake
+        // since non editable parts can have their DOM changed without impacting
+        // the save (e.g. menus being folded into the "+" menu for example).
         return this.isDirty() || Object.values(this.pageOptions).some(option => option.isDirty);
     }
     _trigger_up(ev) {
@@ -800,6 +946,7 @@ export class WysiwygAdapterComponent extends Wysiwyg {
      * @returns {Promise}
      */
     async _saveViewBlocks() {
+        this._restoreCarousels();
         await super._saveViewBlocks(...arguments);
         if (this.isDirty()) {
             return this._restoreMegaMenus();
@@ -809,7 +956,7 @@ export class WysiwygAdapterComponent extends Wysiwyg {
      * @private
      * @param {HTMLElement} editable
      */
-    _saveCoverProperties($elementToSave) {
+    async _saveCoverProperties($elementToSave) {
         var el = $elementToSave.closest('.o_record_cover_container')[0];
         if (!el) {
             return;
@@ -836,7 +983,31 @@ export class WysiwygAdapterComponent extends Wysiwyg {
         }
         this.__savedCovers[resModel].push(resID);
 
-        var cssBgImage = $(el.querySelector('.o_record_cover_image')).css('background-image');
+        const imageEl = el.querySelector('.o_record_cover_image');
+        let cssBgImage = imageEl.style.backgroundImage;
+        if (imageEl.classList.contains("o_b64_image_to_save")) {
+            imageEl.classList.remove("o_b64_image_to_save");
+            const groups = cssBgImage.match(/url\("data:(?<mimetype>.*);base64,(?<imageData>.*)"\)/)?.groups;
+            if (!groups.imageData) {
+                // Checks if the image is in base64 format for RPC call. Relying
+                // only on the presence of the class "o_b64_image_to_save" is not
+                // robust enough.
+                return;
+            }
+            const modelName = await this.websiteService.getUserModelName(resModel);
+            const recordNameEl = imageEl.closest("body").querySelector(`[data-oe-model="${resModel}"][data-oe-id="${resID}"][data-oe-field="name"]`);
+            const recordName = recordNameEl ? `'${recordNameEl.textContent.replaceAll("/", "")}'` : resID;
+            const attachment = await this.rpc(
+                '/web_editor/attachment/add_data',
+                {
+                    name: `${modelName} ${recordName} cover image.${groups.mimetype.split("/")[1]}`,
+                    data: groups.imageData,
+                    is_image: true,
+                    res_model: 'ir.ui.view',
+                },
+            );
+            cssBgImage = `url(${attachment.image_src})`;
+        }
         var coverProps = {
             'background-image': cssBgImage.replace(/"/g, '').replace(window.location.protocol + "//" + window.location.host, ''),
             'background_color_class': el.dataset.bgColorClass,
@@ -869,11 +1040,27 @@ export class WysiwygAdapterComponent extends Wysiwyg {
     /**
      * @override
      */
-    async _saveElement($el, context, withLang) {
+    async _saveElement($el, context, withLang, ...rest) {
         var promises = [];
 
-        // Saving a view content
-        await super._saveElement(...arguments);
+        // Saving Embed Code snippets with <script> in the database, as these
+        // elements are removed in edit mode.
+        if ($el[0].querySelector(".s_embed_code")) {
+            // Copied so as not to impact the actual DOM and prevent scripts
+            // from loading.
+            const $clonedEl = $el.clone(true, true);
+            for (const embedCodeEl of $clonedEl[0].querySelectorAll(".s_embed_code")) {
+                const embedTemplateEl = embedCodeEl.querySelector(".s_embed_code_saved");
+                if (embedTemplateEl) {
+                    embedCodeEl.querySelector(".s_embed_code_embedded")
+                        .replaceChildren(cloneContentEls(embedTemplateEl.content, true));
+                }
+            }
+            await super._saveElement($clonedEl, context, withLang, ...rest);
+        } else {
+            // Saving a view content
+            await super._saveElement(...arguments);
+        }
 
         // Saving mega menu options
         if ($el.data('oe-field') === 'mega_menu_content') {
@@ -883,7 +1070,7 @@ export class WysiwygAdapterComponent extends Wysiwyg {
             // FIXME normally removing the 'show' class should not be necessary here
             // TODO check that editor classes are removed here as well
             const classes = [...$el[0].classList].filter(megaMenuClass =>
-                ["dropdown-menu", "o_mega_menu", "show"].indexOf(megaMenuClass) < 0);
+                ["dropdown-menu", "o_mega_menu", "show", "o_wysiwyg_submenu"].indexOf(megaMenuClass) < 0);
             promises.push(
                 this.orm.write('website.menu', [parseInt($el.data('oe-id'))], {
                     'mega_menu_classes': classes.join(' '),
@@ -924,8 +1111,31 @@ export class WysiwygAdapterComponent extends Wysiwyg {
         if (!megaMenuEl || !megaMenuEl.classList.contains('show')) {
             return this.snippetsMenu.activateSnippet(false);
         }
+        this.odooEditor.observerUnactive("toggleMegaMenu");
         megaMenuEl.classList.add('o_no_parent_editor');
+        this.odooEditor.observerActive("toggleMegaMenu");
         return this.snippetsMenu.activateSnippet($(megaMenuEl));
+    }
+    /**
+     * Restores all the carousels so their first slide is the active one.
+     *
+     * @private
+     */
+    _restoreCarousels() {
+        this.$editable[0].querySelectorAll(".carousel").forEach(carouselEl => {
+            // Set the first slide as the active one.
+            carouselEl.querySelectorAll(".carousel-item").forEach((itemEl, i) => {
+                itemEl.classList.remove("next", "prev", "left", "right");
+                itemEl.classList.toggle("active", i === 0);
+            });
+            carouselEl.querySelectorAll(".carousel-indicators li[data-bs-slide-to]").forEach((indicatorEl, i) => {
+                indicatorEl.classList.toggle("active", i === 0);
+                indicatorEl.removeAttribute("aria-current");
+                if (i === 0) {
+                    indicatorEl.setAttribute("aria-current", "true");
+                }
+            });
+        });
     }
     /**
      * @override
@@ -938,6 +1148,16 @@ export class WysiwygAdapterComponent extends Wysiwyg {
             field: $editable.data('oe-field'),
             type: $editable.data('oe-type'),
         };
+    }
+    /**
+     * Hides all opened dropdowns.
+     *
+     * @private
+     */
+    _hideDropdowns() {
+        for (const toggleEl of this.$editable[0].querySelectorAll(".dropdown-toggle.show")) {
+            Dropdown.getOrCreateInstance(toggleEl).hide();
+        }
     }
 
     //--------------------------------------------------------------------------
@@ -1153,5 +1373,18 @@ export class WysiwygAdapterComponent extends Wysiwyg {
             input.setAttribute('value', input.closest('we-input').dataset.selectStyle || '');
         });
         return dummySnippetsEl;
+    }
+    /**
+     * Called when the page is clicked anywhere.
+     * Closes the shown dropdown if the click is outside of it.
+     *
+     * @private
+     * @param {Event} ev
+     */
+    _onPageClick(ev) {
+        if (ev.target.closest(".dropdown-menu.show, .dropdown-toggle.show")) {
+            return;
+        }
+        this._hideDropdowns();
     }
 }

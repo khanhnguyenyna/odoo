@@ -3,22 +3,29 @@
 # 	* spreadsheet_dashboard
 # 
 # Translators:
-# Wil Odoo, 2023
-# Larissa Manderfeld, 2023
+# Wil Odoo, 2024
+# Larissa Manderfeld, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-01-05 12:32+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Larissa Manderfeld, 2023\n"
+"Last-Translator: Larissa Manderfeld, 2024\n"
 "Language-Team: Spanish (https://app.transifex.com/odoo/teams/41243/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Language: es\n"
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
+
+#. module: spreadsheet_dashboard
+#. odoo-python
+#: code:addons/spreadsheet_dashboard/models/spreadsheet_dashboard.py:0
+#, python-format
+msgid "%s (copy)"
+msgstr "%s (copia)"
 
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_share__access_token
@@ -42,14 +49,14 @@ msgstr "Un error ha ocurrido mientras el tablero estaba cargando."
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/mobile_search_panel/mobile_search_panel.xml:0
 #, python-format
 msgid "BACK"
-msgstr "Atrás"
+msgstr "REGRESAR"
 
 #. module: spreadsheet_dashboard
 #. odoo-javascript
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/mobile_search_panel/mobile_search_panel.js:0
 #, python-format
 msgid "Choose a dashboard...."
-msgstr "Eliga un tablero..."
+msgstr "Elija un tablero..."
 
 #. module: spreadsheet_dashboard
 #: model:ir.ui.menu,name:spreadsheet_dashboard.spreadsheet_dashboard_menu_configuration
@@ -59,7 +66,7 @@ msgstr "Configuración"
 #. module: spreadsheet_dashboard
 #: model:ir.model,name:spreadsheet_dashboard.model_spreadsheet_dashboard_share
 msgid "Copy of a shared dashboard"
-msgstr ""
+msgstr "Copia de una hoja de cálculo compartida"
 
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__create_uid
@@ -85,7 +92,7 @@ msgstr "Tablero"
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__dashboard_group_id
 msgid "Dashboard Group"
-msgstr "tablero grupal"
+msgstr "Grupo de tablero"
 
 #. module: spreadsheet_dashboard
 #: model:ir.actions.act_window,name:spreadsheet_dashboard.spreadsheet_dashboard_action_configuration_dashboards
@@ -107,7 +114,7 @@ msgstr "Nombre mostrado"
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard_share__excel_export
 msgid "Excel Export"
-msgstr ""
+msgstr "Exportación a Excel"
 
 #. module: spreadsheet_dashboard
 #: model:spreadsheet.dashboard.group,name:spreadsheet_dashboard.spreadsheet_dashboard_group_finance
@@ -174,7 +181,7 @@ msgstr "Nombre"
 #: code:addons/spreadsheet_dashboard/static/src/bundle/dashboard_action/dashboard_action.xml:0
 #, python-format
 msgid "No available dashboard"
-msgstr "No hay tableros disponibles"
+msgstr "Sin tableros disponibles"
 
 #. module: spreadsheet_dashboard
 #. odoo-javascript
@@ -184,7 +191,7 @@ msgid ""
 "Only chart figures are displayed in small screens but this dashboard doesn't"
 " contain any"
 msgstr ""
-"Solo las cifras de los gráficos se muestran en pantallas pequeñas, pero este"
+"Solo las cifras de las gráficas se muestran en pantallas pequeñas, pero este"
 " tablero no contiene ninguna."
 
 #. module: spreadsheet_dashboard
@@ -206,7 +213,7 @@ msgstr "Servicios"
 #. module: spreadsheet_dashboard
 #: model:ir.model,name:spreadsheet_dashboard.model_spreadsheet_dashboard
 msgid "Spreadsheet Dashboard"
-msgstr "tableros de hoja de cálculos"
+msgstr "Tablero de hojas de cálculo"
 
 #. module: spreadsheet_dashboard
 #: model:ir.model.fields,field_description:spreadsheet_dashboard.field_spreadsheet_dashboard__spreadsheet_data
@@ -239,7 +246,7 @@ msgstr "URL"
 #. module: spreadsheet_dashboard
 #: model:ir.module.category,description:spreadsheet_dashboard.dashboard_management
 msgid "User access level for Dashboard module"
-msgstr ""
+msgstr "Nivel de acceso de usuario para el módulo Tablero "
 
 #. module: spreadsheet_dashboard
 #: model:spreadsheet.dashboard.group,name:spreadsheet_dashboard.spreadsheet_dashboard_group_website
@@ -251,11 +258,11 @@ msgstr "Sitio web"
 #: code:addons/spreadsheet_dashboard/models/spreadsheet_dashboard_group.py:0
 #, python-format
 msgid "You cannot delete %s as it is used in another module."
-msgstr ""
+msgstr "No puede eliminar %s ya que se usa en otro módulo."
 
 #. module: spreadsheet_dashboard
 #. odoo-python
 #: code:addons/spreadsheet_dashboard/models/spreadsheet_dashboard_share.py:0
 #, python-format
 msgid "You don't have access to this dashboard. "
-msgstr ""
+msgstr "No tiene acceso a este tablero."

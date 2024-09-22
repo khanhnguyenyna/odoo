@@ -8,6 +8,7 @@ import json
 import logging
 import re
 import requests
+import threading
 
 from lxml import etree, html
 from psycopg2 import sql
@@ -188,6 +189,16 @@ class Website(models.Model):
     def _get_menu_ids(self):
         return self.env['website.menu'].search([('website_id', '=', self.id)]).ids
 
+    @tools.ormcache('self.env.uid', 'self.id', cache='templates')
+    def is_menu_cache_disabled(self):
+        """
+        Checks if the website menu contains a record like url.
+        :return: True if the menu contains a record like url
+        """
+        return any(self.env['website.menu'].browse(self._get_menu_ids()).filtered(
+            lambda menu: menu.url and re.search(r"[/](([^/=?&]+-)?[0-9]+)([/]|$)", menu.url))
+        )
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -344,7 +355,7 @@ class Website(models.Model):
 
     def _OLG_api_rpc(self, route, params):
         # For text content generation
-        return self._api_rpc(route, params, 'website.olg_api_endpoint', DEFAULT_OLG_ENDPOINT, timeout=300)
+        return self._api_rpc(route, params, 'website.olg_api_endpoint', DEFAULT_OLG_ENDPOINT, timeout=20)
 
     def get_cta_data(self, website_purpose, website_type):
         return {'cta_btn_text': False, 'cta_btn_href': '/contactus'}
@@ -645,10 +656,12 @@ class Website(models.Model):
 
         if translated_ratio > 0.8:
             try:
+                database_id = self.env['ir.config_parameter'].sudo().get_param('database.uuid')
                 response = self._OLG_api_rpc('/api/olg/1/generate_placeholder', {
                     'placeholders': list(generated_content.keys()),
                     'lang': website.default_lang_id.name,
                     'industry': industry,
+                    'database_id': database_id,
                 })
                 name_replace_parser = re.compile(r"XXXX", re.MULTILINE)
                 for key in generated_content:
@@ -1106,7 +1119,10 @@ class Website(models.Model):
         # there is one on request) or return a random one.
 
         # The format of `httprequest.host` is `domain:port`
-        domain_name = request and request.httprequest.host or ''
+        domain_name = (
+            request and request.httprequest.host
+            or hasattr(threading.current_thread(), 'url') and threading.current_thread().url
+            or '')
         website_id = self.sudo()._get_current_website_id(domain_name, fallback=fallback)
         return self.browse(website_id)
 
@@ -1280,6 +1296,31 @@ class Website(models.Model):
                       of the same.
             :rtype: list({name: str, url: str})
         """
+        # ==== WEBSITE.PAGES ====
+        # '/' already has a http.route & is in the routing_map so it will already have an entry in the xml
+        domain = [('url', '!=', '/')]
+        if not force:
+            domain += [('website_indexed', '=', True), ('visibility', '=', False)]
+            # is_visible
+            domain += [
+                ('website_published', '=', True), ('visibility', '=', False),
+                '|', ('date_publish', '=', False), ('date_publish', '<=', fields.Datetime.now())
+            ]
+
+        if query_string:
+            domain += [('url', 'like', query_string)]
+
+        pages = self._get_website_pages(domain)
+
+        for page in pages:
+            record = {'loc': page['url'], 'id': page['id'], 'name': page['name']}
+            if page.view_id and page.view_id.priority != 16:
+                record['priority'] = min(round(page.view_id.priority / 32.0, 1), 1)
+            if page['write_date']:
+                record['lastmod'] = page['write_date'].date()
+            yield record
+
+        # ==== CONTROLLERS ====
         router = self.env['ir.http'].routing_map()
         url_set = set()
 
@@ -1294,7 +1335,7 @@ class Website(models.Model):
                 func = rule.endpoint.routing['sitemap']
                 if func is False:
                     continue
-                for loc in func(self.env, rule, query_string):
+                for loc in func(self.with_context(lang=self.default_lang_id.code).env, rule, query_string):
                     yield loc
                 continue
 
@@ -1330,7 +1371,7 @@ class Website(models.Model):
 
                     for rec in converter.generate(self.env, args=val, dom=query):
                         newval.append(val.copy())
-                        newval[-1].update({name: rec})
+                        newval[-1].update({name: rec.with_context(lang=self.default_lang_id.code)})
                 values = newval
 
             for value in values:
@@ -1344,35 +1385,32 @@ class Website(models.Model):
 
                     yield page
 
-        # '/' already has a http.route & is in the routing_map so it will already have an entry in the xml
-        domain = [('url', '!=', '/')]
-        if not force:
-            domain += [('website_indexed', '=', True), ('visibility', '=', False)]
-            # is_visible
-            domain += [
-                ('website_published', '=', True), ('visibility', '=', False),
-                '|', ('date_publish', '=', False), ('date_publish', '<=', fields.Datetime.now())
-            ]
+    def get_website_page_ids(self):
+        if not self.env.user.has_group('website.group_website_restricted_editor'):
+            # Note that `website.pages` have `0,0,0,0` ACL rights by default for
+            # everyone except for the website designer which receive `1,0,0,0`.
+            # So the "Website/Site/Content/Pages" menu to reach the page manager
+            # is not shown to the restricted users, as the action linked model
+            # (website.page) can't be access. It's how the Odoo framework works.
+            # Still, we let the restricted editor access this resource for
+            # custos granting them read and/or write access on page.
+            raise AccessError(_("Access Denied"))
 
-        if query_string:
-            domain += [('url', 'like', query_string)]
-
-        pages = self._get_website_pages(domain)
-
-        for page in pages:
-            record = {'loc': page['url'], 'id': page['id'], 'name': page['name']}
-            if page.view_id and page.view_id.priority != 16:
-                record['priority'] = min(round(page.view_id.priority / 32.0, 1), 1)
-            if page['write_date']:
-                record['lastmod'] = page['write_date'].date()
-            yield record
+        domain = [('url', '!=', False)]
+        if self:
+            domain = AND([domain, self.website_domain()])
+        pages = self.env['website.page'].sudo().search(domain)
+        if self:
+            pages = pages.with_context(website_id=self.id)._get_most_specific_pages()
+        return pages.ids
 
     def _get_website_pages(self, domain=None, order='name', limit=None):
+        website = self.get_current_website()
         if domain is None:
             domain = []
-        domain += self.get_current_website().website_domain()
+        domain += website.website_domain()
         pages = self.env['website.page'].sudo().search(domain, order=order, limit=limit)
-        pages = pages._get_most_specific_pages()
+        pages = pages.with_context(website_id=website.id)._get_most_specific_pages()
         return pages
 
     def search_pages(self, needle=None, limit=None):
@@ -1441,6 +1479,7 @@ class Website(models.Model):
         return action
 
     def button_go_website(self, path='/', mode_edit=False):
+        # TODO: adapt in master as 'mode_edit' is always set to False
         self._force()
         if mode_edit:
             # If the user gets on a translated page (e.g /fr) the editor will
@@ -1580,6 +1619,15 @@ class Website(models.Model):
                 if f'data-v{asset_type}="{asset_version}"' in snippet:
                     return True
         return False
+
+    def _check_user_can_modify(self, record):
+        """ Verify that the current user can modify the given record.
+
+        :param record: record on which to perform the check
+        :raise AccessError: if the operation is forbidden
+        """
+        record.check_access_rights('write')
+        record.check_access_rule('write')
 
     def _disable_unused_snippets_assets(self):
         snippet_assets = self.env['ir.asset'].with_context(active_test=False).search_fetch(
@@ -1931,3 +1979,16 @@ class Website(models.Model):
                         for word in re.findall(match_pattern, value):
                             if word[0] == search[0]:
                                 yield word.lower()
+
+    def _allConsentsGranted(self):
+        """
+        Checks if all (cookies) consents have been granted. Note that in the
+        case no cookies bar has been enabled, this considers that full consent
+        has been immediately given. Indeed, in that case, we suppose that the
+        user implemented his own consent behavior through custom code / app.
+        That custom code / app is able to override this function as desired and
+        xpath the `tracking_code_config` script in `website.layout`.
+        :return: True if all consents have been granted, False otherwise
+        """
+        self.ensure_one()
+        return not self.cookies_bar or self.env['ir.http']._is_allowed_cookie('optional')

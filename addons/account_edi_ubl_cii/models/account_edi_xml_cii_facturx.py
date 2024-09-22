@@ -18,7 +18,7 @@ class AccountEdiXmlCII(models.AbstractModel):
     _description = "Factur-x/XRechnung CII 2.2.0"
 
     def _export_invoice_filename(self, invoice):
-        return "factur-x.xml"
+        return f"{invoice.name.replace('/', '_')}_factur_x.xml"
 
     def _export_invoice_ecosio_schematrons(self):
         return {
@@ -159,7 +159,7 @@ class AccountEdiXmlCII(models.AbstractModel):
         else:
             seller_siret = invoice.company_id.company_registry
 
-        buyer_siret = False
+        buyer_siret = invoice.commercial_partner_id.company_registry
         if 'siret' in invoice.commercial_partner_id._fields and invoice.commercial_partner_id.siret:
             buyer_siret = invoice.commercial_partner_id.siret
         template_values = {
@@ -181,6 +181,7 @@ class AccountEdiXmlCII(models.AbstractModel):
             'purchase_order_reference': invoice.purchase_order_reference if 'purchase_order_reference' in invoice._fields
                 and invoice.purchase_order_reference else invoice.ref or invoice.name,
             'contract_reference': invoice.contract_reference if 'contract_reference' in invoice._fields and invoice.contract_reference else '',
+            'document_context_id': "urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended",
         }
 
         # data used for IncludedSupplyChainTradeLineItem / SpecifiedLineTradeSettlement
@@ -204,14 +205,6 @@ class AccountEdiXmlCII(models.AbstractModel):
                 template_values['billing_start'] = min(date_range)
                 template_values['billing_end'] = max(date_range)
 
-        # One of the difference between XRechnung and Facturx is the following. Submitting a Facturx to XRechnung
-        # validator raises a warning, but submitting a XRechnung to Facturx raises an error.
-        supplier = invoice.company_id.partner_id.commercial_partner_id
-        if supplier.country_id.code == 'DE':
-            template_values['document_context_id'] = "urn:cen.eu:en16931:2017#compliant#urn:xoev-de:kosit:standard:xrechnung_2.2"
-        else:
-            template_values['document_context_id'] = "urn:cen.eu:en16931:2017#conformant#urn:factur-x.eu:1p0:extended"
-
         # Fixed taxes: add them as charges on the invoice lines
         for line_vals in template_values['invoice_line_vals_list']:
             line_vals['allowance_charge_vals_list'] = []
@@ -233,7 +226,7 @@ class AccountEdiXmlCII(models.AbstractModel):
         return template_values
 
     def _export_invoice(self, invoice):
-        vals = self._export_invoice_vals(invoice)
+        vals = self._export_invoice_vals(invoice.with_context(lang=invoice.partner_id.lang))
         errors = [constraint for constraint in self._export_invoice_constraints(invoice, vals).values() if constraint]
         xml_content = self.env['ir.qweb']._render('account_edi_ubl_cii.account_invoice_facturx_export_22', vals)
         return etree.tostring(cleanup_xml_node(xml_content), xml_declaration=True, encoding='UTF-8'), set(errors)
@@ -253,7 +246,7 @@ class AccountEdiXmlCII(models.AbstractModel):
         role = invoice.journal_id.type == 'purchase' and 'SellerTradeParty' or 'BuyerTradeParty'
         name = self._find_value(f"//ram:{role}/ram:Name", tree)
         mail = self._find_value(f"//ram:{role}//ram:URIID[@schemeID='SMTP']", tree)
-        vat = self._find_value(f"//ram:{role}/ram:SpecifiedTaxRegistration/ram:ID", tree)
+        vat = self._find_value(f"//ram:{role}/ram:SpecifiedTaxRegistration/ram:ID[string-length(text()) > 5]", tree)
         phone = self._find_value(f"//ram:{role}/ram:DefinedTradeContact/ram:TelephoneUniversalCommunication/ram:CompleteNumber", tree)
         country_code = self._find_value(f'//ram:{role}/ram:PostalTradeAddress//ram:CountryID', tree)
         self._import_retrieve_and_fill_partner(invoice, name=name, phone=phone, mail=mail, vat=vat, country_code=country_code)
@@ -273,6 +266,18 @@ class AccountEdiXmlCII(models.AbstractModel):
                 logs.append(_("Could not retrieve currency: %s. Did you enable the multicurrency option and "
                               "activate the currency?", currency_code_node.text))
 
+        # ==== Bank Details ====
+
+        bank_detail_nodes = tree.findall('.//{*}SpecifiedTradeSettlementPaymentMeans')
+        bank_details = [
+            bank_detail_node.findtext('{*}PayeePartyCreditorFinancialAccount/{*}IBANID')
+            or bank_detail_node.findtext('{*}PayeePartyCreditorFinancialAccount/{*}ProprietaryID')
+            for bank_detail_node in bank_detail_nodes
+        ]
+
+        if bank_details:
+            self._import_retrieve_and_fill_partner_bank_details(invoice, bank_details=bank_details)
+
         # ==== Reference ====
 
         ref_node = tree.find('./{*}ExchangedDocument/{*}ID')
@@ -281,7 +286,7 @@ class AccountEdiXmlCII(models.AbstractModel):
 
         # ==== Invoice origin ====
 
-        invoice_origin_node = tree.find('./{*}OrderReference/{*}ID')
+        invoice_origin_node = tree.find('.//{*}BuyerOrderReferencedDocument/{*}IssuerAssignedID')
         if invoice_origin_node is not None:
             invoice.invoice_origin = invoice_origin_node.text
 
@@ -300,7 +305,7 @@ class AccountEdiXmlCII(models.AbstractModel):
 
         # ==== payment_reference ====
 
-        payment_reference_node = tree.find('.//{*}BuyerOrderReferencedDocument/{*}IssuerAssignedID')
+        payment_reference_node = tree.find('./{*}SupplyChainTradeTransaction/{*}ApplicableHeaderTradeSettlement/{*}PaymentReference')
         if payment_reference_node is not None:
             invoice.payment_reference = payment_reference_node.text
 

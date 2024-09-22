@@ -25,7 +25,7 @@ class AccountMove(models.Model):
         ' identify the type of responsibilities that a person or a legal entity could have and that impacts in the'
         ' type of operations and requirements they need.')
 
-    l10n_ar_currency_rate = fields.Float(copy=False, digits=(16, 6), readonly=True, string="Currency Rate")
+    l10n_ar_currency_rate = fields.Float(copy=False, readonly=True, string="Currency Rate")
 
     # Mostly used on reports
     l10n_ar_afip_concept = fields.Selection(
@@ -96,9 +96,14 @@ class AccountMove(models.Model):
         # on expo invoice you can mix services and products
         expo_invoice = self.l10n_latam_document_type_id.code in ['19', '20', '21']
 
+        # WSFEX 1668 - If Expo invoice and we have a "IVA Liberado – Ley Nº 19.640" (Zona Franca) partner
+        # then AFIP concept to use should be type "Others (4)"
+        is_zona_franca = self.partner_id.l10n_ar_afip_responsibility_type_id == self.env.ref("l10n_ar.res_IVA_LIB")
         # Default value "product"
         afip_concept = '1'
-        if product_types == service:
+        if expo_invoice and is_zona_franca:
+            afip_concept = '4'
+        elif product_types == service:
             afip_concept = '2'
         elif product_types - consumable and product_types - service and not expo_invoice:
             afip_concept = '3'
@@ -231,7 +236,7 @@ class AccountMove(models.Model):
             })
         return super()._reverse_moves(default_values_list=default_values_list, cancel=cancel)
 
-    @api.onchange('l10n_latam_document_type_id', 'l10n_latam_document_number')
+    @api.onchange('l10n_latam_document_type_id', 'l10n_latam_document_number', 'partner_id')
     def _inverse_l10n_latam_document_number(self):
         super()._inverse_l10n_latam_document_number()
 
@@ -295,7 +300,7 @@ class AccountMove(models.Model):
             if any(tax.tax_group_id.l10n_ar_vat_afip_code and tax.tax_group_id.l10n_ar_vat_afip_code not in ['0', '1', '2'] for tax in line.tax_ids):
                 vat_taxable |= line
 
-        profits_tax_group = self.env.ref(f'account.{self.company_id.id}_tax_group_percepcion_ganancias')
+        profits_tax_group = self.env['account.chart.template'].with_company(self.company_id).ref('tax_group_percepcion_ganancias')
         return {'vat_amount': sign * sum(vat_taxes.mapped(amount_field)),
                 # For invoices of letter C should not pass VAT
                 'vat_taxable_amount': sign * sum(vat_taxable.mapped(amount_field)) if self.l10n_latam_document_type_id.l10n_ar_letter != 'C' else self.amount_untaxed,

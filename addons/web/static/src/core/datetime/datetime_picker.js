@@ -315,7 +315,10 @@ export class DateTimePicker extends Component {
         rounding: { type: Number, optional: true },
         slots: {
             type: Object,
-            shape: { buttons: { type: Object, optional: true } },
+            shape: {
+                bottom_left: { type: Object, optional: true },
+                buttons: { type: Object, optional: true },
+            },
             optional: true,
         },
         type: { type: [{ value: "date" }, { value: "datetime" }], optional: true },
@@ -511,9 +514,15 @@ export class DateTimePicker extends Component {
     applyValueAtIndex(value, valueIndex) {
         const result = [...this.values];
         if (this.props.range) {
-            if (result[0] && value.endOf("day") < result[0].startOf("day")) {
+            if (
+                (result[0] && value.endOf("day") < result[0].startOf("day")) ||
+                (result[1] && !result[0])
+            ) {
                 valueIndex = 0;
-            } else if (result[1] && result[1].endOf("day") < value.startOf("day")) {
+            } else if (
+                (result[1] && result[1].endOf("day") < value.startOf("day")) ||
+                (result[0] && !result[1])
+            ) {
                 valueIndex = 1;
             }
         }
@@ -600,14 +609,18 @@ export class DateTimePicker extends Component {
         if (isMeridiemFormat()) {
             this.meridiems = MERIDIEMS.map((m) => [m, m]);
             for (const timeValues of this.state.timeValues) {
-                timeValues.push(MERIDIEMS[Math.floor(timeValues[0] / 12) || 0]);
+                if (timeValues) {
+                    timeValues.push(MERIDIEMS[Math.floor(timeValues[0] / 12) || 0]);
+                }
             }
         }
         this.is12HourFormat = !is24HourFormat();
         if (this.is12HourFormat) {
             this.availableHours = [[0, HOURS[12][1]], ...HOURS.slice(1, 12)];
             for (const timeValues of this.state.timeValues) {
-                timeValues[0] %= 12;
+                if (timeValues) {
+                    timeValues[0] %= 12;
+                }
             }
         }
     }

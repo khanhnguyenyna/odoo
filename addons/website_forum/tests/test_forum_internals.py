@@ -59,6 +59,24 @@ class TestForumInternals(TestForumCommon):
         self.assertEqual(website_2.forum_count, 6,
                          '6 global forums')
 
+    def test_website_forum_last_post_id(self):
+        """Check that each forum's last post is computed correctly and efficiently."""
+        test_forums = self.base_forum | self.forum
+        new_posts = self.env["forum.post"].create([{
+            'name': f'New Post {forum_post_idx}',
+            'forum_id': forum.id,
+        } for forum_post_idx, forum in enumerate(test_forums)])
+
+        with self.assertQueryCount(1):
+            self.assertEqual(test_forums.last_post_id.ids, new_posts.ids)
+
+        another_post = self.env["forum.post"].create([{
+            'name': 'Another New Post',
+            'forum_id': self.base_forum.id,
+        }])
+        with self.assertQueryCount(1):
+            self.assertEqual(test_forums.last_post_id.ids, (another_post | new_posts[1]).ids)
+
 
 @tagged('forum_internals')
 class TestPostInternals(TestForumCommon):
@@ -145,3 +163,14 @@ class TestTags(TestForumCommon):
 
         self.assertEqual(self.base_forum.tag_most_used_ids, self.base_forum.tag_ids[:MOST_USED_TAGS_COUNT])
         self.assertEqual(self.base_forum.tag_unused_ids, self.env['forum.tag'])
+
+    def test_forum_post_link(self):
+        content = 'This is a test link: <a href="https://www.example.com/route?param1=a&param2=b" rel="ugc">test</a> Let make sure it works.'
+        self.user_portal.karma = 50
+        with self.with_user(self.user_portal.login):
+            post = self.env['forum.post'].create({
+                'name': "Post Forum test",
+                'content': content,
+                'forum_id': self.forum.id,
+            })
+        self.assertEqual(post.content, '<p>This is a test link: <a rel="nofollow" href="https://www.example.com/route?param1=a&amp;param2=b">test</a> Let make sure it works.</p>')

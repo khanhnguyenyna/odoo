@@ -43,10 +43,11 @@
     </template>
 
     <template id="payment_delivery" name="Delivery Costs" inherit_id="website_sale.payment">
-        <xpath expr="//t[@t-if='website_sale_order.amount_total']" position="before">
+        <!-- //t[@t-if='website_sale_order.amount_total'] should be removed in master -->
+        <xpath expr="//div[@name='website_sale_non_free_cart'] | //t[@name='website_sale_non_free_cart'] | //t[@t-if='website_sale_order.amount_total']" position="before">
             <div t-if="deliveries" id="delivery_carrier">
                 <t t-set="delivery_nb" t-value="len(deliveries)"/>
-                <h4>Choose a delivery method</h4>
+                <h4 class="fs-6 small text-uppercase fw-bolder">Choose a delivery method</h4>
                 <div class="card border-0" id="delivery_method">
                     <ul class="list-group">
                     <t t-foreach="deliveries" t-as="delivery">
@@ -57,10 +58,6 @@
                     </ul>
                 </div>
             </div>
-        </xpath>
-        <!-- we shouldn't be able to pay if there is no way to deliver -->
-        <xpath expr="//div[@id='payment_method']" position="attributes">
-                <attribute name="t-att-style">'display: none!important' if not deliveries and delivery_has_storable else ''</attribute>
         </xpath>
     </template>
 

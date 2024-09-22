@@ -7,6 +7,7 @@ from odoo.tools import groupby
 
 from collections import defaultdict
 from markupsafe import Markup, escape
+from odoo.tools import frozendict
 import json
 
 class AutomaticEntryWizard(models.TransientModel):
@@ -160,6 +161,7 @@ class AutomaticEntryWizard(models.TransientModel):
 
         # Group data from selected move lines
         counterpart_balances = defaultdict(lambda: defaultdict(lambda: 0))
+        counterpart_distribution_amount = defaultdict(lambda: defaultdict(lambda: {}))
         grouped_source_lines = defaultdict(lambda: self.env['account.move.line'])
 
         for line in self.move_line_ids.filtered(lambda x: x.account_id != self.destination_account_id):
@@ -170,17 +172,40 @@ class AutomaticEntryWizard(models.TransientModel):
                 counterpart_currency = self.destination_account_id.currency_id
                 counterpart_amount_currency = self.company_id.currency_id._convert(line.balance, self.destination_account_id.currency_id, self.company_id, line.date)
 
-            counterpart_balances[(line.partner_id, counterpart_currency)]['amount_currency'] += counterpart_amount_currency
-            counterpart_balances[(line.partner_id, counterpart_currency)]['balance'] += line.balance
-            counterpart_balances[(line.partner_id, counterpart_currency)]['analytic_distribution'] = line.analytic_distribution
-            grouped_source_lines[(line.partner_id, line.currency_id, line.account_id)] += line
+            grouping_key = (line.partner_id, counterpart_currency)
+
+            counterpart_balances[grouping_key]['amount_currency'] += counterpart_amount_currency
+            counterpart_balances[grouping_key]['balance'] += line.balance
+            if line.analytic_distribution:
+                for account_id, distribution in line.analytic_distribution.items():
+                    # For the counterpart, we will need to make a prorata of the different distribution of the lines
+                    # This computes the total balance for each analytic account, for each counterpart line to generate
+                    distribution_values = counterpart_distribution_amount[grouping_key]
+                    distribution_values[account_id] = (line.balance * distribution + distribution_values.get(account_id, 0) * 100) / 100
+            counterpart_balances[grouping_key]['analytic_distribution'] = counterpart_distribution_amount[grouping_key] or {}
+            grouped_source_lines[(
+                line.partner_id,
+                line.currency_id,
+                line.account_id,
+                line.analytic_distribution and frozendict(line.analytic_distribution),
+            )] += line
 
         # Generate counterpart lines' vals
         for (counterpart_partner, counterpart_currency), counterpart_vals in counterpart_balances.items():
             source_accounts = self.move_line_ids.mapped('account_id')
             counterpart_label = len(source_accounts) == 1 and _("Transfer from %s", source_accounts.display_name) or _("Transfer counterpart")
 
-            if not counterpart_currency.is_zero(counterpart_vals['amount_currency']):
+            # We divide the amount for each account by the total balance to reflect the lines counter-parted
+            analytic_distribution = {
+                account_id: (
+                    100
+                    if counterpart_currency.is_zero(counterpart_vals['balance'])
+                    else 100 * distribution_amount / counterpart_vals['balance']
+                )
+                for account_id, distribution_amount in counterpart_vals['analytic_distribution'].items()
+            }
+
+            if not counterpart_currency.is_zero(counterpart_vals['amount_currency']) or not self.company_id.currency_id.is_zero(counterpart_vals['balance']):
                 line_vals.append({
                     'name': counterpart_label,
                     'debit': counterpart_vals['balance'] > 0 and self.company_id.currency_id.round(counterpart_vals['balance']) or 0,
@@ -189,11 +214,11 @@ class AutomaticEntryWizard(models.TransientModel):
                     'partner_id': counterpart_partner.id or None,
                     'amount_currency': counterpart_currency.round((counterpart_vals['balance'] < 0 and -1 or 1) * abs(counterpart_vals['amount_currency'])) or 0,
                     'currency_id': counterpart_currency.id,
-                    'analytic_distribution': counterpart_vals['analytic_distribution'],
+                    'analytic_distribution': analytic_distribution,
                 })
 
         # Generate change_account lines' vals
-        for (partner, currency, account), lines in grouped_source_lines.items():
+        for (partner, currency, account, analytic_distribution), lines in grouped_source_lines.items():
             account_balance = sum(line.balance for line in lines)
             if not self.company_id.currency_id.is_zero(account_balance):
                 account_amount_currency = currency.round(sum(line.amount_currency for line in lines))
@@ -205,16 +230,76 @@ class AutomaticEntryWizard(models.TransientModel):
                     'partner_id': partner.id or None,
                     'currency_id': currency.id,
                     'amount_currency': (account_balance > 0 and -1 or 1) * abs(account_amount_currency),
+                    'analytic_distribution': analytic_distribution,
                 })
+
+        # Get the lowest child company based on accounts used to avoid access error
+        accounts = self.env['account.account'].browse([line['account_id'] for line in line_vals])
+        companies = accounts.company_id | self.env.company
+        lowest_child_company = max(companies, key=lambda company: len(company.parent_ids))
 
         return [{
             'currency_id': self.journal_id.currency_id.id or self.journal_id.company_id.currency_id.id,
             'move_type': 'entry',
             'journal_id': self.journal_id.id,
+            'company_id': lowest_child_company.id,
             'date': fields.Date.to_string(self.date),
             'ref': self.destination_account_id.display_name and _("Transfer entry to %s", self.destination_account_id.display_name or ''),
             'line_ids': [(0, 0, line) for line in line_vals],
         }]
+
+    def _get_move_line_dict_vals_change_period(self, aml, date):
+        # account.move.line data
+        accrual_account = self.revenue_accrual_account if self.account_type == 'income' else self.expense_accrual_account
+        reported_debit = aml.company_id.currency_id.round((self.percentage / 100) * aml.debit)
+        reported_credit = aml.company_id.currency_id.round((self.percentage / 100) * aml.credit)
+        reported_amount_currency = aml.currency_id.round((self.percentage / 100) * aml.amount_currency)
+
+        if date == 'new_date':
+            return [
+                (0, 0, {
+                    'name': aml.name or '',
+                    'debit': reported_debit,
+                    'credit': reported_credit,
+                    'amount_currency': reported_amount_currency,
+                    'currency_id': aml.currency_id.id,
+                    'account_id': aml.account_id.id,
+                    'partner_id': aml.partner_id.id,
+                    'analytic_distribution': aml.analytic_distribution,
+                }),
+                (0, 0, {
+                    'name': self._format_strings(_('{percent}% recognized on {new_date}'), aml.move_id),
+                    'debit': reported_credit,
+                    'credit': reported_debit,
+                    'amount_currency': -reported_amount_currency,
+                    'currency_id': aml.currency_id.id,
+                    'account_id': accrual_account.id,
+                    'partner_id': aml.partner_id.id,
+                    'analytic_distribution': aml.analytic_distribution,
+                }),
+            ]
+        return [
+            (0, 0, {
+                'name': aml.name or '',
+                'debit': reported_credit,
+                'credit': reported_debit,
+                'amount_currency': -reported_amount_currency,
+                'currency_id': aml.currency_id.id,
+                'account_id': aml.account_id.id,
+                'partner_id': aml.partner_id.id,
+                'analytic_distribution': aml.analytic_distribution,
+            }),
+            (0, 0, {
+                'name': self._format_strings(_('{percent}% recognized on {new_date}'), aml.move_id),
+                'debit': reported_debit,
+                'credit': reported_credit,
+                'amount_currency': reported_amount_currency,
+                'currency_id': aml.currency_id.id,
+                'account_id': accrual_account.id,
+                'partner_id': aml.partner_id.id,
+                'analytic_distribution': aml.analytic_distribution,
+            }),
+        ]
 
     def _get_move_dict_vals_change_period(self):
         reference_move = self.env['account.move'].new({'journal_id': self.journal_id.id, 'move_type': 'entry'})
@@ -224,7 +309,6 @@ class AutomaticEntryWizard(models.TransientModel):
             return reference_move._get_accounting_date(aml.date, aml.move_id._affect_tax_report())
 
         # set the change_period account on the selected journal items
-        accrual_account = self.revenue_accrual_account if self.account_type == 'income' else self.expense_accrual_account
 
         move_data = {'new_date': {
             'currency_id': self.journal_id.currency_id.id or self.journal_id.company_id.currency_id.id,
@@ -249,55 +333,8 @@ class AutomaticEntryWizard(models.TransientModel):
 
         # compute the account.move.lines and the total amount per move
         for aml in self.move_line_ids:
-            # account.move.line data
-            reported_debit = aml.company_id.currency_id.round((self.percentage / 100) * aml.debit)
-            reported_credit = aml.company_id.currency_id.round((self.percentage / 100) * aml.credit)
-            reported_amount_currency = aml.currency_id.round((self.percentage / 100) * aml.amount_currency)
-
-            move_data['new_date']['line_ids'] += [
-                (0, 0, {
-                    'name': aml.name or '',
-                    'debit': reported_debit,
-                    'credit': reported_credit,
-                    'amount_currency': reported_amount_currency,
-                    'currency_id': aml.currency_id.id,
-                    'account_id': aml.account_id.id,
-                    'partner_id': aml.partner_id.id,
-                    'analytic_distribution': aml.analytic_distribution,
-                }),
-                (0, 0, {
-                    'name': self._format_strings(_('{percent}% recognized on {new_date}'), aml.move_id),
-                    'debit': reported_credit,
-                    'credit': reported_debit,
-                    'amount_currency': -reported_amount_currency,
-                    'currency_id': aml.currency_id.id,
-                    'account_id': accrual_account.id,
-                    'partner_id': aml.partner_id.id,
-                    'analytic_distribution': aml.analytic_distribution,
-                }),
-            ]
-            move_data[get_lock_safe_date(aml)]['line_ids'] += [
-                (0, 0, {
-                    'name': aml.name or '',
-                    'debit': reported_credit,
-                    'credit': reported_debit,
-                    'amount_currency': -reported_amount_currency,
-                    'currency_id': aml.currency_id.id,
-                    'account_id': aml.account_id.id,
-                    'partner_id': aml.partner_id.id,
-                    'analytic_distribution': aml.analytic_distribution,
-                }),
-                (0, 0, {
-                    'name': self._format_strings(_('{percent}% to recognize on {new_date}'), aml.move_id),
-                    'debit': reported_debit,
-                    'credit': reported_credit,
-                    'amount_currency': reported_amount_currency,
-                    'currency_id': aml.currency_id.id,
-                    'account_id': accrual_account.id,
-                    'partner_id': aml.partner_id.id,
-                    'analytic_distribution': aml.analytic_distribution,
-                }),
-            ]
+            for date in ('new_date', get_lock_safe_date(aml)):
+                move_data[date]['line_ids'] += self._get_move_line_dict_vals_change_period(aml, date)
 
         move_vals = [m for m in move_data.values()]
         return move_vals
@@ -341,6 +378,7 @@ class AutomaticEntryWizard(models.TransientModel):
 
     def do_action(self):
         move_vals = json.loads(self.move_data)
+        self = self.with_context(skip_computed_taxes=True)
         if self.action == 'change_period':
             return self._do_action_change_period(move_vals)
         elif self.action == 'change_account':
@@ -471,7 +509,7 @@ class AutomaticEntryWizard(models.TransientModel):
 
         return Markup("<ul>%s</ul>") % Markup().join([
             Markup("<li>%s</li>") % \
-                self._format_strings(transfer_format, transfer_move, balance) % (Markup("<strong>%s</strong>") % account.display_name)
+                self._format_strings(transfer_format % (Markup("<strong>%s</strong>") % account.display_name), transfer_move, balance)
             for account, balance in balances_per_account.items()
             if account != self.destination_account_id
         ])

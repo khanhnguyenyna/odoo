@@ -17,7 +17,8 @@ def _reopen(self, res_id, model, context=None):
     # save original model in context, because selecting the list of available
     # templates requires a model in context
     context = dict(context or {}, default_model=model)
-    return {'type': 'ir.actions.act_window',
+    return {'name': _('Compose Email'),
+            'type': 'ir.actions.act_window',
             'view_mode': 'form',
             'res_id': res_id,
             'res_model': self._name,
@@ -95,17 +96,17 @@ class MailComposer(models.TransientModel):
     email_layout_xmlid = fields.Char(
         'Email Notification Layout',
         compute='_compute_email_layout_xmlid', readonly=False, store=True,
-        copy=False)
+        copy=False, compute_sudo=False)
     email_add_signature = fields.Boolean(
         'Add signature',
         compute='_compute_email_add_signature', readonly=False, store=True)
     # origin
     email_from = fields.Char(
-        'From', compute='_compute_authorship', readonly=False, store=True,
+        'From', compute='_compute_authorship', readonly=False, store=True, compute_sudo=False,
         help="Email address of the sender. This field is set when no matching partner is found and replaces the author_id field in the chatter.")
     author_id = fields.Many2one(
         'res.partner', string='Author',
-        compute='_compute_authorship', readonly=False, store=True,
+        compute='_compute_authorship', readonly=False, store=True, compute_sudo=False,
         help="Author of the message. If not set, email_from may hold an email address that did not match any partner.")
     # composition
     composition_mode = fields.Selection(
@@ -145,7 +146,7 @@ class MailComposer(models.TransientModel):
     mail_activity_type_id = fields.Many2one('mail.activity.type', 'Mail Activity Type', ondelete='set null')
     # destination
     reply_to = fields.Char(
-        'Reply To', compute='_compute_reply_to', readonly=False, store=True,
+        'Reply To', compute='_compute_reply_to', readonly=False, store=True, compute_sudo=False,
         help='Reply email address. Setting the reply_to bypasses the automatic thread creation.')
     reply_to_force_new = fields.Boolean(
         string='Considers answers as new thread',
@@ -164,7 +165,7 @@ class MailComposer(models.TransientModel):
     # sending
     auto_delete = fields.Boolean(
         'Delete Emails',
-        compute="_compute_auto_delete", readonly=False, store=True,
+        compute="_compute_auto_delete", readonly=False, store=True, compute_sudo=False,
         help='This option permanently removes any track of email after it\'s been sent, including from the Technical menu in the Settings, in order to preserve storage space of your Odoo database.')
     auto_delete_keep_log = fields.Boolean(
         'Keep Message Copy',
@@ -175,10 +176,10 @@ class MailComposer(models.TransientModel):
         compute='_compute_force_send', readonly=False, store=True)
     mail_server_id = fields.Many2one(
         'ir.mail_server', string='Outgoing mail server',
-        compute='_compute_mail_server_id', readonly=False, store=True)
+        compute='_compute_mail_server_id', readonly=False, store=True, compute_sudo=False)
     scheduled_date = fields.Char(
         'Scheduled Date',
-        compute='_compute_scheduled_date', readonly=False, store=True,
+        compute='_compute_scheduled_date', readonly=False, store=True, compute_sudo=False,
         help="In comment mode: if set, postpone notifications sending. "
              "In mass mail mode: if sent, send emails after that date. "
              "This date is considered as being in UTC timezone.")
@@ -319,6 +320,9 @@ class MailComposer(models.TransientModel):
             # update email_from first as it is the main used field currently
             if composer.template_id.email_from:
                 composer._set_value_from_template('email_from')
+            # switch to a template without email_from -> fallback on current user as default
+            elif composer.template_id:
+                composer.email_from = self.env.user.email_formatted
             # removing template or void from -> fallback on current user as default
             elif not composer.template_id or not composer.email_from:
                 composer.email_from = self.env.user.email_formatted
@@ -553,12 +557,22 @@ class MailComposer(models.TransientModel):
 
     @api.depends('composition_mode', 'model', 'res_domain', 'res_ids')
     def _compute_force_send(self):
-        """ It is set to True in mass mailing mode (send directly by default)
-        and in monorecord comment mode (send notifications right now). Batch
-        comment delays notification to use the email queue. """
+        """ When being in single record mode, we force_send (post on a record
+        or send a single email right away). In batch mode: comment always uses
+        the email queue (lot of potentially different emails to craft). Mass
+        mailing mode depends on number of recipients and is configurable using
+        'mail.mail.force.send.limit' configuration parameter (default=100).
+        Using a domain forces the email queue usage as it depends on actual
+        evaluation and is generally used for big batches anyway. """
         for composer in self:
-            composer.force_send = (composer.composition_mode == 'mass_mail' or
-                                   not composer.composition_batch)
+            if not composer.composition_batch:
+                composer.force_send = True
+            elif composer.composition_mode == 'comment' or composer.res_domain:
+                composer.force_send = False
+            else:
+                force_send_limit = int(self.env['ir.config_parameter'].sudo().get_param('mail.mail.force.send.limit', 100))
+                res_ids = composer._evaluate_res_ids()
+                composer.force_send = len(res_ids) <= force_send_limit
 
     @api.depends('template_id')
     def _compute_mail_server_id(self):
@@ -653,8 +667,7 @@ class MailComposer(models.TransientModel):
         for wizard in self:
             if wizard.res_domain:
                 search_domain = wizard._evaluate_res_domain()
-                search_user = wizard.res_domain_user_id or self.env.user
-                res_ids = self.env[wizard.model].with_user(search_user).search(search_domain).ids
+                res_ids = self.env[wizard.model].search(search_domain).ids
             else:
                 res_ids = wizard._evaluate_res_ids()
             # in comment mode: raise here as anyway message_post will raise.
@@ -708,33 +721,37 @@ class MailComposer(models.TransientModel):
         sudo as it is considered as a technical model. """
         mails_sudo = self.env['mail.mail'].sudo()
 
-        batch_size = int(self.env['ir.config_parameter'].sudo().get_param('mail.batch_size')) or self._batch_size
-        sliced_res_ids = [res_ids[i:i + batch_size] for i in range(0, len(res_ids), batch_size)]
+        batch_size = int(
+            self.env['ir.config_parameter'].sudo().get_param('mail.batch_size')
+        ) or self._batch_size  # be sure to not have 0, as otherwise no iteration is done
+        for res_ids_iter in tools.split_every(batch_size, res_ids):
+            res_ids_values = list(self._prepare_mail_values(res_ids_iter).values())
 
-        for res_ids_iter in sliced_res_ids:
-            mail_values_all = self._prepare_mail_values(res_ids_iter)
-
-            iter_mails_sudo = self.env['mail.mail'].sudo()
-            for _res_id, mail_values in mail_values_all.items():
-                iter_mails_sudo += mails_sudo.create(mail_values)
+            iter_mails_sudo = self.env['mail.mail'].sudo().create(res_ids_values)
             mails_sudo += iter_mails_sudo
 
             records = self.env[self.model].browse(res_ids_iter) if self.model and hasattr(self.env[self.model], 'message_post') else False
             if records:
                 records._message_mail_after_hook(iter_mails_sudo)
 
-            # as 'send' does not filter out scheduled mails (only 'process_email_queue'
-            # does) we need to do it manually
-            if not self.force_send:
-                continue
-            iter_mails_sudo_tosend = iter_mails_sudo.filtered(
-                lambda mail: (
-                    not mail.scheduled_date or
-                    mail.scheduled_date <= datetime.datetime.utcnow()
+            if self.force_send:
+                # as 'send' does not filter out scheduled mails (only 'process_email_queue'
+                # does) we need to do it manually
+                iter_mails_sudo_tosend = iter_mails_sudo.filtered(
+                    lambda mail: (
+                        not mail.scheduled_date or
+                        mail.scheduled_date <= datetime.datetime.utcnow()
+                    )
                 )
-            )
-            if iter_mails_sudo_tosend:
-                iter_mails_sudo_tosend.send(auto_commit=auto_commit)
+                if iter_mails_sudo_tosend:
+                    iter_mails_sudo_tosend.send(auto_commit=auto_commit)
+                    continue
+            # sending emails will commit and invalidate cache; in case we do not force
+            # send better void the cache and commit what is already generated to avoid
+            # running several times on same records in case of issue
+            if auto_commit is True:
+                self._cr.commit()
+            self.env.invalidate_all()
 
         return mails_sudo
 
@@ -1242,7 +1259,7 @@ class MailComposer(models.TransientModel):
         template_values = self.template_id._generate_template(
             res_ids,
             template_fields,
-            find_or_create_partners=True
+            find_or_create_partners=find_or_create_partners,
         )
 
         exclusion_list = ('email_cc', 'email_to') if find_or_create_partners else ()
@@ -1271,7 +1288,7 @@ class MailComposer(models.TransientModel):
             blacklist = {x[0] for x in self._cr.fetchall()}
             if not blacklist:
                 return blacklisted_rec_ids
-            if issubclass(type(self.env[self.model]), self.pool['mail.thread.blacklist']):
+            if isinstance(self.env[self.model], self.pool['mail.thread.blacklist']):
                 targets = self.env[self.model].browse(mail_values_dict.keys())
                 targets.fetch(['email_normalized'])
                 # First extract email from recipient before comparing with blacklist

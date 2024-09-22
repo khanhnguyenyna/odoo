@@ -69,7 +69,7 @@
                            readonly="not is_editable"/>
                     <field name="company_id" optional="show" groups="base.group_multi_company" readonly="True"/>
                     <field name="price_unit" string="Unit Price" optional="hide" widget="monetary"
-                           options="{'currency_field': 'company_currency_id'}" readonly="True"/>
+                           options="{'currency_field': 'company_currency_id', 'field_digits': True}" readonly="True"/>
                     <field name="quantity" optional="hide" readonly="not is_editable or not product_has_cost"/>
                     <field name="tax_ids" optional="hide" widget="many2many_tags"
                            groups="account.group_account_invoice,account.group_account_readonly"
@@ -167,7 +167,7 @@
                             <label for="product_id"/>
                             <div>
                                 <field name="product_id" required="1" readonly="not is_editable"
-                                       context="{'default_can_be_expensed': 1, 'tree_view_ref': 'hr_expense.product_product_expense_tree_view', 'form_view_ref': 'hr_expense.product_product_expense_form_view'}"
+                                       context="{'default_detailed_type': 'service', 'default_can_be_expensed': 1, 'tree_view_ref': 'hr_expense.product_product_expense_tree_view', 'form_view_ref': 'hr_expense.product_product_expense_form_view'}"
                                        class="w-100"/>
                                 <div class="fst-italic" invisible="not is_editable or not product_description or not product_id">
                                     <field name="product_description"/>
@@ -213,7 +213,7 @@
                                        widget="many2many_tags"
                                        readonly="not is_editable"
                                        options="{'no_create': True}"/>
-                                <field name="tax_amount"/>
+                                <field name="tax_amount_currency"/>
                             </div>
                             <t groups="hr_expense.group_hr_expense_team_approver">
                                 <field name="employee_id" groups="!hr.group_hr_user"
@@ -236,7 +236,7 @@
                                    invisible="not accounting_date or state not in ['approved', 'done']"
                                    readonly="not is_editable"/>
                             <field name="account_id" options="{'no_create': True}"
-                                   domain="[('account_type', 'not in', ('asset_receivable','liability_payable','asset_cash','liability_credit_card')), ('company_id', '=', company_id)]"
+                                   domain="[('account_type', 'not in', ('asset_receivable','liability_payable','asset_cash','liability_credit_card')), ('deprecated', '=', False)]"
                                    groups="account.group_account_readonly" readonly="not is_editable"
                                    context="{'default_company_id': company_id}"/>
                             <field name="analytic_distribution" widget="analytic_distribution"
@@ -485,7 +485,7 @@
                     <h2 class="d-none d-md-block">
                         Drag and drop files to create expenses
                     </h2>
-                    <p>
+                    <p class="d-none d-md-block">
                         Or
                     </p>
                     <h2 class="d-none d-md-block">
@@ -550,6 +550,9 @@
             <field name="model">product.product</field>
             <field name="arch" type="xml">
                 <form string="Expense Categories">
+                    <div class="alert alert-warning" role="alert" invisible="not standard_price_update_warning">
+                        <field name="standard_price_update_warning"/>
+                    </div>
                     <sheet>
                         <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
                         <field name='product_variant_count' invisible='1'/>
@@ -570,7 +573,6 @@
                             <group string="General Information">
                                 <field name="active" invisible="1"/>
                                 <field name="type" invisible="1"/>
-                                <field name="detailed_type" invisible="1"/>
                                 <field name="standard_price" class="w-25"
                                        help="When the cost of an expense product is different than 0, then the user
                                         using this product won't be able to change the amount of the expense,
@@ -743,7 +745,6 @@
                 <field name="can_reset" invisible="1"/>
                 <field name="can_approve" invisible="1"/>
                 <field name="company_id" invisible="1"/>
-                <field name="account_move_ids" invisible="1"/>
                 <field name="payment_state" invisible="1"/>
                 <field name="is_editable" invisible="1"/>
                 <field name="currency_id" invisible="1"/>
@@ -880,7 +881,7 @@
                                     }"
                                     readonly="not is_editable"
                                     force_save="1">
-                                <tree>
+                                <tree editable="bottom">
                                     <field name="employee_id" column_invisible="True"/>
                                     <field name="state" column_invisible="True"/>
                                     <field name="nb_attachment" column_invisible="True"/>
@@ -901,18 +902,18 @@
                                            optional="show"
                                            options="{'product_field': 'product_id', 'account_field': 'account_id', 'business_domain': 'expense'}"/>
                                     <field name="account_id" optional="hide" groups="account.group_account_readonly"/>
-                                    <field name="price_unit" optional="hide" widget="monetary" options="{'currency_field': 'company_currency_id'}"/>
+                                    <field name="price_unit" optional="hide" widget="monetary" options="{'currency_field': 'company_currency_id', 'field_digits': True}" readonly="True"/>
                                     <field name="currency_id" optional="hide" readonly="True" groups="base.group_multi_currency"/>
-                                    <field name="quantity" optional="hide" readonly="not product_has_cost"/>
+                                    <field name="quantity" optional="hide" readonly="True"/>
                                     <field name="tax_ids" string="Taxes" optional="show" widget="many2many_tags"
-                                           context="{'default_company_id': company_id}"/>
+                                           context="{'default_company_id': company_id}" readonly="True"/>
                                     <field name="tax_amount_currency" optional="hide"  options="{'currency_field': 'currency_id'}"
                                            context="{'default_company_id': company_id}" readonly="True" groups="base.group_multi_currency"/>
                                     <field name="tax_amount" optional="hide" readonly="True"/>
                                     <field name="total_amount_currency" options="{'currency_field': 'currency_id'}"
                                            string="Subtotal In Currency " optional="show"
-                                           readonly="not is_multiple_currency" groups="base.group_multi_currency"/>
-                                    <field name="total_amount" string="Subtotal" readonly="product_has_cost"/>
+                                           readonly="true" groups="base.group_multi_currency"/>
+                                    <field name="total_amount" string="Subtotal" readonly="True"/>
                                 </tree>
                             </field>
                             <group class="oe_subtotal_footer" colspan="2" name="expense_total">
@@ -1202,13 +1203,8 @@
             <field name="name">Expense Reports to Approve</field>
             <field name="res_model">hr.expense.sheet</field>
             <field name="view_mode">tree,kanban,form,pivot,graph</field>
-            <field name="search_view_id" ref="hr_expense_sheet_view_search"/>
-            <field name="context">{
-                'search_default_submitted': 1,
-                'search_default_department_id': [active_id],
-                'default_department_id': active_id
-                }
-            </field>
+            <field name="search_view_id" ref="hr_expense_sheet_view_search_with_panel"/>
+            <field name="context">{ 'searchpanel_default_state': ["submit"] }</field>
         </record>
 
         <record id="action_hr_expense_sheet_department_filtered" model="ir.actions.act_window">

@@ -25,18 +25,6 @@ export class Persona extends Record {
         return super.insert(...arguments);
     }
 
-    update(data) {
-        super.update(data);
-        if (
-            this.type === "partner" &&
-            this.im_status !== "im_partner" &&
-            !this.is_public &&
-            !this._store.registeredImStatusPartners?.includes(this.id)
-        ) {
-            this._store.registeredImStatusPartners?.push(this.id);
-        }
-    }
-
     channelMembers = Record.many("ChannelMember");
     /** @type {number} */
     id;
@@ -46,6 +34,33 @@ export class Persona extends Record {
     landlineNumber;
     /** @type {string} */
     mobileNumber;
+    storeAsTrackedImStatus = Record.one("Store", {
+        /** @this {import("models").Persona} */
+        compute() {
+            if (
+                this.type === "guest" ||
+                (this.type === "partner" && this.im_status !== "im_partner" && !this.is_public)
+            ) {
+                return this._store;
+            }
+        },
+        onAdd() {
+            if (!this._store.env.services.bus_service.isActive) {
+                return;
+            }
+            const model = this.type === "partner" ? "res.partner" : "mail.guest";
+            this._store.env.services.bus_service.addChannel(`odoo-presence-${model}_${this.id}`);
+        },
+        onDelete() {
+            if (!this._store.env.services.bus_service.isActive) {
+                return;
+            }
+            const model = this.type === "partner" ? "res.partner" : "mail.guest";
+            this._store.env.services.bus_service.deleteChannel(`odoo-presence-${model}_${this.id}`);
+        },
+        eager: true,
+        inverse: "imStatusTrackedPersonas",
+    });
     /** @type {'partner' | 'guest'} */
     type;
     /** @type {string} */

@@ -4,6 +4,7 @@
 # 
 # Translators:
 # Wil Odoo, 2023
+# Rasareeyar Lappiam, 2024
 # 
 msgid ""
 msgstr ""
@@ -11,7 +12,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-10-26 21:56+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Rasareeyar Lappiam, 2024\n"
 "Language-Team: Thai (https://app.transifex.com/odoo/teams/41243/th/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -25,6 +26,8 @@ msgid ""
 "!<br/>\n"
 "            Did not receive it?"
 msgstr ""
+"!<br/>\n"
+"            ไม่ได้รับมันเหรอ?"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_header
@@ -48,42 +51,44 @@ msgstr "ลองค้นหาอีกครั้ง"
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_badges
 msgid "<i class=\"fa fa-arrow-right\"/> Get Badges"
-msgstr ""
+msgstr "<i class=\"fa fa-arrow-right\"/> รับเหรียญรางวัล"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_content
 msgid "<i class=\"fa fa-close me-1\"/>Cancel"
-msgstr ""
+msgstr "<i class=\"fa fa-close me-1\"/>ยกเลิก"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<i class=\"fa fa-pencil fa-1g float-sm-none float-md-start\" title=\"Edit\"/>"
 msgstr ""
+"<i class=\"fa fa-pencil fa-1g float-sm-none float-md-start\" "
+"title=\"แก้ไข\"/>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_header
 msgid "<i class=\"fa fa-pencil me-1\"/>EDIT"
-msgstr ""
+msgstr "<i class=\"fa fa-pencil me-1\"/>แก้ไข"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_content
 msgid "<i class=\"fa fa-pencil me-1\"/>Edit"
-msgstr ""
+msgstr "<i class=\"fa fa-pencil me-1\"/>แก้ไข"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_header
 msgid "<i class=\"fa fa-pencil me-2\"/>EDIT PROFILE"
-msgstr ""
+msgstr "<i class=\"fa fa-pencil me-2\"/>แก้ไขโปรไฟล์"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_badges
 msgid "<i class=\"oi oi-arrow-right me-1\"/>All Badges"
-msgstr ""
+msgstr "<i class=\"oi oi-arrow-right me-1\"/>เหรียญรางวัลทั้งหมด"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_badges
 msgid "<i class=\"oi oi-arrow-right\"/> All Badges"
-msgstr ""
+msgstr "<i class=\"oi oi-arrow-right\"/> เหรียญรางวัลทั้งหมด"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.badge_content
@@ -93,72 +98,72 @@ msgstr "<i class=\"text-muted\">ผู้ใช้ที่ได้รับร
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<option value=\"\">Country...</option>"
-msgstr ""
+msgstr "<option value=\"\">ประเทศ...</option>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_content
 msgid "<small class=\"fw-bold me-2\">Current rank:</small>"
-msgstr ""
+msgstr "<small class=\"fw-bold me-2\">อันดับปัจจุบัน:</small>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_content
 msgid "<small class=\"fw-bold\">Badges</small>"
-msgstr ""
+msgstr "<small class=\"fw-bold\">เหรียญรางวัล</small>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_content
 msgid "<small class=\"fw-bold\">Joined</small>"
-msgstr ""
+msgstr "<small class=\"fw-bold\">เข้าร่วม</small>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<span class=\"fw-bold\">Biography</span>"
-msgstr ""
+msgstr "<span class=\"fw-bold\">ชีวประวัติ</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<span class=\"fw-bold\">City</span>"
-msgstr ""
+msgstr "<span class=\"fw-bold\">เมือง</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<span class=\"fw-bold\">Country</span>"
-msgstr ""
+msgstr "<span class=\"fw-bold\">ประเทศ</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<span class=\"fw-bold\">Email</span>"
-msgstr ""
+msgstr "<span class=\"fw-bold\">อีเมล</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<span class=\"fw-bold\">Name</span>"
-msgstr ""
+msgstr "<span class=\"fw-bold\">ชื่อ</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<span class=\"fw-bold\">Public Profile</span>"
-msgstr ""
+msgstr "<span class=\"fw-bold\">โปรไฟล์สาธารณะ</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "<span class=\"fw-bold\">Website</span>"
-msgstr ""
+msgstr "<span class=\"fw-bold\">เว็บไซต์</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.all_user_card
 msgid "<span class=\"text-muted small fw-bold\">Badges</span>"
-msgstr ""
+msgstr "<span class=\"text-muted small fw-bold\">เหรียญรางวัล</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.all_user_card
 msgid "<span class=\"text-muted small fw-bold\">XP</span>"
-msgstr ""
+msgstr "<span class=\"text-muted small fw-bold\">XP</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.top3_user_card
 msgid "<span class=\"text-muted\">Badges</span>"
-msgstr "<span class=\"text-muted\">ป้ายรางวัล</span>"
+msgstr "<span class=\"text-muted\">เหรียญรางวัล</span>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.top3_user_card
@@ -177,7 +182,7 @@ msgstr ""
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.users_page_header
 msgid "<strong class=\"mb-3 text-white me-2\">Rank by:</strong>"
-msgstr ""
+msgstr "<strong class=\"mb-3 text-white me-2\">จัดอันดับตาม:</strong>"
 
 #. module: website_profile
 #: model:mail.template,body_html:website_profile.validation_email
@@ -269,21 +274,107 @@ msgid ""
 "</table>\n"
 "            "
 msgstr ""
+"<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding-top: 16px; background-color: #F1F1F1; color: #454748; width: 100%; border-collapse:separate;\"><tr><td align=\"center\">\n"
+"<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"padding: 16px; background-color: white; color: #454748; border-collapse:separate;\">\n"
+"<tbody>\n"
+"    <!-- ส่วนหัว -->\n"
+"    <tr>\n"
+"        <td align=\"center\" style=\"min-width: 590px;\">\n"
+"            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;\">\n"
+"                <tr>\n"
+"                    <td valign=\"middle\">\n"
+"                        <span style=\"font-size: 20px; font-weight: bold;\">\n"
+"                            การตรวจสอบโปรไฟล์ <t t-out=\"object.company_id.name or ''\">YourCompany</t>\n"
+"                        </span>\n"
+"                    </td>\n"
+"                    <td t-if=\"not user.company_id.uses_default_logo\" valign=\"middle\" align=\"right\">\n"
+"                        <img t-attf-src=\"/logo.png?company={{ user.company_id.id }}\" style=\"padding: 0px; margin: 0px; height: auto; width: 80px;\" t-att-alt=\"user.company_id.name\">\n"
+"                    </td>\n"
+"                </tr>\n"
+"                <tr>\n"
+"                    <td colspan=\"2\" style=\"text-align:center;\">\n"
+"                        <hr width=\"100%\" style=\"background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin:16px 0px 16px 0px;\">\n"
+"                    </td>\n"
+"                </tr>\n"
+"            </table>\n"
+"        </td>\n"
+"    </tr>\n"
+"    <!-- เนื้อหา -->\n"
+"    <tr>\n"
+"        <td align=\"center\" style=\"min-width: 590px;\">\n"
+"            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"min-width: 590px; background-color: white; padding: 0px 8px 0px 8px; border-collapse:separate;\">\n"
+"                <tr>\n"
+"                    <td valign=\"top\" style=\"font-size: 13px;\">\n"
+"                        <p style=\"margin: 0px; padding: 0px; font-size: 13px;\">\n"
+"                            เรียน <t t-out=\"object.name or ''\">Marc Demo</t>,<br><br>\n"
+"                            คุณได้รับเชิญให้ตรวจสอบอีเมลของคุณเพื่อเข้าถึงเว็บไซต์ \"<t t-out=\"object.company_id.name or ''\">YourCompany</t>\"\n"
+"                            หากต้องการตรวจสอบอีเมลของคุณ โปรดคลิกลิงก์ต่อไปนี้:\n"
+"                            <div style=\"margin: 16px 0px 16px 0px;\">\n"
+"                                <a t-att-href=\"ctx.get('token_url')\" style=\"background-color: #875A7B; padding: 8px 16px 8px 16px; text-decoration: none; color: #fff; border-radius: 5px; font-size:13px;\">\n"
+"                                    ตรวจสอบบัญชีของฉัน\n"
+"                                </a>\n"
+"                            </div>\n"
+"                            ขอขอบคุณสำหรับการเข้าร่วมของคุณ!\n"
+"                        </p>\n"
+"                    </td>\n"
+"                </tr>\n"
+"                <tr>\n"
+"                    <td style=\"text-align:center;\">\n"
+"                        <hr width=\"100%\" style=\"background-color:rgb(204,204,204);border:medium none;clear:both;display:block;font-size:0px;min-height:1px;line-height:0; margin: 16px 0px 16px 0px;\">\n"
+"                    </td>\n"
+"                </tr>\n"
+"            </table>\n"
+"        </td>\n"
+"    </tr>\n"
+"    <!-- ส่วนท้าย -->\n"
+"    <tr>\n"
+"        <td align=\"center\" style=\"min-width: 590px;\">\n"
+"            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\" font-family: 'Verdana Regular'; color: #454748; min-width: 590px; background-color: white; font-size: 11px; padding: 0px 8px 0px 8px; border-collapse:separate;\">\n"
+"                <tr>\n"
+"                    <td valign=\"middle\" align=\"left\">\n"
+"                         <t t-out=\"user.company_id.name or ''\">YourCompany</t>\n"
+"                    </td>\n"
+"                    <td valign=\"middle\" align=\"right\" style=\"opacity: 0.7;\">\n"
+"                        <t t-out=\"user.company_id.phone or ''\">+1 650-123-4567</t>\n"
+"                        <t t-if=\"user.company_id.email\">\n"
+"                            | <a t-attf-href=\"'mailto:%s' % {{ user.company_id.email }}\" style=\"text-decoration:none; color: #454748;\" t-out=\"user.company_id.email or ''\">info@yourcompany.com</a>\n"
+"                        </t>\n"
+"                        <t t-if=\"user.company_id.website\">\n"
+"                            | <a t-attf-href=\"{{ user.company_id.website }}\" style=\"text-decoration:none; color: #454748;\" t-out=\"user.company_id.website or ''\">http://www.example.com</a>\n"
+"                        </t>\n"
+"                    </td>\n"
+"                </tr>\n"
+"            </table>\n"
+"        </td>\n"
+"    </tr>\n"
+"</tbody>\n"
+"</table>\n"
+"</td></tr>\n"
+"<!-- สนับสนุนโดย -->\n"
+"<tr><td align=\"center\" style=\"min-width: 590px;\">\n"
+"    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"590\" style=\"min-width: 590px; background-color: #F1F1F1; color: #454748; padding: 8px; border-collapse:separate;\">\n"
+"        <tr><td style=\"text-align: center; font-size: 13px;\">\n"
+"            สนับสนุนโดย <a target=\"_blank\" href=\"https://www.odoo.com?utm_source=db&amp;utm_medium=forum\" style=\"color: #875A7B;\">Odoo</a>\n"
+"        </td></tr>\n"
+"    </table>\n"
+"</td></tr>\n"
+"</table>\n"
+"            "
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.email_validation_banner
 msgid "<u>Correct your email address</u>"
-msgstr ""
+msgstr "<u>แก้ไขที่อยู่อีเมลของคุณ</u>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.email_validation_banner
 msgid "<u>Send Again</u>"
-msgstr ""
+msgstr "<u>ส่งอีกครั้ง</u>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.email_validation_banner
 msgid "<u>here</u>"
-msgstr ""
+msgstr "<u>ที่นี่</u>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_content
@@ -306,12 +397,12 @@ msgstr "เวลาทั้งหมด"
 #: model_terms:ir.ui.view,arch_db:website_profile.rank_badge_main
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_content
 msgid "Badges"
-msgstr "ป้ายรางวัล"
+msgstr "เหรียญรางวัล"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_badges
 msgid "Badges are your collection of achievements. Wear them proudly! <br/>"
-msgstr ""
+msgstr "เหรียญรางวัลคือชุดสะสมความสำเร็จของคุณ สวมใส่อย่างภาคภูมิใจ!<br/>"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.badge_content
@@ -321,7 +412,7 @@ msgid ""
 "                        appear on your profile page, and your posts."
 msgstr ""
 "นอกจากการได้รับชื่อเสียงจากคำถามและคำตอบของคุณแล้ว\n"
-"                        คุณได้รับป้ายรางวัลสำหรับการให้ความช่วยเหลือเป็นพิเศษ<br class=\"d-none d-lg-inline-block\"/>ป้ายรางวัล\n"
+"                        คุณได้รับเหรียญรางวัลสำหรับการให้ความช่วยเหลือเป็นพิเศษ<br class=\"d-none d-lg-inline-block\"/>เหรียญรางวัล\n"
 "                       จะปรากฏบนหน้าโปรไฟล์ของคุณและโพสต์ของคุณ"
 
 #. module: website_profile
@@ -357,17 +448,17 @@ msgstr "แก้ไขโปรไฟล์"
 #. module: website_profile
 #: model:mail.template,name:website_profile.validation_email
 msgid "Forum: Email Verification"
-msgstr ""
+msgstr "ฟอรั่ม: การยืนยันอีเมล"
 
 #. module: website_profile
 #: model:ir.model,name:website_profile.model_gamification_badge
 msgid "Gamification Badge"
-msgstr "ป้ายรางวัลในรูปแบบเกม"
+msgstr "เหรียญรางวัลในรูปแบบเกม"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.profile_next_rank_card
 msgid "Get"
-msgstr ""
+msgstr "รับ"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_sub_nav
@@ -377,7 +468,7 @@ msgstr "โฮม"
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.rank_badge_main
 msgid "How do I earn badges?"
-msgstr "ฉันจะรับป้ายรางวัลได้อย่างไร?"
+msgstr "ฉันจะรับเหรียญรางวัลได้อย่างไร?"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.rank_badge_main
@@ -422,12 +513,12 @@ msgstr "อันดับต่อไป:"
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.users_page_main
 msgid "No Leaderboard Yet :("
-msgstr ""
+msgstr "ยังไม่มีกระดานผู้นำ :("
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_badges
 msgid "No badges yet!"
-msgstr "ยังไม่มีป้ายรางวัล!"
+msgstr "ยังไม่มีเหรียญรางวัล!"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.users_page_content
@@ -439,7 +530,7 @@ msgstr "ไม่พบผู้ใช้สำหรับ"
 #: code:addons/website_profile/controllers/main.py:0
 #, python-format
 msgid "Not have enough karma to view other users' profile."
-msgstr ""
+msgstr "มี Karma ไม่เพียงพอที่จะดูโปรไฟล์ของผู้ใช้รายอื่น"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
@@ -472,7 +563,7 @@ msgstr "ค้นหาผู้ใช้"
 #. module: website_profile
 #: model:mail.template,description:website_profile.validation_email
 msgid "Sent to forum visitors to confirm their mail address"
-msgstr ""
+msgstr "ส่งไปยังผู้เยี่ยมชมฟอรั่มเพื่อยืนยันที่อยู่อีเมลของพวกเขา"
 
 #. module: website_profile
 #: model:ir.model.fields,help:website_profile.field_gamification_badge__website_url
@@ -526,7 +617,7 @@ msgstr "ผู้ใช้"
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.email_validation_banner
 msgid "Verification Email sent to"
-msgstr ""
+msgstr "ส่งอีเมลยืนยันไปที่"
 
 #. module: website_profile
 #: model:ir.model.fields,field_description:website_profile.field_gamification_badge__website_published
@@ -546,13 +637,13 @@ msgstr "เว็บไซต์ URL"
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.rank_badge_main
 msgid "When you finish a course or reach milestones, you're awarded badges."
-msgstr "เมื่อคุณเรียนจบหลักสูตรหรือบรรลุเป้าหมายสำคัญ คุณจะได้รับตรารางวัล"
+msgstr "เมื่อคุณเรียนจบหลักสูตรหรือบรรลุเป้าหมายสำคัญ คุณจะได้รับเหรียญรางวัล"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.user_biography_editor
 #: model_terms:ir.ui.view,arch_db:website_profile.user_profile_edit_content
 msgid "Write a few words about yourself..."
-msgstr ""
+msgstr "เขียนคำสองสามคำเกี่ยวกับตัวคุณ..."
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.all_user_card
@@ -576,11 +667,13 @@ msgid ""
 "Your Account has not yet been verified.<br/>\n"
 "            Click"
 msgstr ""
+"บัญชีของคุณยังไม่ได้รับการยืนยัน<br/>\n"
+"            คลิก"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.email_validation_banner
 msgid "Your account does not have an email set up. Please set it up on"
-msgstr ""
+msgstr "บัญชีของคุณไม่ได้ตั้งค่าอีเมล โปรดตั้งค่าบน"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.rank_badge_main
@@ -611,7 +704,7 @@ msgstr "สัปดาห์นี้"
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.email_validation_banner
 msgid "to receive a verification email"
-msgstr ""
+msgstr "เพื่อรับอีเมลยืนยัน"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.profile_next_rank_card
@@ -624,11 +717,13 @@ msgid ""
 "xp\n"
 "                        to level up!"
 msgstr ""
+"xp\n"
+"                        เพื่อเพิ่มเลเวล!"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.email_validation_banner
 msgid "your account settings"
-msgstr ""
+msgstr "การตั้งค่าบัญชีของคุณ"
 
 #. module: website_profile
 #: model_terms:ir.ui.view,arch_db:website_profile.profile_next_rank_card
@@ -636,6 +731,8 @@ msgid ""
 "{{ '%s/%s xp' % (user.karma, next_rank_id.karma_min) if next_rank_id else "
 "''}}"
 msgstr ""
+"{{ '%s/%s xp' % (user.karma, next_rank_id.karma_min) if next_rank_id else "
+"''}}"
 
 #. module: website_profile
 #: model:mail.template,subject:website_profile.validation_email

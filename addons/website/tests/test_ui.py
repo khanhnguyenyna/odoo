@@ -7,6 +7,9 @@ from werkzeug.urls import url_encode
 
 import odoo
 import odoo.tests
+from odoo import http
+from odoo.addons.base.tests.common import HttpCaseWithUserDemo
+from odoo.addons.web_editor.controllers.main import Web_Editor
 
 
 @odoo.tests.tagged('-at_install', 'post_install')
@@ -61,7 +64,8 @@ class TestUiCustomizeTheme(odoo.tests.HttpCase):
 
 
 @odoo.tests.tagged('-at_install', 'post_install')
-class TestUiHtmlEditor(odoo.tests.HttpCase):
+class TestUiHtmlEditor(HttpCaseWithUserDemo):
+
     def test_html_editor_multiple_templates(self):
         Website = self.env['website']
         View = self.env['ir.ui.view']
@@ -101,7 +105,7 @@ class TestUiHtmlEditor(odoo.tests.HttpCase):
         self.assertEqual(len(specific_page.inherit_children_ids.filtered(lambda v: 'oe_structure' in v.name)), 1, "oe_structure view should have been created on the specific tree")
 
     def test_html_editor_scss(self):
-        self.env.ref('base.user_demo').write({
+        self.user_demo.write({
             'groups_id': [(6, 0, [
                 self.env.ref('base.group_user').id,
                 self.env.ref('website.group_website_designer').id
@@ -110,8 +114,35 @@ class TestUiHtmlEditor(odoo.tests.HttpCase):
         self.start_tour(self.env['website'].get_client_action_url('/contactus'), 'test_html_editor_scss', login='admin')
         self.start_tour(self.env['website'].get_client_action_url('/'), 'test_html_editor_scss_2', login='demo')
 
-    def media_dialog_undraw(self):
+    def test_media_dialog_undraw(self):
+        BASE_URL = self.base_url()
+        banner = '/website/static/src/img/snippets_demo/s_banner.jpg'
+
+        def mock_media_library_search(self, **params):
+            return {
+                'results': 1,
+                'media': [{
+                    'id': 1,
+                    'media_url': BASE_URL + banner,
+                    'thumbnail_url': BASE_URL + banner,
+                    'tooltip': False,
+                    'author': 'undraw',
+                    'author_link': BASE_URL,
+                }],
+            }
+
+        # disable undraw, no third party should be called in tests
+        # Mocked for the previews in the media dialog
+        mock_media_library_search.routing_type = 'json'
+        Web_Editor.media_library_search = http.route(['/web_editor/media_library_search'], type='json', auth='user', website=True)(mock_media_library_search)
+
         self.start_tour("/", 'website_media_dialog_undraw', login='admin')
+
+
+@odoo.tests.tagged('external', '-standard', '-at_install', 'post_install')
+class TestUiHtmlEditorWithExternal(HttpCaseWithUserDemo):
+    def test_media_dialog_external_library(self):
+        self.start_tour("/", 'website_media_dialog_external_library', login='admin')
 
 
 @odoo.tests.tagged('-at_install', 'post_install')
@@ -150,6 +181,18 @@ class TestUiTranslate(odoo.tests.HttpCase):
 
         self.assertNotEqual(new_menu.name, 'value pa-GB', msg="The new menu should not have its value edited, only its translation")
         self.assertEqual(new_menu.with_context(lang=parseltongue.code).name, 'value pa-GB', msg="The new translation should be set")
+
+    def test_translate_text_options(self):
+        lang_en = self.env.ref('base.lang_en')
+        lang_fr = self.env.ref('base.lang_fr')
+        self.env['res.lang']._activate_lang(lang_fr.code)
+        default_website = self.env.ref('website.default_website')
+        default_website.write({
+            'default_lang_id': lang_en.id,
+            'language_ids': [(6, 0, (lang_en + lang_fr).ids)],
+        })
+
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'translate_text_options', login='admin')
 
     def test_snippet_translation(self):
         ResLang = self.env['res.lang']
@@ -303,6 +346,7 @@ class TestUi(odoo.tests.HttpCase):
         self.start_tour('/web', 'conditional_visibility_2', login='admin')
         self.start_tour(self.env['website'].get_client_action_url('/'), 'conditional_visibility_3', login='admin')
         self.start_tour(self.env['website'].get_client_action_url('/'), 'conditional_visibility_4', login='admin')
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'conditional_visibility_5', login='admin')
 
     def test_11_website_snippet_background_edition(self):
         self.env['ir.attachment'].create({
@@ -402,6 +446,12 @@ class TestUi(odoo.tests.HttpCase):
 
     def test_24_snippet_cache_across_websites(self):
         default_website = self.env.ref('website.default_website')
+        if self.env['website'].search_count([]) == 1:
+            self.env['website'].create({
+                'name': 'My Website 2',
+                'domain': '',
+                'sequence': 20,
+            })
         self.env['ir.ui.view'].with_context(website_id=default_website.id).save_snippet(
             name='custom_snippet_test',
             arch="""
@@ -441,6 +491,9 @@ class TestUi(odoo.tests.HttpCase):
     def test_30_website_text_animations(self):
         self.start_tour("/", 'text_animations', login='admin')
 
+    def test_31_website_edit_megamenu_big_icons_subtitles(self):
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'edit_megamenu_big_icons_subtitles', login='admin')
+
     def test_website_media_dialog_image_shape(self):
         self.start_tour("/", 'website_media_dialog_image_shape', login='admin')
 
@@ -452,3 +505,141 @@ class TestUi(odoo.tests.HttpCase):
 
     def test_website_text_highlights(self):
         self.start_tour("/", 'text_highlights', login='admin')
+
+    def test_website_extra_items_no_dirty_page(self):
+        """
+        Having enough menus to trigger the "+" folded menus has been known to
+        wrongfully mark the page as dirty. There are 3 cases:
+
+        - the menu is not folded outside of edit mode and when entering edit
+          mode, the "+" appears and some menu are folded
+
+        - the menu is folded outside of edit mode and when entering edit mode
+          the resize actually makes it so different menu items are folded
+
+        - the menu is folded outside of edit mode and when entering edit mode it
+          stays the same (known to have been broken because edit mode tweaks the
+          dropdown behavior)
+
+        Those are fixed. This test makes sure the third case stays fixed.
+        At the moment, the first two cases are not marking the page as dirty but
+        the related "+" menu behavior is kinda broken so it would be difficult
+        to test (TODO).
+        """
+        # Remove all menu items but the first one
+        website = self.env['website'].get_current_website()
+        website.menu_id.child_id[1:].unlink()
+        # Create a new menu item whose text is very long so that we are sure
+        # it is folded into the extra items "+" menu outside of edit mode and
+        # stays the same when entering edit mode.
+        self.env['website.menu'].create({
+            'name': 'Menu %s' % ('a' * 200),  # Very long text
+            'website_id': website.id,
+            'parent_id': website.menu_id.id,
+        })
+
+        self.start_tour('/', 'website_no_action_no_dirty_page', login='admin')
+
+    def test_website_no_dirty_page(self):
+        # Previous tests are testing the dirty behavior when the extra items
+        # "+" menu comes in play. For other "no dirty" tests, we just remove
+        # most menu items first to make sure they pass independently.
+        website = self.env['website'].get_current_website()
+        website.menu_id.child_id[1:].unlink()
+
+        self.start_tour('/', 'website_no_dirty_page', login='admin')
+
+    def test_widget_lifecycle(self):
+        self.env['ir.asset'].create({
+            'name': 'wysiwyg_patch_start_and_destroy',
+            'bundle': 'website.assets_wysiwyg',
+            'path': 'website/static/tests/tour_utils/widget_lifecycle_patch_wysiwyg.js',
+        })
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'widget_lifecycle', login='admin')
+
+    def test_drop_404_ir_attachment_url(self):
+        website_snippets = self.env.ref('website.snippets')
+        self.env['ir.ui.view'].create([{
+            'name': '404 Snippet',
+            'type': 'qweb',
+            'key': 'website.s_404_snippet',
+            'arch': """
+                <section class="s_404_snippet">
+                    <div class="container">
+                        <img class="img-responsive img-thumbnail" src="/web/image/website.404_ir_attachment"/>
+                    </div>
+                </section>
+            """,
+        }, {
+            'type': 'qweb',
+            'inherit_id': website_snippets.id,
+            'arch': """
+                <xpath expr="//t[@t-snippet='website.s_parallax']" position="after">
+                    <t t-snippet="website.s_404_snippet"
+                       t-thumbnail="/website/static/src/img/snippets_thumbs/s_website_form.svg"/>
+                </xpath>
+            """,
+        }])
+        attachment = self.env['ir.attachment'].create({
+            'name': '404_ir_attachment',
+            'type': 'url',
+            'url': '/web/static/__some__typo__.png',
+            'mimetype': 'image/png',
+        })
+        self.env['ir.model.data'].create({
+            'name': '404_ir_attachment',
+            'module': 'website',
+            'model': 'ir.attachment',
+            'res_id': attachment.id,
+        })
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'drop_404_ir_attachment_url', login='admin')
+
+    def test_mobile_order_with_drag_and_drop(self):
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'website_mobile_order_with_drag_and_drop', login='admin')
+
+    def test_website_no_dirty_lazy_image(self):
+        website = self.env['website'].browse(1)
+        # Enable multiple langs to reduce the chance of the test being silently
+        # broken by ensuring that it receives a lot of extra o_dirty elements.
+        # This is done to account for potential later changes in the number of
+        # o_dirty elements caused by legitimate modifications in the code.
+        # Perfs: `_activate_lang()` does not load .pot so it is perf friendly
+        lang_fr = self.env['res.lang']._activate_lang('fr_FR')
+        lang_es = self.env['res.lang']._activate_lang('es_AR')
+        lang_zh = self.env['res.lang']._activate_lang('zh_HK')
+        lang_ar = self.env['res.lang']._activate_lang('ar_SY')
+        website.language_ids = self.env.ref('base.lang_en') + lang_fr + lang_es + lang_zh + lang_ar
+        # Select "dropdown with image" language selector template
+        for key, active in [
+            # footer
+            ('portal.footer_language_selector', True),
+            ('website.footer_language_selector_inline', False),
+            ('website.footer_language_selector_flag', True),
+            ('website.footer_language_selector_no_text', False),
+            ('website.footer_language_selector_flag', True),
+            ('website.footer_language_selector_no_text', False),
+            # header
+            ('website.header_language_selector', True),
+            ('website.header_language_selector_inline', False),
+            ('website.header_language_selector_flag', True),
+            ('website.header_language_selector_no_text', False),
+            ('website.header_language_selector_flag', True),
+            ('website.header_language_selector_no_text', False),
+        ]:
+            self.env['website'].with_context(website_id=website.id).viewref(key).active = active
+
+        self.start_tour('/', 'website_no_dirty_lazy_image', login='admin')
+
+    def test_website_edit_menus_delete_parent(self):
+        website = self.env['website'].browse(1)
+        menu_tree = self.env['website.menu'].get_tree(website.id)
+
+        parent_menu = menu_tree['children'][0]['fields']
+        child_menu = menu_tree['children'][1]['fields']
+        child_menu['parent_id'] = parent_menu['id']
+
+        self.env['website.menu'].save(website.id, {'data': [parent_menu, child_menu]})
+        self.start_tour(self.env['website'].get_client_action_url('/'), 'edit_menus_delete_parent', login='admin')
+
+    def test_snippet_carousel(self):
+        self.start_tour('/', 'snippet_carousel', login='admin')

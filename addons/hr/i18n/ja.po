@@ -3,16 +3,17 @@
 # 	* hr
 # 
 # Translators:
-# Wil Odoo, 2023
-# Junko Augias, 2023
+# Ryoko Tsuda <ryoko@quartile.co>, 2024
+# Wil Odoo, 2024
+# Junko Augias, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Junko Augias, 2023\n"
+"Last-Translator: Junko Augias, 2024\n"
 "Language-Team: Japanese (https://app.transifex.com/odoo/teams/41243/ja/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -360,6 +361,17 @@ msgid "Additional Information"
 msgstr "追加情報"
 
 #. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee.py:0
+#, python-format
+msgid ""
+"Additional Information: \n"
+" %(description)s"
+msgstr ""
+"追加情報: \n"
+" %(description)s"
+
+#. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__additional_note
 #: model:ir.model.fields,field_description:hr.field_res_users__additional_note
 msgid "Additional Note"
@@ -636,7 +648,7 @@ msgstr "編集することができます"
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.view_users_simple_form
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "取消"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__certificate
@@ -863,6 +875,16 @@ msgid "Create a new department"
 msgstr "新しい部署を登録する"
 
 #. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_contract_type_action
+msgid "Create a new employment type"
+msgstr "新しい従業員タイプを作成"
+
+#. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
+msgid "Create a new work location"
+msgstr "新しい作業区を作成"
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -961,6 +983,8 @@ msgstr ""
 "主要顧客との定期的な交流を維持し、より良い結果の獲得と拡大を図る。"
 
 #. module: hr
+#. odoo-javascript
+#: code:addons/hr/static/src/components/avatar_card/avatar_card_popover_patch.xml:0
 #: model:ir.model,name:hr.model_hr_department
 #: model:ir.model.fields,field_description:hr.field_hr_employee__department_id
 #: model:ir.model.fields,field_description:hr.field_hr_employee_base__department_id
@@ -973,6 +997,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:hr.view_department_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_job_filter
+#, python-format
 msgid "Department"
 msgstr "部門"
 
@@ -1365,7 +1390,7 @@ msgstr "女"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__study_field
 #: model:ir.model.fields,field_description:hr.field_res_users__study_field
 msgid "Field of Study"
-msgstr "科目"
+msgstr "専攻分野"
 
 #. module: hr
 #: model:hr.departure.reason,name:hr.departure_fired
@@ -2069,11 +2094,6 @@ msgid "No Tags found ! Let's create one"
 msgstr "タグが見つかりません！作成しましょう。"
 
 #. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid "No Work Locations found ! Let's create one"
-msgstr "作業区が見つかりません！作成しましょう。"
-
-#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2308,17 +2328,6 @@ msgid "Perfect written English"
 msgstr "完璧な英語の文章"
 
 #. module: hr
-#: model_terms:hr.job,description:hr.job_consultant
-#: model_terms:hr.job,description:hr.job_developer
-#: model_terms:hr.job,description:hr.job_marketing
-msgid ""
-"Perform assigned responsibilities, collaborate with team members, and adhere"
-" to company policies. Strong communication, problem-solving, and work ethic "
-"required. Adaptability, initiative, and willingness to learn are valued."
-msgstr ""
-"担当業務を遂行し、チームメンバーと協力し、会社の方針を遵守すること。高いコミュニケーション能力、問題解決能力、労働倫理が求められます。適応力、主体性、学ぶ意欲が評価されます。"
-
-#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2436,7 +2445,7 @@ msgstr "従業員の出勤"
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.res_config_settings_view_form
 msgid "Presence reporting screen, email and IP address control."
-msgstr "在席レポート画面、EメールやIPアドレスでの管理"
+msgstr "出勤レポート画面、EメールやIPアドレスでの管理"
 
 #. module: hr
 #: model:ir.model.fields.selection,name:hr.selection__hr_employee__hr_icon_display__presence_present
@@ -2446,7 +2455,7 @@ msgstr "在席レポート画面、EメールやIPアドレスでの管理"
 #: model:ir.model.fields.selection,name:hr.selection__hr_employee_public__hr_icon_display__presence_present
 #: model:ir.model.fields.selection,name:hr.selection__hr_employee_public__hr_presence_state__present
 msgid "Present"
-msgstr "在席"
+msgstr "出勤"
 
 #. module: hr
 #: model:ir.model.fields.selection,name:hr.selection__hr_employee__hr_icon_display__presence_absent_active
@@ -2511,25 +2520,25 @@ msgstr "個人電話番号"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__private_state_id
 #: model:ir.model.fields,field_description:hr.field_res_users__private_state_id
 msgid "Private State"
-msgstr "プライベート都道府県"
+msgstr "個人都道府県"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__private_street
 #: model:ir.model.fields,field_description:hr.field_res_users__private_street
 msgid "Private Street"
-msgstr "プライベート通り"
+msgstr "個人町名番地"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__private_street2
 #: model:ir.model.fields,field_description:hr.field_res_users__private_street2
 msgid "Private Street2"
-msgstr "プライベート通り2"
+msgstr "個人町名番地2"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__private_zip
 #: model:ir.model.fields,field_description:hr.field_res_users__private_zip
 msgid "Private Zip"
-msgstr "プライベート郵便番号"
+msgstr "個人郵便番号"
 
 #. module: hr
 #: model:hr.department,name:hr.dep_ps
@@ -2599,7 +2608,7 @@ msgstr "理由コード"
 #: model:ir.ui.menu,name:hr.menu_config_recruitment
 #: model_terms:ir.ui.view,arch_db:hr.view_hr_job_form
 msgid "Recruitment"
-msgstr "求人"
+msgstr "採用"
 
 #. module: hr
 #. odoo-python
@@ -2737,7 +2746,7 @@ msgstr "学校名"
 #. module: hr
 #: model:hr.contract.type,name:hr.contract_type_seasonal
 msgid "Seasonal"
-msgstr "季節的な"
+msgstr "季節雇用"
 
 #. module: hr
 #: model:ir.model.fields,help:hr.field_hr_employee__coach_id
@@ -2808,6 +2817,13 @@ msgstr "社会保障番号"
 #: model_terms:ir.ui.view,arch_db:hr.print_employee_badge
 msgid "Software Developer"
 msgstr "ソフトウエア開発者"
+
+#. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee_base.py:0
+#, python-format
+msgid "Some employee already have a work contact"
+msgstr "すでに連絡先のある従業員がいます"
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -2954,6 +2970,19 @@ msgid ""
 msgstr ""
 "ISOの国別コードは2文字です。\n"
 "これを使ってクイックサーチできます。"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_marketing
+msgid ""
+"The Marketing Manager defines the mid- to long-term marketing strategy for his covered market segments in the World.\n"
+"              He develops and monitors the annual budget in collaboration with Sales.\n"
+"              He defines the products and customers portfolio according to the marketing plan.\n"
+"              This mission requires strong collaboration with Technical Service and Sales."
+msgstr ""
+"マーケティング・マネジャーは、世界各地の担当市場セグメントに対する中長期的なマーケティング戦略を定義します。\n"
+"営業と協力して年間予算を策定し、モニタリングします。\n"
+"マーケティングプランに基づき、プロダクトと顧客のポートフォリオを確定します。\n"
+"この職務にはテクニカルサービスおよびセールスとの強力なコラボレーションが必要です。"
 
 #. module: hr
 #. odoo-python
@@ -3196,7 +3225,7 @@ msgstr "プロフィールを見る"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_expire
 #: model:ir.model.fields,field_description:hr.field_res_users__visa_expire
-msgid "Visa Expire Date"
+msgid "Visa Expiration Date"
 msgstr "ビザの有効期限"
 
 #. module: hr
@@ -3211,6 +3240,21 @@ msgstr "ビザ番号"
 #, python-format
 msgid "Warning"
 msgstr "警告"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_consultant
+msgid ""
+"We are currently looking for someone like that to join our Consultant team."
+msgstr "現在、そのような方をコンサルタント・チームの一員として募集しています。"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_developer
+msgid ""
+"We are currently looking for someone like that to join our Web team.\n"
+"                Someone who can snap out of coding and perform analysis or meet clients to explain the technical possibilities that can meet their needs."
+msgstr ""
+"私たちは現在、ウェブチームに加わってくれるそのような人を探しています。\n"
+"コーディングから離れ、分析を行ったり、クライアントに会ってニーズを満たす技術的な可能性を説明できる人を探しています。"
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -3320,13 +3364,6 @@ msgstr "勤務場所"
 #: model:ir.ui.menu,name:hr.menu_hr_work_location_tree
 msgid "Work Locations"
 msgstr "勤務場所"
-
-#. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid ""
-"Work Locations are used to define more precisely where your employee is "
-"located everyday."
-msgstr "勤務ロケーションは、従業員が毎日どこにいるかをより正確に定義するために使用されます。"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__mobile_phone

@@ -142,7 +142,9 @@ function patchBrowserWithCleanup() {
             mediaDevices: browser.navigator.mediaDevices,
             permissions: browser.navigator.permissions,
             userAgent: browser.navigator.userAgent.replace(/\([^)]*\)/, "(X11; Linux x86_64)"),
-            sendBeacon: () => {},
+            sendBeacon: () => {
+                throw new Error("sendBeacon called in test but not mocked");
+            },
         },
         // in tests, we never want to interact with the real url or reload the page
         location: mockLocation,
@@ -322,28 +324,28 @@ function patchEventBus() {
 }
 
 export async function setupTests() {
-    // uncomment to debug memory leaks in qunit suite
-    // if (window.gc) {
-    //     let memoryBeforeModule;
-    //     QUnit.moduleStart(({ tests }) => {
-    //         if (tests.length) {
-    //             window.gc();
-    //             memoryBeforeModule = window.performance.memory.usedJSHeapSize;
-    //         }
-    //     });
-    //     QUnit.moduleDone(({ name }) => {
-    //         if (memoryBeforeModule) {
-    //             window.gc();
-    //             const afterGc = window.performance.memory.usedJSHeapSize;
-    //             console.log(
-    //                 `MEMINFO - After suite "${name}" - after gc: ${afterGc} delta: ${
-    //                     afterGc - memoryBeforeModule
-    //                 }`
-    //             );
-    //             memoryBeforeModule = null;
-    //         }
-    //     });
-    // }
+    if (window.gc) {
+        // uncomment to debug memory leaks in qunit suite
+        // let memoryBeforeModule;
+        QUnit.moduleStart(({ tests }) => {
+            if (tests.length) {
+                window.gc();
+                // memoryBeforeModule = window.performance.memory.usedJSHeapSize;
+            }
+        });
+        // QUnit.moduleDone(({ name }) => {
+        //     if (memoryBeforeModule) {
+        //         window.gc();
+        //         const afterGc = window.performance.memory.usedJSHeapSize;
+        //         console.log(
+        //             `MEMINFO - After suite "${name}" - after gc: ${afterGc} delta: ${
+        //                 afterGc - memoryBeforeModule
+        //             }`
+        //         );
+        //         memoryBeforeModule = null;
+        //     }
+        // });
+    }
 
     QUnit.testStart(() => {
         prepareRegistriesWithCleanup();

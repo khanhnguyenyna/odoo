@@ -1,13 +1,14 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
-
 from contextlib import contextmanager
 from dateutil.relativedelta import relativedelta
+from freezegun import freeze_time
 from unittest.mock import patch
 
 from odoo import fields
 from odoo.addons.mail.models.mail_activity import MailActivity
 from odoo.addons.mail.tests.common import MailCommon
 from odoo.tests.common import Form, tagged, HttpCase
+from odoo.tools.misc import format_date
 
 
 class ActivityScheduleCase(MailCommon):
@@ -89,6 +90,7 @@ class ActivityScheduleCase(MailCommon):
                     **{template.activity_type_id.delay_unit: template.activity_type_id.delay_count}))
             self.assertEqual(activity.note, template.note)
             self.assertEqual(activity.summary, template.summary)
+            self.assertFalse(activity.automated)
             if force_responsible_id:
                 self.assertEqual(activity.user_id, force_responsible_id)
             else:
@@ -116,7 +118,8 @@ class ActivityScheduleCase(MailCommon):
 
             self.assertIn(template.summary, message.body)
             self.assertIn(f'{template.summary or template.activity_type_id.name}, '
-                          f'assigned to {responsible_id.name}, due on the {date_deadline}', message.body)
+                          f'assigned to {responsible_id.name}, due on the '
+                          f'{format_date(self.env, date_deadline)}', message.body)
 
     def assertPlanExecution(self, plan, records, force_base_date_deadline=None, force_responsible_id=None):
         """ Check that the plan has created the right activities and send the
@@ -159,3 +162,23 @@ class TestMailActivityChatter(HttpCase):
             "mail_activity_schedule_from_chatter",
             login="admin",
         )
+
+    def test_mail_activity_date_format(self):
+        with freeze_time("2024-1-1 09:00:00 AM"):
+            LANG_CODE = "en_US"
+            self.env = self.env(context={"lang": LANG_CODE})
+            testuser = self.env['res.users'].create({
+                "email": "testuser@testuser.com",
+                "name": "Test User",
+                "login": "testuser",
+                "password": "testuser",
+            })
+            lang = self.env["res.lang"].search([('code', '=', LANG_CODE)])
+            lang.date_format = "%d/%b/%y"
+            lang.time_format = "%I:%M:%S %p"
+
+            self.start_tour(
+                f"/web#id={testuser.partner_id.id}&model=res.partner",
+                "mail_activity_date_format",
+                login="admin",
+            )

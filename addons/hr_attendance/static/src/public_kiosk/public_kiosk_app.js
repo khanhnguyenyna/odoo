@@ -28,10 +28,8 @@ class kioskAttendanceApp extends Component{
         this.rpc = useService("rpc");
         this.barcode = useService("barcode");
         this.notification = useService("notification");
-        this.companyImageUrl = url("/web/image", {
-            model: "res.company",
-            id: this.props.companyId,
-            field: "logo",
+        this.companyImageUrl = url("/web/binary/company_logo", {
+            company: this.props.companyId,
         });
         this.lockScanner = false;
         if (this.props.kioskMode !== 'manual'){
@@ -135,7 +133,7 @@ export async function createPublicKioskAttendance(document, kiosk_backend_info) 
                 employees: kiosk_backend_info.employees,
                 departments: kiosk_backend_info.departments,
                 kioskMode: kiosk_backend_info.kiosk_mode,
-                barcodeSource: kiosk_backend_info.employees,
+                barcodeSource: kiosk_backend_info.barcode_source,
             },
         dev: env.debug,
         translateFn: _t,

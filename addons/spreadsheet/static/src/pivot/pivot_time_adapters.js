@@ -69,7 +69,9 @@ export function pivotTimeAdapter(groupAggregate) {
  * @property {(groupBy: string, field: string, readGroupResult: object) => string} normalizeServerValue
  * @property {(value: string) => string} normalizeFunctionValue
  * @property {(normalizedValue: string, step: number) => string} increment
- * @property {(normalizedValue: string, locale: Object) => string} format
+ * @property {(normalizedValue: string, locale: Object) => string} formatValue
+ * @property {(locale: Object) => string} getFormat
+ * @property {(normalizedValue: string) => string | number} toCellValue
  */
 
 /**
@@ -83,7 +85,7 @@ export function pivotTimeAdapter(groupAggregate) {
 const dayAdapter = {
     normalizeServerValue(groupBy, field, readGroupResult) {
         const serverDayValue = getGroupStartingDay(field, groupBy, readGroupResult);
-        const date = deserializeDate(serverDayValue);
+        const date = deserializeDate(serverDayValue).reconfigure({ numberingSystem: "latn" });
         return date.toFormat("MM/dd/yyyy");
     },
     normalizeFunctionValue(value) {
@@ -91,12 +93,20 @@ const dayAdapter = {
         return formatValue(date, { locale: DEFAULT_LOCALE, format: "mm/dd/yyyy" });
     },
     increment(normalizedValue, step) {
-        const date = DateTime.fromFormat(normalizedValue, "MM/dd/yyyy");
+        const date = DateTime.fromFormat(normalizedValue, "MM/dd/yyyy", {
+            numberingSystem: "latn",
+        });
         return date.plus({ days: step }).toFormat("MM/dd/yyyy");
     },
-    format(normalizedValue, locale) {
+    getFormat(locale) {
+        return locale.dateFormat;
+    },
+    formatValue(normalizedValue, locale) {
         const value = toNumber(normalizedValue, DEFAULT_LOCALE);
-        return formatValue(value, { locale, format: locale.dateFormat });
+        return formatValue(value, { locale, format: this.getFormat(locale) });
+    },
+    toCellValue(normalizedValue) {
+        return toNumber(normalizedValue, DEFAULT_LOCALE);
     },
 };
 
@@ -122,9 +132,15 @@ const weekAdapter = {
         const nextWeek = date.plus({ weeks: step });
         return `${nextWeek.weekNumber}/${nextWeek.weekYear}`;
     },
-    format(normalizedValue, locale) {
+    getFormat(locale) {
+        return undefined;
+    },
+    formatValue(normalizedValue, locale) {
         const [week, year] = normalizedValue.split("/");
         return sprintf(_t("W%(week)s %(year)s"), { week, year });
+    },
+    toCellValue(normalizedValue) {
+        return this.formatValue(normalizedValue);
     },
 };
 
@@ -136,7 +152,7 @@ const weekAdapter = {
 const monthAdapter = {
     normalizeServerValue(groupBy, field, readGroupResult) {
         const firstOfTheMonth = getGroupStartingDay(field, groupBy, readGroupResult);
-        const date = deserializeDate(firstOfTheMonth);
+        const date = deserializeDate(firstOfTheMonth).reconfigure({ numberingSystem: "latn" });
         return date.toFormat("MM/yyyy");
     },
     normalizeFunctionValue(value) {
@@ -144,13 +160,19 @@ const monthAdapter = {
         return formatValue(date, { DEFAULT_LOCALE, format: "mm/yyyy" });
     },
     increment(normalizedValue, step) {
-        return DateTime.fromFormat(normalizedValue, "MM/yyyy")
+        return DateTime.fromFormat(normalizedValue, "MM/yyyy", { numberingSystem: "latn" })
             .plus({ months: step })
             .toFormat("MM/yyyy");
     },
-    format(normalizedValue, locale) {
+    getFormat(locale) {
+        return "mmmm yyyy";
+    },
+    formatValue(normalizedValue, locale) {
         const value = toNumber(normalizedValue, DEFAULT_LOCALE);
-        return formatValue(value, { locale, format: "mmmm yyyy" });
+        return formatValue(value, { locale, format: this.getFormat(locale) });
+    },
+    toCellValue(normalizedValue) {
+        return toNumber(normalizedValue, DEFAULT_LOCALE);
     },
 };
 
@@ -175,9 +197,15 @@ const quarterAdapter = {
         const nextQuarter = date.plus({ quarters: step });
         return `${nextQuarter.quarter}/${nextQuarter.year}`;
     },
-    format(normalizedValue, locale) {
+    getFormat(locale) {
+        return undefined;
+    },
+    formatValue(normalizedValue, locale) {
         const [quarter, year] = normalizedValue.split("/");
         return sprintf(_t("Q%(quarter)s %(year)s"), { quarter, year });
+    },
+    toCellValue(normalizedValue) {
+        return this.formatValue(normalizedValue);
     },
 };
 /**
@@ -193,14 +221,21 @@ const yearAdapter = {
     increment(normalizedValue, step) {
         return normalizedValue + step;
     },
-    format(normalizedValue, locale) {
+    getFormat(locale) {
+        return "0";
+    },
+    formatValue(normalizedValue, locale) {
         return formatValue(normalizedValue, { locale, format: "0" });
+    },
+    toCellValue(normalizedValue) {
+        return normalizedValue;
     },
 };
 
 /**
  * Decorate adapter functions to handle the empty value "false"
  * @param {PivotTimeAdapter} adapter
+ * @returns {PivotTimeAdapter}
  */
 function falseHandlerDecorator(adapter) {
     return {
@@ -222,11 +257,18 @@ function falseHandlerDecorator(adapter) {
             }
             return adapter.increment(normalizedValue, step);
         },
-        format(normalizedValue, locale) {
+        getFormat: adapter.getFormat.bind(adapter),
+        formatValue(normalizedValue, locale) {
             if (normalizedValue === false) {
                 return _t("None");
             }
-            return adapter.format(normalizedValue, locale);
+            return adapter.formatValue(normalizedValue, locale);
+        },
+        toCellValue(normalizedValue) {
+            if (normalizedValue === false) {
+                return _t("None");
+            }
+            return adapter.toCellValue(normalizedValue);
         },
     };
 }

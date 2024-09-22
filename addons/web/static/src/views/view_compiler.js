@@ -252,6 +252,7 @@ export class ViewCompiler {
         const root = this.templates[key].cloneNode(true);
         const child = this.compileNode(root, params);
         const newRoot = createElement("t", [child]);
+        newRoot.setAttribute("t-translation", "off");
         return newRoot;
     }
 
@@ -453,7 +454,7 @@ export function useViewCompiler(ViewCompiler, templates, params) {
     const compiledTemplates = {};
     let compiler;
     for (const tname in templates) {
-        const key = templates[tname].outerHTML;
+        const key = `${ViewCompiler.name}/${templates[tname].outerHTML}`;
         if (!templateCache[key]) {
             compiler = compiler || new ViewCompiler(templates);
             templateCache[key] = xml`${compiler.compile(tname, params).outerHTML}`;

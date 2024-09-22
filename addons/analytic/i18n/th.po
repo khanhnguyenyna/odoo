@@ -3,16 +3,16 @@
 # 	* analytic
 # 
 # Translators:
-# Wil Odoo, 2023
-# Rasareeyar Lappiam, 2023
+# Rasareeyar Lappiam, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Rasareeyar Lappiam, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Thai (https://app.transifex.com/odoo/teams/41243/th/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -80,7 +80,7 @@ msgstr "บัญชีที่ใช้งานอยู่"
 #: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
 #, python-format
 msgid "Add a Line"
-msgstr "เพิ่มไลน์"
+msgstr "เพิ่มรายการ"
 
 #. module: analytic
 #: model_terms:ir.actions.act_window,help:analytic.action_account_analytic_account_form
@@ -463,7 +463,7 @@ msgstr "คำอธิบาย"
 #. module: analytic
 #: model:account.analytic.account,name:analytic.analytic_desertic_hispafuentes
 msgid "Desertic - Hispafuentes"
-msgstr "ทะเลทราย - Hispafuentes"
+msgstr "Desertic - Hispafuentes"
 
 #. module: analytic
 #. odoo-javascript
@@ -551,7 +551,7 @@ msgid ""
 "                analytic accounts. You can track costs and revenues to analyse\n"
 "                your margins easily."
 msgstr ""
-"ใน Odoo มีการใช้คำสั่งขายและโปรเจกต์โดยใช้\n"
+"ใน Odoo มีการใช้คำสั่งขายและโปรเจ็กต์โดยใช้\n"
 "                บัญชีวิเคราะห์ คุณสามารถติดตามต้นทุนและรายได้เพื่อวิเคราะห์\n"
 "                อัตรากำไรขั้นต้นของคุณได้อย่างง่ายดาย"
 
@@ -629,6 +629,13 @@ msgstr "ชื่อ"
 #: model:account.analytic.account,name:analytic.analytic_nebula
 msgid "Nebula"
 msgstr "Nebula"
+
+#. module: analytic
+#. odoo-javascript
+#: code:addons/analytic/static/src/components/analytic_distribution/analytic_distribution.xml:0
+#, python-format
+msgid "New Model"
+msgstr "โมเดลใหม่"
 
 #. module: analytic
 #: model_terms:ir.actions.act_window,help:analytic.account_analytic_line_action_entries
@@ -750,7 +757,7 @@ msgstr "บัญชีโปรเจ็กต์"
 #. module: analytic
 #: model:account.analytic.plan,name:analytic.analytic_plan_projects
 msgid "Projects"
-msgstr "โปรเจกต์"
+msgstr "โปรเจ็กต์"
 
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_line__unit_amount
@@ -785,12 +792,12 @@ msgstr ""
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_plan__root_id
 msgid "Root"
-msgstr "ราก"
+msgstr "รูท"
 
 #. module: analytic
 #: model:ir.model.fields,field_description:analytic.field_account_analytic_account__root_plan_id
 msgid "Root Plan"
-msgstr "แผน Root"
+msgstr "แผนรูท"
 
 #. module: analytic
 #. odoo-javascript
@@ -807,7 +814,7 @@ msgstr "Seagate P2"
 #. module: analytic
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_line_filter
 msgid "Search Analytic Lines"
-msgstr "ค้นหาไลน์การวิเคราะห์"
+msgstr "ค้นหารายการการวิเคราะห์"
 
 #. module: analytic
 #: model:ir.model.fields,help:analytic.field_account_analytic_distribution_model__company_id
@@ -918,4 +925,4 @@ msgstr ""
 #. module: analytic
 #: model_terms:ir.ui.view,arch_db:analytic.view_account_analytic_account_form
 msgid "e.g. Project XYZ"
-msgstr "เช่น โปรเจกต์ XYZ"
+msgstr "เช่น โปรเจ็กต์ XYZ"

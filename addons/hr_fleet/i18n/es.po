@@ -3,16 +3,16 @@
 # 	* hr_fleet
 # 
 # Translators:
-# Wil Odoo, 2023
-# Larissa Manderfeld, 2023
+# Wil Odoo, 2024
+# Larissa Manderfeld, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-01-05 12:31+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Larissa Manderfeld, 2023\n"
+"Last-Translator: Larissa Manderfeld, 2024\n"
 "Language-Team: Spanish (https://app.transifex.com/odoo/teams/41243/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -35,6 +35,11 @@ msgid "Activity plan template"
 msgstr "Plantilla del plan de actividad"
 
 #. module: hr_fleet
+#: model:ir.model.fields,field_description:hr_fleet.field_mail_activity_plan_template__responsible_type
+msgid "Assignment"
+msgstr "Asignación"
+
+#. module: hr_fleet
 #: model_terms:ir.ui.view,arch_db:hr_fleet.fleet_vehicle_assignation_log_employee_view_list
 #: model_terms:ir.ui.view,arch_db:hr_fleet.fleet_vehicle_assignation_log_view_list
 msgid "Attachments"
@@ -46,18 +51,18 @@ msgstr "Archivos adjuntos"
 #, python-format
 msgid "Cannot remove address from employees with linked cars."
 msgstr ""
-"No se puede eliminar la dirección de empleados con automóviles vinculados."
+"No se puede eliminar la dirección de los empleados con coches vinculados."
 
 #. module: hr_fleet
 #: model:ir.model.fields,field_description:hr_fleet.field_hr_employee__employee_cars_count
 #: model:ir.model.fields,field_description:hr_fleet.field_res_users__employee_cars_count
 msgid "Cars"
-msgstr "Automóviles"
+msgstr "Coches"
 
 #. module: hr_fleet
 #: model_terms:ir.ui.view,arch_db:hr_fleet.hr_departure_wizard_view_form
 msgid "Company Car"
-msgstr "Vehículo de la compañía"
+msgstr "Coche de la compañía"
 
 #. module: hr_fleet
 #: model_terms:ir.ui.view,arch_db:hr_fleet.fleet_vehicle_assignation_log_employee_view_list
@@ -100,7 +105,7 @@ msgstr "Empleado"
 #: code:addons/hr_fleet/models/mail_activity_plan_template.py:0
 #, python-format
 msgid "Employee %s is not linked to a vehicle."
-msgstr ""
+msgstr "El empleado %s no está vinculado a un vehículo. "
 
 #. module: hr_fleet
 #: model:ir.model.fields,field_description:hr_fleet.field_fleet_vehicle__driver_employee_name
@@ -117,12 +122,12 @@ msgstr "Gerente de flota"
 #: code:addons/hr_fleet/models/mail_activity_plan_template.py:0
 #, python-format
 msgid "Fleet Manager is limited to Employee plans."
-msgstr ""
+msgstr "El gerente de flota está limitado a los planes de empleados."
 
 #. module: hr_fleet
 #: model_terms:ir.ui.view,arch_db:hr_fleet.view_employee_form
 msgid "Fleet Mobility Card"
-msgstr "Tarjeta de Movilidad de Flota"
+msgstr "Tarjeta de movilidad de flota"
 
 #. module: hr_fleet
 #: model:ir.model.fields,field_description:hr_fleet.field_fleet_vehicle__future_driver_employee_id
@@ -139,7 +144,7 @@ msgstr "Matrícula"
 #: model:ir.model.fields,field_description:hr_fleet.field_hr_employee__mobility_card
 #: model:ir.model.fields,field_description:hr_fleet.field_hr_employee_public__mobility_card
 msgid "Mobility Card"
-msgstr "Tarjeta de Movilidad"
+msgstr "Tarjeta de movilidad"
 
 #. module: hr_fleet
 #: model:ir.model.fields,field_description:hr_fleet.field_fleet_vehicle_assignation_log__attachment_number
@@ -154,7 +159,7 @@ msgstr "Registro del odómetro para un vehículo"
 #. module: hr_fleet
 #: model:ir.model,name:hr_fleet.model_hr_employee_public
 msgid "Public Employee"
-msgstr "Empleado Público"
+msgstr "Empleado público"
 
 #. module: hr_fleet
 #. odoo-python
@@ -166,12 +171,7 @@ msgstr "Empleado relacionado"
 #. module: hr_fleet
 #: model:ir.model.fields,field_description:hr_fleet.field_hr_departure_wizard__release_campany_car
 msgid "Release Company Car"
-msgstr "Liberar automóvil de la compañía"
-
-#. module: hr_fleet
-#: model:ir.model.fields,field_description:hr_fleet.field_mail_activity_plan_template__responsible_type
-msgid "Responsible"
-msgstr "Responsable"
+msgstr "Liberar coche de la empresa"
 
 #. module: hr_fleet
 #: model:ir.model,name:hr_fleet.model_fleet_vehicle_log_services
@@ -184,6 +184,8 @@ msgstr "Servicios para los vehículos"
 #, python-format
 msgid "The vehicle of employee %(employee)s is not linked to a fleet manager."
 msgstr ""
+"El vehículo del empleado %(employee)s no está vinculado a un gerente de "
+"flota."
 
 #. module: hr_fleet
 #. odoo-javascript

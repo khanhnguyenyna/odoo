@@ -30,7 +30,9 @@ class PartnerIdTypeEc(enum.Enum):
         Returns ID code for move and partner based on subset of Table 2 of SRI's ATS specification
         """
         partner_id_type = partner._l10n_ec_get_identification_type()
-        if move_type.startswith('in_'):
+        if partner.vat and verify_final_consumer(partner.vat):
+            return cls.FINAL_CONSUMER
+        elif move_type.startswith('in_'):
             if partner_id_type == 'ruc':  # includes final consumer
                 return cls.IN_RUC
             elif partner_id_type == 'cedula':
@@ -101,15 +103,24 @@ class ResPartner(models.Model):
         """
         self.ensure_one()
 
-        def id_type_in(*args):
-            return any([self.l10n_latam_identification_type_id == self.env.ref(arg) for arg in args])
+        id_types_by_xmlid = {
+            'l10n_ec.ec_dni': 'cedula',  # DNI
+            'l10n_ec.ec_ruc': 'ruc',  # RUC
+            'l10n_ec.ec_passport': 'ec_passport',  # EC passport
+            'l10n_latam_base.it_pass': 'passport',  # Passport
+            'l10n_latam_base.it_fid': 'foreign',  # Foreign ID
+            'l10n_latam_base.it_vat': 'foreign',
+        }
 
-        if id_type_in('l10n_ec.ec_dni'):
-            return 'cedula'  # DNI
-        elif id_type_in('l10n_ec.ec_ruc'):
-            return 'ruc'  # RUC
-        elif id_type_in('l10n_latam_base.it_pass'):
-            return 'passport'  # Pasaporte
-        elif id_type_in('l10n_latam_base.it_fid', 'l10n_latam_base.it_vat') \
-                or self.l10n_latam_identification_type_id.country_id != self.env.ref('base.ec'):
-            return 'foreign'  # Identificacion del exterior
+        # This method is orm-cached, which makes it more efficient in loops than get_external_id()
+        xmlid_by_res_id = {
+            self.env['ir.model.data']._xmlid_to_res_model_res_id(xmlid, raise_if_not_found=True)[1]: xmlid
+            for xmlid in id_types_by_xmlid
+        }
+
+        id_type_xmlid = xmlid_by_res_id.get(self.l10n_latam_identification_type_id.id)
+        if id_type_xmlid in id_types_by_xmlid:
+            return id_types_by_xmlid[id_type_xmlid]
+
+        if self.l10n_latam_identification_type_id.country_id.code != 'EC':
+            return 'foreign'

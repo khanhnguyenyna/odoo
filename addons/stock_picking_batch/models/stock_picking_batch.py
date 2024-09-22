@@ -6,7 +6,7 @@ from markupsafe import Markup
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from odoo.osv.expression import AND
-from odoo.tools.float_utils import float_compare, float_is_zero, float_round
+from odoo.tools.float_utils import float_is_zero
 
 class StockPickingBatch(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -37,7 +37,7 @@ class StockPickingBatch(models.Model):
         'stock.move', string="Stock moves", compute='_compute_move_ids')
     move_line_ids = fields.One2many(
         'stock.move.line', string='Stock move lines',
-        compute='_compute_move_ids', inverse='_set_move_line_ids')
+        compute='_compute_move_line_ids', inverse='_set_move_line_ids')
     state = fields.Selection([
         ('draft', 'Draft'),
         ('in_progress', 'In progress'),
@@ -60,11 +60,17 @@ class StockPickingBatch(models.Model):
     # To remove in master
     show_set_qty_button = fields.Boolean(compute='_compute_show_qty_button')
     show_clear_qty_button = fields.Boolean(compute='_compute_show_qty_button')
+    show_lots_text = fields.Boolean(compute='_compute_show_lots_text')
 
     @api.depends()
     def _compute_show_qty_button(self):
         self.show_set_qty_button = False
         self.show_clear_qty_button = False
+
+    @api.depends('picking_type_id')
+    def _compute_show_lots_text(self):
+        for batch in self:
+            batch.show_lots_text = batch.picking_ids and batch.picking_ids[0].show_lots_text
 
     @api.depends('company_id', 'picking_type_id', 'state')
     def _compute_allowed_picking_ids(self):
@@ -87,8 +93,12 @@ class StockPickingBatch(models.Model):
     def _compute_move_ids(self):
         for batch in self:
             batch.move_ids = batch.picking_ids.move_ids
+            batch.show_check_availability = any(m.state not in ['assigned', 'cancel', 'done'] for m in batch.move_ids)
+
+    @api.depends('picking_ids', 'picking_ids.move_line_ids')
+    def _compute_move_line_ids(self):
+        for batch in self:
             batch.move_line_ids = batch.picking_ids.move_line_ids
-            batch.show_check_availability = any(m.state not in ['assigned', 'done'] for m in batch.move_ids)
 
     @api.depends('state', 'move_ids', 'picking_type_id')
     def _compute_show_allocation(self):
@@ -190,11 +200,14 @@ class StockPickingBatch(models.Model):
         def has_no_quantity(picking):
             return all(not m.picked or float_is_zero(m.quantity, precision_rounding=m.product_uom.rounding) for m in picking.move_ids if m.state not in ('done', 'cancel'))
 
+        def is_empty(picking):
+            return all(float_is_zero(m.quantity, precision_rounding=m.product_uom.rounding) for m in picking.move_ids if m.state not in ('done', 'cancel'))
+
         self.ensure_one()
         self._check_company()
-        # Empty 'waiting for another operation' pickings will be removed from the batch when it is validated.
+        # Empty 'assigned' or 'waiting for another operation' pickings will be removed from the batch when it is validated.
         pickings = self.mapped('picking_ids').filtered(lambda picking: picking.state not in ('cancel', 'done'))
-        empty_waiting_pickings = self.mapped('picking_ids').filtered(lambda p: p.state == 'waiting' and has_no_quantity(p))
+        empty_waiting_pickings = self.mapped('picking_ids').filtered(lambda p: (p.state in ('waiting', 'confirmed') and has_no_quantity(p)) or (p.state == 'assigned' and is_empty(p)))
         pickings = pickings - empty_waiting_pickings
 
         empty_pickings = set()
@@ -230,7 +243,7 @@ class StockPickingBatch(models.Model):
         """
         self.ensure_one()
         if self.state not in ('done', 'cancel'):
-            move_line_ids = self.picking_ids[0]._package_move_lines()
+            move_line_ids = self.picking_ids[0]._package_move_lines(batch_pack=True)
             if move_line_ids:
                 res = move_line_ids.picking_id[0]._pre_put_in_pack_hook(move_line_ids)
                 if res:

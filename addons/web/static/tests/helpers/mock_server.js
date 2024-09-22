@@ -55,6 +55,7 @@ const DEFAULT_FIELD_VALUES = {
     selection: false,
     reference: false,
     properties: [],
+    json: false,
 };
 
 // -----------------------------------------------------------------------------
@@ -1049,9 +1050,13 @@ export class MockServer {
                         if (func === "array_agg") {
                             group[name] = records.map((r) => r[fieldName]);
                         } else {
-                            group[name] = 0;
-                            for (const r of records) {
-                                group[name] += r[fieldName];
+                            if (!records.length) {
+                                group[name] = false;
+                            } else {
+                                group[name] = 0;
+                                for (const r of records) {
+                                    group[name] += r[fieldName];
+                                }
                             }
                         }
                         break;
@@ -1127,7 +1132,7 @@ export class MockServer {
         }
 
         if (!groupBy.length) {
-            const group = { __count: records.length };
+            const group = { __count: records.length, __domain: kwargs.domain };
             aggregateFields(group, records);
             return [group];
         }
@@ -1326,6 +1331,9 @@ export class MockServer {
         for (const group of groups) {
             const records = this.getRecords(modelName, group.__domain || []);
             let groupByValue = group[groupBy]; // always technical value here
+            if (Array.isArray(groupByValue)) {
+                groupByValue = groupByValue[1];
+            }
 
             // special case for bool values: rpc call response with capitalized strings
             if (!(groupByValue in data)) {
@@ -2503,11 +2511,14 @@ export class MockServer {
                             if (!relatedFields) {
                                 record[fieldName] = record[fieldName][0];
                             } else {
-                                const displayName = record[fieldName][1];
-                                record[fieldName] = { id: record[fieldName][0] };
-                                if ("display_name" in relatedFields) {
-                                    record[fieldName].display_name = displayName;
-                                }
+                                record[fieldName] = this.mockWebRead(
+                                    field.relation,
+                                    [record[fieldName][0]],
+                                    {
+                                        specification: relatedFields,
+                                        context: spec[fieldName].context,
+                                    }
+                                )[0];
                             }
                         }
                     }

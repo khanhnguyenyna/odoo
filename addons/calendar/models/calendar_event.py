@@ -288,7 +288,12 @@ class Meeting(models.Model):
     @api.depends_context('uid')
     def _compute_user_can_edit(self):
         for event in self:
-            event.user_can_edit = self.env.user in event.partner_ids.user_ids + event.user_id or self.env.user.has_group('base.group_partner_manager')
+            # By default, only current attendees and the organizer can edit the event.
+            editor_candidates = event.partner_ids.user_ids + event.user_id
+            # Right before saving the event, old partners must be able to save changes.
+            if event._origin:
+                editor_candidates += event._origin.partner_ids.user_ids
+            event.user_can_edit = self.env.user.id in editor_candidates.ids
 
     @api.depends('attendee_ids')
     def _compute_invalid_email_partner_ids(self):
@@ -365,6 +370,19 @@ class Meeting(models.Model):
             if event.allday:
                 event.stop -= timedelta(seconds=1)
 
+    @api.onchange('start_date', 'stop_date')
+    def _onchange_date(self):
+        """ This onchange is required for cases where the stop/start is False and we set an allday event.
+            The inverse method is not called in this case because start_date/stop_date are not used in any
+            compute/related, so we need an onchange to set the start/stop values in the form view
+        """
+        for event in self:
+            if event.stop_date and event.start_date:
+                event.with_context(is_calendar_event_new=True).write({
+                    'start': fields.Datetime.from_string(event.start_date).replace(hour=8),
+                    'stop': fields.Datetime.from_string(event.stop_date).replace(hour=18),
+                })
+
     def _inverse_dates(self):
         """ This method is used to set the start and stop values of all day events.
             The calendar view needs date_start and date_stop values to display correctly the allday events across
@@ -412,6 +430,12 @@ class Meeting(models.Model):
                       end_datetime=meeting.stop
                     )
                 )
+
+    def _check_organizer_validation_conditions(self, vals_list):
+        """ Method for check in the microsoft_calendar module that needs to be
+            overridden in appointment.
+        """
+        return [True] * len(vals_list)
 
     @api.depends('recurrence_id', 'recurrency')
     def _compute_rrule_type_ui(self):
@@ -580,7 +604,7 @@ class Meeting(models.Model):
         return super()._compute_field_value(field)
 
     def _fetch_query(self, query, fields):
-        if self.env.is_system():
+        if self.env.su:
             return super()._fetch_query(query, fields)
 
         public_fnames = self._get_public_fields()
@@ -592,12 +616,7 @@ class Meeting(models.Model):
         events = super()._fetch_query(query, fields_to_fetch)
 
         # determine private events to which the user does not participate
-        current_partner_id = self.env.user.partner_id
-        others_private_events = events.filtered(
-            lambda e: e.privacy == 'private' \
-                  and e.user_id != self.env.user \
-                  and current_partner_id not in e.partner_ids
-        )
+        others_private_events = events.filtered(lambda ev: ev._check_private_event_conditions())
         if not others_private_events:
             return events
 
@@ -613,7 +632,7 @@ class Meeting(models.Model):
     def write(self, values):
         detached_events = self.env['calendar.event']
         recurrence_update_setting = values.pop('recurrence_update', None)
-        update_recurrence = recurrence_update_setting in ('all_events', 'future_events') and len(self) == 1
+        update_recurrence = recurrence_update_setting in ('all_events', 'future_events') and len(self) == 1 and self.recurrence_id
         break_recurrence = values.get('recurrency') is False
 
         if any(vals in self._get_recurrent_fields() for vals in values) and not (update_recurrence or values.get('recurrency')):
@@ -648,12 +667,12 @@ class Meeting(models.Model):
         previous_attendees = self.attendee_ids
 
         recurrence_values = {field: values.pop(field) for field in self._get_recurrent_fields() if field in values}
+        future_edge_case = recurrence_update_setting == 'future_events' and self == self.recurrence_id.base_event_id
         if update_recurrence:
             if break_recurrence:
                 # Update this event
                 detached_events |= self._break_recurrence(future=recurrence_update_setting == 'future_events')
             else:
-                future_edge_case = recurrence_update_setting == 'future_events' and self == self.recurrence_id.base_event_id
                 time_values = {field: values.pop(field) for field in time_fields if field in values}
                 if 'access_token' in values:
                     values.pop('access_token')  # prevents copying access_token to other events in recurrency
@@ -669,7 +688,7 @@ class Meeting(models.Model):
             self._sync_activities(fields=values.keys())
 
         # We reapply recurrence for future events and when we add a rrule and 'recurrency' == True on the event
-        if recurrence_update_setting not in ['self_only', 'all_events'] and not break_recurrence:
+        if recurrence_update_setting not in ['self_only', 'all_events'] and not future_edge_case and not break_recurrence:
             detached_events |= self._apply_recurrence_values(recurrence_values, future=recurrence_update_setting == 'future_events')
 
         (detached_events & self).active = False
@@ -681,7 +700,7 @@ class Meeting(models.Model):
             self.recurrence_id._setup_alarms(recurrence_update=True)
             if not self.recurrence_id:
                 self._setup_alarms()
-        attendee_update_events = self.filtered(lambda ev: ev.user_id != self.env.user)
+        attendee_update_events = self.filtered(lambda ev: ev.user_id and ev.user_id != self.env.user)
         if update_time and attendee_update_events:
             # Another user update the event time fields. It should not be auto accepted for the organizer.
             # This prevent weird behavior when a user modified future events time fields and
@@ -704,18 +723,31 @@ class Meeting(models.Model):
                     self.env.ref('calendar.calendar_template_meeting_changedate', raise_if_not_found=False)
                 )
 
+        # Change base event when the main base event is archived. If it isn't done when trying to modify
+        # all events of the recurrence an error can be thrown or all the recurrence can be deleted.
+        if values.get("active") is False:
+            recurrences = self.env["calendar.recurrence"].search([
+                ('base_event_id', 'in', self.ids)
+            ])
+            recurrences._select_new_base_event()
+
         return True
+
+    def _check_private_event_conditions(self):
+        """
+        Checks if the event is private, returning True if the conditions match and False otherwise.
+        The event is private if it is explicetely defined and the user is neither the organizer or a partner of it.
+        """
+        self.ensure_one()
+        event_is_private = self.privacy == 'private'
+        user_is_not_partner = self.user_id.id != self.env.uid and self.env.user.partner_id not in self.partner_ids
+        return event_is_private and user_is_not_partner
 
     @api.depends('privacy', 'user_id')
     def _compute_display_name(self):
         """ Hide private events' name for events which don't belong to the current user
         """
-        hidden = self.filtered(
-            lambda evt:
-                evt.privacy == 'private' and
-                evt.user_id.id != self.env.uid and
-                self.env.user.partner_id not in evt.partner_ids
-        )
+        hidden = self.filtered(lambda event: event._check_private_event_conditions())
         hidden.display_name = _('Busy')
         super(Meeting, self - hidden)._compute_display_name()
 
@@ -746,7 +778,7 @@ class Meeting(models.Model):
         # don't forget to update recurrences if there are some base events in the set to unlink,
         # but after having removed the events ;-)
         recurrences = self.env["calendar.recurrence"].search([
-            ('base_event_id.id', 'in', [e.id for e in self])
+            ('base_event_id', 'in', [e.id for e in self])
         ])
 
         result = super().unlink()
@@ -789,6 +821,11 @@ class Meeting(models.Model):
 
         removed_partner_ids = []
         added_partner_ids = []
+
+        # if commands are just integers, assume they are ids with the intent to `Command.set`
+        if partner_commands and isinstance(partner_commands[0], int):
+            partner_commands = [Command.set(partner_commands)]
+
         for command in partner_commands:
             op = command[0]
             if op in (2, 3, Command.delete, Command.unlink):  # Remove partner
@@ -999,6 +1036,28 @@ class Meeting(models.Model):
         if events_to_notify:
             self.env['calendar.alarm_manager']._notify_next_alarm(events_to_notify.partner_ids.ids)
         return triggers_by_events
+
+    def get_next_alarm_date(self, events_by_alarm):
+        self.ensure_one()
+        now = fields.datetime.now()
+        sorted_alarms = self.alarm_ids.sorted("duration_minutes")
+        triggered_alarms = sorted_alarms.filtered(lambda alarm: alarm.id in events_by_alarm)[0]
+        event_has_future_alarms = sorted_alarms[0] != triggered_alarms
+        next_date = None
+        if self.recurrence_id.trigger_id and self.recurrence_id.trigger_id.call_at <= now:
+            next_date = self.start - timedelta(minutes=sorted_alarms[0].duration_minutes) \
+                if event_has_future_alarms \
+                else self.start
+        # For recurrent events, when there is no next_date and no trigger in the recurence, set the next
+        # date as the date of the next event. This keeps the single alarm alive in the recurrence.
+        recurrence_has_no_trigger = self.recurrence_id and not self.recurrence_id.trigger_id
+        if recurrence_has_no_trigger and not next_date and len(sorted_alarms) > 0:
+            future_recurrent_events = self.recurrence_id.calendar_event_ids.filtered(lambda ev: ev.start > self.start)
+            if future_recurrent_events:
+                # The next event (minus the alarm duration) will be the next date.
+                next_recurrent_event = future_recurrent_events.sorted("start")[0]
+                next_date = next_recurrent_event.start - timedelta(minutes=sorted_alarms[0].duration_minutes)
+        return next_date
 
     # ------------------------------------------------------------
     # RECURRENCY

@@ -118,12 +118,17 @@ class StockRule(models.Model):
             warehouse_id = rule.warehouse_id
             if not warehouse_id:
                 warehouse_id = rule.location_dest_id.warehouse_id
-            if rule.picking_type_id == warehouse_id.sam_type_id:
+            manu_rule = rule.route_id.rule_ids.filtered(lambda r: r.action == 'manufacture' and r.warehouse_id == warehouse_id)
+            if warehouse_id.manufacture_steps != 'pbm_sam' or not manu_rule:
+                continue
+            if rule.picking_type_id == warehouse_id.sam_type_id or (
+                warehouse_id.sam_loc_id and warehouse_id.sam_loc_id.parent_path in rule.location_src_id.parent_path
+            ):
                 if float_compare(procurement.product_qty, 0, precision_rounding=procurement.product_uom.rounding) < 0:
                     procurement.values['group_id'] = procurement.values['group_id'].stock_move_ids.filtered(
                         lambda m: m.state not in ['done', 'cancel']).move_orig_ids.group_id[:1]
                     continue
-                manu_type_id = warehouse_id.manu_type_id
+                manu_type_id = manu_rule[0].picking_type_id
                 if manu_type_id:
                     name = manu_type_id.sequence_id.next_by_id()
                 else:
@@ -210,16 +215,18 @@ class StockRule(models.Model):
         if bom.type == 'normal':
             # pre-production rules
             warehouse = self.location_dest_id.warehouse_id
-            if warehouse.manufacture_steps != 'mrp_one_step':
-                wh_manufacture_rules = product._get_rules_from_location(product.property_stock_production, route_ids=warehouse.pbm_route_id)
-                extra_delays, extra_delay_description = (wh_manufacture_rules - self)._get_lead_days(product, **values)
-                for key, value in extra_delays.items():
-                    delays[key] += value
-                delay_description += extra_delay_description
+            for wh in warehouse:
+                if wh.manufacture_steps != 'mrp_one_step':
+                    wh_manufacture_rules = product._get_rules_from_location(product.property_stock_production, route_ids=wh.pbm_route_id)
+                    extra_delays, extra_delay_description = (wh_manufacture_rules - self)._get_lead_days(product, **values)
+                    for key, value in extra_delays.items():
+                        delays[key] += value
+                    delay_description += extra_delay_description
             # manufacturing security lead time
-            security_delay = self.picking_type_id.company_id.manufacturing_lead
-            delays['total_delay'] += security_delay
-            delays['security_lead_days'] += security_delay
+            for comp in self.picking_type_id.company_id:
+                security_delay = comp.manufacturing_lead
+                delays['total_delay'] += security_delay
+                delays['security_lead_days'] += security_delay
             if not bypass_delay_description:
                 delay_description.append((_('Manufacture Security Lead Time'), _('+ %d day(s)', security_delay)))
         days_to_order = values.get('days_to_order', bom.days_to_prepare_mo)

@@ -1,10 +1,9 @@
 /** @odoo-module **/
 
+import { isBrowserFirefox } from "@web/core/browser/feature_detection";
 import { browser } from "../browser/browser";
-import { _t } from "@web/core/l10n/translation";
 import { registry } from "../registry";
 import { completeUncaughtError, getErrorTechnicalName } from "./error_utils";
-import { isIOS, isBrowserSafari } from "@web/core/browser/feature_detection";
 
 /**
  * Uncaught Errors have 4 properties:
@@ -23,20 +22,22 @@ export class UncaughtError extends Error {
 }
 
 export class UncaughtClientError extends UncaughtError {
-    constructor(message = _t("Uncaught Javascript Error")) {
+    constructor(message = "Uncaught Javascript Error") {
         super(message);
     }
 }
 
 export class UncaughtPromiseError extends UncaughtError {
-    constructor(message = _t("Uncaught Promise")) {
+    constructor(message = "Uncaught Promise") {
         super(message);
         this.unhandledRejectionEvent = null;
     }
 }
 
+// FIXME: this error is misnamed and actually represends errors in third-party scripts
+// rename this in master
 export class UncaughtCorsError extends UncaughtError {
-    constructor(message = _t("Uncaught CORS Error")) {
+    constructor(message = "Uncaught CORS Error") {
         super(message);
     }
 }
@@ -83,22 +84,23 @@ export const errorService = {
             if (!error && errorsToIgnore.includes(message)) {
                 return;
             }
+            const isRedactedError = !filename && !lineno && !colno;
+            const isThirdPartyScriptError =
+                isRedactedError ||
+                // Firefox doesn't hide details of errors occuring in third-party scripts, check origin explicitly
+                (isBrowserFirefox() && new URL(filename).origin !== window.location.origin);
+            // Don't display error dialogs for third party script errors unless we are in debug mode
+            if (isThirdPartyScriptError && !odoo.debug) {
+                return;
+            }
             let uncaughtError;
-            if (!filename && !lineno && !colno) {
-                if ((isIOS() || isBrowserSafari()) && odoo.debug !== "assets") {
-                    // In Safari 16.4+ (as of Jun 14th 2023), an error occurs
-                    // when going back and forward through the browser when the
-                    // cache is enabled. A feedback has been reported but in the
-                    // meantime, hide any script error in these versions.
-                    return;
-                }
+            if (isRedactedError) {
                 uncaughtError = new UncaughtCorsError();
-                uncaughtError.traceback = _t(
+                uncaughtError.traceback =
                     `Unknown CORS error\n\n` +
-                        `An unknown CORS error occured.\n` +
-                        `The error probably originates from a JavaScript file served from a different origin.\n` +
-                        `(Opening your browser console might give you a hint on the error.)`
-                );
+                    `An unknown CORS error occured.\n` +
+                    `The error probably originates from a JavaScript file served from a different origin.\n` +
+                    `(Opening your browser console might give you a hint on the error.)`;
             } else {
                 uncaughtError = new UncaughtClientError();
                 uncaughtError.event = ev;

@@ -7,12 +7,21 @@ import { patch } from "@web/core/utils/patch";
 
 patch(SuggestionService.prototype, {
     getSupportedDelimiters(thread) {
-        return thread?.model !== "discuss.channel" || thread.type === "livechat"
+        return (thread.type === "chat" && thread.correspondent?.eq(this.store.odoobot)) ||
+            thread.model !== "discuss.channel" ||
+            thread.type === "livechat"
             ? [...super.getSupportedDelimiters(...arguments), [":"]]
             : super.getSupportedDelimiters(...arguments);
     },
+    async fetchSuggestions({ delimiter, term }, { thread } = {}) {
+        if (thread?.type === "livechat" && delimiter === "#") {
+            return;
+        }
+        return super.fetchSuggestions(...arguments);
+    },
     /**
      * Returns suggestions that match the given search term from specified type.
+     * Searching on channels is disabled in livechat since the visitor don't have access to channels.
      *
      * @param {Object} [param0={}]
      * @param {String} [param0.delimiter] can be one one of the following: ["@", ":", "#", "/"]
@@ -23,6 +32,13 @@ patch(SuggestionService.prototype, {
      * @returns {[mainSuggestion[], extraSuggestion[]]}
      */
     searchSuggestions({ delimiter, term }, { thread } = {}, sort = false) {
+        if (thread?.type === "livechat" && delimiter === "#") {
+            return {
+                type: undefined,
+                mainSuggestions: [],
+                extraSuggestions: [],
+            };
+        }
         if (delimiter === ":") {
             return this.searchCannedResponseSuggestions(cleanTerm(term), sort);
         }

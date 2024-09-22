@@ -600,7 +600,11 @@ class TestMailAliasDomain(TestMailAliasCommon):
                     alias_domain.write({'name': failing_name})
 
         # sanitization of bounce / catchall
-        for (bounce_alias, catchall_alias, default_from), (exp_bounce, exp_catchall, exp_default_from) in zip(
+        for (
+            (bounce_alias, catchall_alias, default_from),
+            (exp_bounce, exp_catchall, exp_default_from),
+            (exp_bounce_email, exp_catchall_email, exp_default_from_email),
+        ) in zip(
             [
                 (
                     'bounce+b4r=*R3wl_#_-$€{}[]()~|\\/!?&%^\'"`~',
@@ -610,6 +614,12 @@ class TestMailAliasDomain(TestMailAliasCommon):
                 ('bounce+😊', 'catchall+😊', 'notifications+😊'),
                 ('Bouncâïde 😊', 'Catchôïee 😊', 'Notificâtïons 😊'),
                 ('ぁ', 'ぁぁ', 'ぁぁぁ'),
+                # only default_from can be a valid email and taken as such
+                (
+                    'bounce@wrong.complete.com',
+                    'catchall@wrong.complete.com',
+                    'notifications@valid.complete.com',
+                ),
             ],
             [
                 (
@@ -620,17 +630,53 @@ class TestMailAliasDomain(TestMailAliasCommon):
                 ('bounce+-', 'catchall+-', 'notifications+-'),
                 ('bouncaide-', 'catchoiee-', 'notifications-'),
                 ('?', '??', '???'),
+                # only default_from can be a valid email and taken as such
+                (
+                    'bounce',
+                    'catchall',
+                    'notifications@valid.complete.com',
+                ),
+            ],
+            [
+                (
+                    f'bounce+b4r=*r3wl_#_-$-{{}}-~|-/!?&%^\'-`~@{alias_domain.name}',
+                    f'catchall+b4r=*r3wl_#_-$-{{}}-~|-/!?&%^\'-`~@{alias_domain.name}',
+                    f'notifications+b4r=*r3wl_#_-$-{{}}-~|-/!?&%^\'-`~@{alias_domain.name}',
+                ),
+                (
+                    f'bounce+-@{alias_domain.name}',
+                    f'catchall+-@{alias_domain.name}',
+                    f'notifications+-@{alias_domain.name}'),
+                (
+                    f'bouncaide-@{alias_domain.name}',
+                    f'catchoiee-@{alias_domain.name}',
+                    f'notifications-@{alias_domain.name}'
+                ),
+                (
+                    f'?@{alias_domain.name}',
+                    f'??@{alias_domain.name}',
+                    f'???@{alias_domain.name}'
+                ),
+                # only default_from can be a valid email and taken as such
+                (
+                    f'bounce@{alias_domain.name}',
+                    f'catchall@{alias_domain.name}',
+                    'notifications@valid.complete.com',
+                ),
             ]
         ):
             with self.subTest(bounce_alias=bounce_alias):
                 alias_domain.write({'bounce_alias': bounce_alias})
                 self.assertEqual(alias_domain.bounce_alias, exp_bounce)
+                self.assertEqual(alias_domain.bounce_email, exp_bounce_email)
             with self.subTest(catchall_alias=catchall_alias):
                 alias_domain.write({'catchall_alias': catchall_alias})
                 self.assertEqual(alias_domain.catchall_alias, exp_catchall)
+                self.assertEqual(alias_domain.catchall_email, exp_catchall_email)
             with self.subTest(default_from=default_from):
                 alias_domain.write({'default_from': default_from})
                 self.assertEqual(alias_domain.default_from, exp_default_from)
+                self.assertEqual(alias_domain.default_from_email, exp_default_from_email)
 
         # falsy values
         for config_value in [False, None, '', ' ']:
@@ -806,6 +852,18 @@ class TestMailAliasMixin(TestMailAliasCommon):
         self.assertEqual(record_copy.alias_bounced_content, new_content)
         record_copy2 = record_copy.copy()
         self.assertEqual(record_copy2.alias_bounced_content, new_content)
+
+    @users('employee')
+    def test_copy_optional_alias_model(self):
+        """ Do not propagate alias_id to duplicate record as it could lead to
+        overwriting alias_name of old record. """
+        record = self.env['mail.test.alias.optional'].create({
+            'name': 'Test Optional Alias Record',
+            'alias_name': 'test.optional.alias.record',
+        })
+        self.assertTrue(record.alias_id)
+        record_copy = record.copy()
+        self.assertFalse(record_copy.alias_id)
 
     @users('erp_manager')
     def test_multi_company_setup(self):

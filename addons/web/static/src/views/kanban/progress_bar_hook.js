@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { onWillStart, onWillUpdateProps, reactive, useComponent } from "@odoo/owl";
+import { reactive } from "@odoo/owl";
 import { Domain } from "@web/core/domain";
 import { _t } from "@web/core/l10n/translation";
 import { extractInfoFromGroupData } from "@web/model/relational_model/utils";
@@ -30,6 +30,14 @@ function _createFilterDomain(fieldName, bars, value) {
     return filterDomain;
 }
 
+function _groupsToAggregateValues(groups, groupBy, fields) {
+    const groupByFieldName = groupBy[0].split(":")[0];
+    return groups.map((g) => {
+        const groupInfo = extractInfoFromGroupData(g, groupBy, fields);
+        return Object.assign(groupInfo.aggregates, { [groupByFieldName]: groupInfo.serverValue });
+    });
+}
+
 class ProgressBarState {
     constructor(progressAttributes, model, aggregateFields, activeBars = {}) {
         this.progressAttributes = progressAttributes;
@@ -43,16 +51,19 @@ class ProgressBarState {
 
     getGroupInfo(group) {
         if (!this._groupsInfo[group.id]) {
-            if (
-                !Object.keys(
-                    _findGroup(this._aggregateValues, group.groupByField, group.serverValue)
-                ).length
-            ) {
-                this._aggregateValues.push({
-                    ...group.aggregates,
-                    [group.groupByField.name]: group.serverValue,
-                });
+            const aggValues = _findGroup(
+                this._aggregateValues,
+                group.groupByField,
+                group.serverValue
+            );
+            const index = this._aggregateValues.indexOf(aggValues);
+            if (index > -1) {
+                this._aggregateValues.splice(index, 1);
             }
+            this._aggregateValues.push({
+                ...group.aggregates,
+                [group.groupByField.name]: group.serverValue,
+            });
             let groupValue = group.displayName || group.value;
             if (groupValue === true) {
                 groupValue = "True";
@@ -177,6 +188,7 @@ class ProgressBarState {
         }
         await Promise.all(proms);
         this.activeBars[group.serverValue] = nextActiveBar;
+        this.updateCounts(group);
     }
 
     _updateAggregateGroup(group, bars, activeBar) {
@@ -185,22 +197,19 @@ class ProgressBarState {
             bars,
             activeBar.value
         );
-        const { context, groupBy, resModel } = this.model.root;
+        const { context, fields, groupBy, resModel } = this.model.root;
         const kwargs = { context };
-        const fieldNames = this._aggregateFields.map((f) => f.name);
-        const fields = [...fieldNames, group.groupByField.name];
+        const fieldNames = [...this._aggregateFields.map((f) => f.name), group.groupByField.name];
         const domain = filterDomain
             ? Domain.and([group.groupDomain, filterDomain]).toList()
             : group.groupDomain;
         return this.model.orm
-            .webReadGroup(resModel, domain, fields, groupBy, kwargs)
+            .webReadGroup(resModel, domain, fieldNames, groupBy, kwargs)
             .then((res) => {
                 if (res.length) {
-                    const resGroup = _findGroup(res.groups, group.groupByField, group.serverValue);
-                    activeBar.aggregates = {
-                        ...resGroup,
-                        [group.groupByField.name]: group.serverValue,
-                    };
+                    const groupByField = group.groupByField;
+                    const aggrValues = _groupsToAggregateValues(res.groups, groupBy, fields);
+                    activeBar.aggregates = _findGroup(aggrValues, groupByField, group.serverValue);
                 }
             });
     }
@@ -239,10 +248,7 @@ class ProgressBarState {
             groupBy,
             kwargs
         );
-        this._aggregateValues = res.groups.map((r) => {
-            const groupInfo = extractInfoFromGroupData(r, groupBy, fields);
-            return { ...groupInfo.aggregates, [firstGroupByName]: groupInfo.serverValue };
-        });
+        this._aggregateValues = _groupsToAggregateValues(res.groups, groupBy, fields);
     }
 
     async _updateProgressBar() {
@@ -291,23 +297,15 @@ class ProgressBarState {
         }
     }
 
-    async loadProgressBar(props = {}) {
-        const groupBy = props.groupBy || this.model.root.groupBy;
-        const defaultGroupBy =
-            props.defaultGroupBy || (this.model.root && this.model.root.defaultGroupBy);
-        if (groupBy.length || defaultGroupBy) {
-            const resModel = props.resModel || this.model.root.resModel;
-            const domain = props.domain || this.model.root.domain;
-            const context = props.context || this.model.root.context;
+    async loadProgressBar({ context, domain, groupBy, resModel }) {
+        if (groupBy.length) {
             const { colors, fieldName: field, help } = this.progressAttributes;
             const res = await this.model.orm.call(resModel, "read_progress_bar", [], {
                 domain,
-                group_by: groupBy.length ? groupBy[0] : defaultGroupBy,
+                group_by: groupBy[0],
                 progress_bar: { colors, field, help },
                 context,
             });
-            this._groupsInfo = {};
-            this._aggregateValues = [];
             this._pbCounts = res;
         }
     }
@@ -324,22 +322,26 @@ class ProgressBarState {
 }
 
 export function useProgressBar(progressAttributes, model, aggregateFields, activeBars) {
-    const component = useComponent();
-
-    const progressBarState = new ProgressBarState(
-        progressAttributes,
-        model,
-        aggregateFields,
-        activeBars
+    const progressBarState = reactive(
+        new ProgressBarState(progressAttributes, model, aggregateFields, activeBars)
     );
 
-    // FIXME: maybe this can be do directly on the readGroup
-    onWillStart(() => {
-        return progressBarState.loadProgressBar(component.props);
-    });
-    onWillUpdateProps((nextProps) => {
-        progressBarState.loadProgressBar(nextProps);
-    });
+    let prom;
+    const onWillLoadRoot = model.hooks.onWillLoadRoot;
+    model.hooks.onWillLoadRoot = (config) => {
+        onWillLoadRoot();
+        prom = progressBarState.loadProgressBar({
+            context: config.context,
+            domain: config.domain,
+            groupBy: config.groupBy,
+            resModel: config.resModel,
+        });
+    };
+    const onRootLoaded = model.hooks.onRootLoaded;
+    model.hooks.onRootLoaded = async () => {
+        await onRootLoaded();
+        return prom;
+    };
 
-    return reactive(progressBarState);
+    return progressBarState;
 }

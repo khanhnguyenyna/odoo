@@ -5,7 +5,7 @@
             <t t-set="o" t-value="o.with_context(lang=lang)"/>
             <t t-set="values" t-value="o._get_payment_receipt_report_values()"/>
             <div class="page">
-                <h3><strong id="payment_title">Payment Receipt: <span t-field="o.name"/>INV0001</strong></h3>
+                <h3><strong id="payment_title">Payment Receipt: <span t-field="o.name">INV0001</span></strong></h3>
 
                 <div class="mb-4 mt-3">
                     <div name="date" class="row">
@@ -44,8 +44,7 @@
                 <table name="invoices"
                        t-if="values['display_invoices']"
                        class="table table-sm">
-                    <t t-set="partials" t-value="o.move_id._get_reconciled_invoices_partials()[0]"/>
-                    <t t-set="invoices" t-value="{partial[2].move_id for partial in partials}"/>
+                    <t t-set="invoices" t-value="o.reconciled_invoice_ids or o.reconciled_bill_ids"/>
                     <!-- Check if invoices include different currencies -->
                     <t t-foreach="invoices" t-as="inv">
                         <t t-if="any(inv.currency_id != par[2].currency_id for par in inv._get_reconciled_invoices_partials()[0])" t-set="otherCurrency" t-value="True"/>

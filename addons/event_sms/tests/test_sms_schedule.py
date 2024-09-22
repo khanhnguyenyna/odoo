@@ -7,14 +7,18 @@ from odoo import fields
 from odoo.addons.event.tests.common import EventCase
 from odoo.addons.phone_validation.tools import phone_validation
 from odoo.addons.sms.tests.common import SMSCase
-from odoo.tests import users
+from odoo.tests import tagged, users
 
 
+@tagged('event_mail')
 class TestSMSSchedule(EventCase, SMSCase):
 
     @classmethod
     def setUpClass(cls):
         super(TestSMSSchedule, cls).setUpClass()
+
+        # consider asynchronous sending as default sending
+        cls.env["ir.config_parameter"].set_param("event.event_mail_async", False)
 
         cls.sms_template_sub = cls.env['sms.template'].create({
             'name': 'Test subscription',

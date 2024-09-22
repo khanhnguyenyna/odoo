@@ -3,16 +3,21 @@
 # 	* website
 # 
 # Translators:
-# Wil Odoo, 2023
-# 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023
+# 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2024
+# Yazi Tian, 2024
+# Martin Trigaux, 2024
+# 湘子 南 <1360857908@qq.com>, 2024
+# Jeffery CHEN <jeffery9@gmail.com>, 2024
+# Chloe Wang, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:54+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Chinese (China) (https://app.transifex.com/odoo/teams/41243/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -52,6 +57,23 @@ msgstr "\"来源网址\" 不能为空。"
 #, python-format
 msgid "\"URL to\" can not be empty."
 msgstr "“链接”不能为空"
+
+#. module: website
+#. odoo-python
+#: code:addons/website/models/website_rewrite.py:0
+#, python-format
+msgid ""
+"\"URL to\" cannot be set to \"/\". To change the homepage content, use the "
+"\"Homepage URL\" field in the website settings or the page properties on any"
+" custom page."
+msgstr "不能将 “前往网址” 设置为 “/”。若要更改主页内容，请使用网站设置中的“主页网址”字段，或任何自定义页面上的页面属性。"
+
+#. module: website
+#. odoo-python
+#: code:addons/website/models/website_rewrite.py:0
+#, python-format
+msgid "\"URL to\" cannot be set to an existing page."
+msgstr "“前往网址” 不可设为现有页面。"
 
 #. module: website
 #. odoo-python
@@ -212,9 +234,13 @@ msgstr "+ 新网站"
 #: model_terms:ir.ui.view,arch_db:website.template_footer_contact
 #: model_terms:ir.ui.view,arch_db:website.template_footer_descriptive
 #: model_terms:ir.ui.view,arch_db:website.template_footer_headline
+msgid "+1 555-555-5556"
+msgstr "+1 555-555-5556"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.template_footer_links
-msgid "+1 (650) 555-0111"
-msgstr "+1 (650) 555-0111"
+msgid "+1 555-555-5556\""
+msgstr "+1 555-555-5556\""
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.searchbar_input_snippet_options
@@ -363,7 +389,7 @@ msgstr "2000 千米"
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_comparisons
 msgid "24x7 toll-free support"
-msgstr "全天候免费支持"
+msgstr "24x7 全天候免费支持"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.color_combinations_debug_view
@@ -682,10 +708,10 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:website.header_text_element
 msgid ""
 "<i class=\"fa fa-1x fa-fw fa-phone me-1\"/>\n"
-"                        <span class=\"o_force_ltr\"><small>+1 (650) 555-0111</small></span>"
+"                        <span class=\"o_force_ltr\"><small>+1 555-555-5556</small></span>"
 msgstr ""
 "<i class=\"fa fa-1x fa-fw fa-phone me-1\"/>\n"
-"                        <span class=\"o_force_ltr\"><small>+1 (650) 555-0111</small></span>"
+"                        <span class=\"o_force_ltr\"><small>+1 555-555-5556</small></span>"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.header_text_element
@@ -782,11 +808,11 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:website.contactus
 #: model_terms:ir.ui.view,arch_db:website.contactus_thanks_ir_ui_view
 msgid ""
-"<i class=\"fa fa-phone fa-fw me-2\"/><span class=\"o_force_ltr\">+1 (650) "
-"555-0111</span>"
+"<i class=\"fa fa-phone fa-fw me-2\"/><span class=\"o_force_ltr\">+1 "
+"555-555-5556</span>"
 msgstr ""
-"<i class=\"fa fa-phone fa-fw me-2\"/><span class=\"o_force_ltr\">+1 (650) "
-"555-0111</span>"
+"<i class=\"fa fa-phone fa-fw me-2\"/><span class=\"o_force_ltr\">+1 "
+"555-555-5556</span>"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.res_config_settings_view_form
@@ -1040,12 +1066,12 @@ msgstr ""
 msgid ""
 "<small>\n"
 "                            <i class=\"fa fa-1x fa-fw fa-envelope me-1\"/>\n"
-"                             info@yourcompany.example.com\n"
+"                            info@yourcompany.example.com\n"
 "                        </small>"
 msgstr ""
 "<small>\n"
-"                           <i class=\"fa fa-1x fa-fw fa-envelope me-1\"/>\n"
-"                             info@yourcompany.example.com\n"
+"                            <i class=\"fa fa-1x fa-fw fa-envelope me-1\"/>\n"
+"                            info@yourcompany.example.com\n"
 "                        </small>"
 
 #. module: website
@@ -1141,8 +1167,8 @@ msgstr "<span class=\"o_footer_copyright_name me-2\">版权 &amp;copy; 公司名
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.header_text_element
-msgid "<span class=\"o_force_ltr\">+1 (650) 555-0111</span>"
-msgstr "<span class=\"o_force_ltr\">+1 (650) 555-0111</span>"
+msgid "<span class=\"o_force_ltr\">+1 555-555-5556</span>"
+msgstr "<span class=\"o_force_ltr\">+1 555-555-5556</span>"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.website_visitor_view_form
@@ -1535,6 +1561,13 @@ msgstr "如果访问者的最后一次网页视图时间在最后5分钟内，�
 
 #. module: website
 #. odoo-javascript
+#: code:addons/website/static/src/xml/web_editor.xml:0
+#, python-format
+msgid "AI"
+msgstr "AI"
+
+#. module: website
+#. odoo-javascript
 #: code:addons/website/static/src/xml/website.editor.xml:0
 #, python-format
 msgid "API Key"
@@ -1568,6 +1601,13 @@ msgstr "关于我们"
 #: model_terms:ir.ui.view,arch_db:website.template_footer_minimalist
 msgid "About us"
 msgstr "关于我们"
+
+#. module: website
+#. odoo-python
+#: code:addons/website/models/website.py:0
+#, python-format
+msgid "Access Denied"
+msgstr "访问被拒绝"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_website_visitor__access_token
@@ -1794,6 +1834,11 @@ msgid "Add a new field at the end"
 msgstr "在末尾添加一个新字段"
 
 #. module: website
+#: model_terms:ir.ui.view,arch_db:website.view_view_form_extend
+msgid "Add groups in the \"Access Rights\" tab below."
+msgstr "在下面的“访问权限”选项卡中新增组别。"
+
+#. module: website
 #. odoo-python
 #: code:addons/website/models/res_lang.py:0
 #, python-format
@@ -1806,6 +1851,13 @@ msgstr "添加语言"
 #, python-format
 msgid "Add new %s"
 msgstr "添加新的 %s"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/components/dialog/add_page_dialog.xml:0
+#, python-format
+msgid "Add page template"
+msgstr "添加页面模板"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.external_snippets
@@ -2147,6 +2199,13 @@ msgstr "添加一句口号"
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/xml/web_editor.xml:0
+#, python-format
+msgid "Animate"
+msgstr "动画"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/web_editor.xml:0
 #: code:addons/website/static/src/xml/web_editor.xml:0
 #, python-format
 msgid "Animate text"
@@ -2256,7 +2315,7 @@ msgstr "资产"
 #. module: website
 #: model:ir.model,name:website.model_web_editor_assets
 msgid "Assets Utils"
-msgstr "资产单位"
+msgstr "资产工具"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_theme_ir_asset__copy_ids
@@ -2351,6 +2410,7 @@ msgstr "后端"
 #. odoo-javascript
 #: code:addons/website/static/src/xml/website.editor.xml:0
 #: code:addons/website/static/src/xml/website.editor.xml:0
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.s_chart_options
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 #, python-format
@@ -2364,6 +2424,13 @@ msgstr "背景"
 #, python-format
 msgid "Background Shape"
 msgstr "后台形状"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.background.video.xml:0
+#, python-format
+msgid "Background video"
+msgstr "背景视频"
 
 #. module: website
 #. odoo-javascript
@@ -2841,7 +2908,10 @@ msgid "Careful"
 msgstr "小心"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_dynamic_snippet_carousel/000.xml:0
 #: model_terms:ir.ui.view,arch_db:website.snippets
+#, python-format
 msgid "Carousel"
 msgstr "旋转木马"
 
@@ -2890,8 +2960,8 @@ msgid ""
 "Change theme in a few clicks, and browse through Odoo's catalog of\n"
 "                            ready-to-use themes available in our app store."
 msgstr ""
-"只需要点击几下就可以改变主题, 同时可以在我们的应用商店中\n"
-"                           浏览Odoo 提供的现成可用的的主题。"
+"只需要点击几下就可以改变主题，同时可以在我们的应用商店中\n"
+"                           浏览 ERP 提供的可用主题."
 
 #. module: website
 #. odoo-javascript
@@ -2900,7 +2970,7 @@ msgstr ""
 msgid ""
 "Changing the color palette will reset all your color customizations, are you"
 " sure you want to proceed?"
-msgstr "更改调色板将重置您的所有颜色自定义，您确定要继续吗？"
+msgstr "更改调色板会重置您的所有颜色自定义设置，您确定要继续吗？"
 
 #. module: website
 #. odoo-javascript
@@ -2910,7 +2980,7 @@ msgid ""
 "Changing theme requires to leave the editor. This will save all your "
 "changes, are you sure you want to proceed? Be careful that changing the "
 "theme will reset all your color customizations."
-msgstr "更改主题需要离开编辑器。这将保存您的所有更改，您确定要继续吗？请注意，更改主题会重置您的所有颜色自定义。"
+msgstr "更改主题需要离开编辑器。这将保存您的所有更改，您确定要继续吗？请注意，更改主题将重置您的所有颜色自定义设置。"
 
 #. module: website
 #. odoo-javascript
@@ -2924,7 +2994,7 @@ msgstr "图表"
 #. module: website
 #: model:website.configurator.feature,description:website.feature_module_live_chat
 msgid "Chat with visitors to improve traction"
-msgstr "与访客聊天以提高吸引力"
+msgstr "与访客聊天，增加互动"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_popup
@@ -2936,7 +3006,7 @@ msgstr "现在付款可以享受首个订单立减$20。"
 #: code:addons/website/static/src/js/content/website_root.js:0
 #, python-format
 msgid "Check your configuration."
-msgstr "检查配置."
+msgstr "检查配置。"
 
 #. module: website
 #. odoo-javascript
@@ -2958,7 +3028,7 @@ msgstr "芝士洋葱圈"
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_product_catalog
 msgid "Chefs Fresh Soup of the Day"
-msgstr "厨师新鲜汤的一天"
+msgstr "厨师推荐每日鲜汤"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_website_menu__child_id
@@ -3034,8 +3104,8 @@ msgid ""
 "Click and change content directly from the front-end: no complex back\n"
 "                            end to deal with."
 msgstr ""
-"直接从前端点击和更改内容:无需复杂的\n"
-"                           后端处理."
+"点击并直接从前端更改内容：\n"
+"无需处理复杂的后端。"
 
 #. module: website
 #. odoo-javascript
@@ -3063,7 +3133,7 @@ msgstr "点击"
 msgid ""
 "Click on <b>\"Edit\"</b> in the right panel to replace this with your own "
 "HTML code"
-msgstr "点击右侧面板中的<b>\"编辑\"</b>，将其替换为您自己的HTML代码"
+msgstr "点击右侧面板中的<b>\"编辑\"</b>，将其替换为您自己的 HTML 代码"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_process_steps
@@ -3095,6 +3165,7 @@ msgstr "客户"
 #. odoo-javascript
 #: code:addons/website/static/src/components/resource_editor/resource_editor.xml:0
 #: code:addons/website/static/src/components/views/theme_preview.xml:0
+#: code:addons/website/static/src/components/views/theme_preview.xml:0
 #: code:addons/website/static/src/snippets/s_image_gallery/000.xml:0
 #: code:addons/website/static/src/xml/website.xml:0
 #: model_terms:ir.ui.view,arch_db:website.bs_debug_view
@@ -3123,6 +3194,13 @@ msgstr "关闭编辑器"
 #: model_terms:ir.ui.view,arch_db:website.s_product_list
 msgid "Clothes"
 msgstr "衣服"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/client_actions/configurator/configurator.xml:0
+#, python-format
+msgid "Clothes, Marketing, ..."
+msgstr "服装、市场营销, ..."
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.res_config_settings_view_form
@@ -3162,8 +3240,7 @@ msgid ""
 "resize and duplicate the blocks to create your own layout. Add images or "
 "icons to customize the blocks."
 msgstr ""
-"色块是一种简单而有效的方式来<b>呈现和突出您的内容</b>. 通过选择图像或者颜色可以改变背景. 您甚至通过调整模块的大小和复制模块来创建自己的布局。"
-" 添加图像或者图标可以自定义模块."
+"颜色块是一种简单而有效的方式来<b>展示和突出您的内容</b>。选择一个图像或颜色作为背景。你甚至可以调整大小和复制模块来创建自己的布局。添加图像或图标可以自定义模块。"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_map_options
@@ -3351,8 +3428,8 @@ msgid ""
 "Contact us about anything related to our company or services.<br/>\n"
 "                                    We'll do our best to get back to you as soon as possible."
 msgstr ""
-"有关我们公司或服务的任何信息请联系我们.<br/>\n"
-"                                    我们将全力以赴回复您。"
+"如有任何关于我们公司或服务的疑问，欢迎联络我们。<br/>\n"
+"                                    我们会尽快回复您。"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.template_footer_contact
@@ -3369,7 +3446,7 @@ msgstr "如有任何问题，请与我们联系"
 msgid ""
 "Contact us today to embark on your path to a healthier, more vibrant you. "
 "Your fitness journey begins here."
-msgstr "今天就联系我们，踏上更健康、更有活力的您之路。您的健身之旅从这里开始。"
+msgstr "立即与我们联系，踏上更健康、更有活力的新旅程。您的健身之旅由此开始。"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.website_visitor_view_search
@@ -3460,15 +3537,15 @@ msgid ""
 "                            We also use cookies to help us compile aggregate data about site traffic and site interaction so that we can offer\n"
 "                            better site experiences and tools in the future."
 msgstr ""
-"Cookies是当您访问我们的服务时由我们的服务器发送到您的计算机或设备上的一小段文本。\n"
+"Cookies 是当您访问我们的服务时由我们的服务器发送到您的计算机或设备上的一小段文本。\n"
 "                            它们存储在您的浏览器，然后发送回我们的服务器，以便我们可以提供上下文内容。\n"
-"                            如果没有cookie，使用网络将是一个更令人沮丧的体验。\n"
-"                            我们使用它们来支持您在我们网站上的活动。例如，您的会话(因此您不必再次登录)或您的购物车。\n"
+"                            如果没有 cookie，使用网络将是一个更令人沮丧的体验。\n"
+"                            我们使用它们来支持您在我们网站上的活动。例如，您的会话（这样您就不必再次登录）或您的购物车。\n"
 "                            <br/>\n"
-"                            Cookies还用于帮助我们了解您在我们网站(您拥有的网页)上的先前或当前活动的偏好\n"
-"                            访问)，您的语言和国家，使我们能够为您提供更好的服务.\n"
-"                            我们还使用cookie来帮助我们收集网站流量和网站交互的汇计数据，以便我们提供\n"
-"                            未来更好的站点体验和工具."
+"                            Cookies 还用于帮助我们了解您在我们网站（您访问过的网页）上的活动偏好\n"
+"                            ，您的语言和国家，使我们能够为您提供更佳服务。\n"
+"                            我们还使用 cookie 来帮助我们汇编网站流量和网站互动的综合数据，以便我们将来提供\n"
+"                            更好的网站体验和工具。"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
@@ -3535,7 +3612,7 @@ msgstr "封面属性"
 #. module: website
 #: model:ir.model,name:website.model_website_cover_properties_mixin
 msgid "Cover Properties Website Mixin"
-msgstr "混合网站封面属性"
+msgstr "封面属性网站混入"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.new_page_template_services_s_text_cover
@@ -3621,7 +3698,7 @@ msgstr "创建人"
 msgid ""
 "Created in 2021, the company is young and dynamic. Discover the composition "
 "of the team and their skills."
-msgstr "公司成立于2021年，年轻而充满活力。发现团队的组成和他们的技能。"
+msgstr "公司成立于 2021 年，年轻而充满活力。了解团队的组成和技能。"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_theme_ir_asset__create_date
@@ -3817,6 +3894,13 @@ msgstr "默认"
 #: model_terms:ir.ui.view,arch_db:website.res_config_settings_view_form
 msgid "Default Access Rights"
 msgstr "默认访问权限"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_searchbar/options.js:0
+#, python-format
+msgid "Default Input Style"
+msgstr "默认输入样式"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_website__default_lang_id
@@ -4250,6 +4334,16 @@ msgid "Display this website when users visit this domain"
 msgstr "用户访问此域时显示此网站"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/components/edit_head_body_dialog/edit_head_body_dialog.xml:0
+#: code:addons/website/static/src/xml/website.editor.xml:0
+#, python-format
+msgid ""
+"Do not copy/paste code you do not understand, this could put your data at "
+"risk."
+msgstr "不要复制/粘贴您不理解的代码，这可能会使您的数据处于危险之中."
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_mega_menu_cards
 msgid ""
 "Do you need specific information? Our specialists will help you with "
@@ -4443,7 +4537,7 @@ msgstr "例如 https://www.mydomain.com"
 msgid ""
 "Easily design your own Odoo templates thanks to clean HTML\n"
 "                            structure and bootstrap CSS."
-msgstr "借助简单的 HTML 结构和 Bootstrap CSS，轻松设计您自己的 Odoo 模板。"
+msgstr "借助简单的 HTML 结构和 Bootstrap CSS，轻松设计您自己的 ERP 模板."
 
 #. module: website
 #. odoo-javascript
@@ -4488,6 +4582,13 @@ msgstr "编辑 %s"
 #, python-format
 msgid "Edit HTML anyway"
 msgstr "无论如何编辑 HTML"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/components/edit_head_body_dialog/edit_head_body_dialog.xml:0
+#, python-format
+msgid "Edit Head and Body Code"
+msgstr ""
 
 #. module: website
 #. odoo-javascript
@@ -4547,7 +4648,7 @@ msgstr "编辑视频"
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.layout
 msgid "Editor"
-msgstr "编辑"
+msgstr "编辑器"
 
 #. module: website
 #: model:res.groups,name:website.group_website_designer
@@ -4588,6 +4689,7 @@ msgstr "与我们一起提升您的品牌"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_website_visitor__email
+#: model_terms:ir.ui.view,arch_db:website.s_share
 #: model_terms:ir.ui.view,arch_db:website.s_website_form_options
 #: model_terms:ir.ui.view,arch_db:website.website_visitor_view_kanban
 #: model_terms:ir.ui.view,arch_db:website.website_visitor_view_tree
@@ -4852,9 +4954,19 @@ msgid "Extra Large"
 msgstr "加大"
 
 #. module: website
+#: model_terms:ir.ui.view,arch_db:website.layout
+msgid "Extra items button"
+msgstr "额外项目按钮"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.searchbar_input_snippet_options
 msgid "Extra link"
 msgstr "额外链接"
+
+#. module: website
+#: model_terms:ir.ui.view,arch_db:website.footer_custom
+msgid "Extra page"
+msgstr "附加页"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
@@ -4872,8 +4984,19 @@ msgid "F.A.Q."
 msgstr "F.A.Q."
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_facebook_page/000.js:0
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#: model_terms:ir.ui.view,arch_db:website.footer_custom
+#: model_terms:ir.ui.view,arch_db:website.header_social_links
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
+#: model_terms:ir.ui.view,arch_db:website.s_share
+#: model_terms:ir.ui.view,arch_db:website.s_social_media
 #: model_terms:ir.ui.view,arch_db:website.snippets
+#: model_terms:ir.ui.view,arch_db:website.template_footer_centered
+#: model_terms:ir.ui.view,arch_db:website.template_footer_headline
 #: model_terms:ir.ui.view,arch_db:website.template_footer_links
+#, python-format
 msgid "Facebook"
 msgstr "脸书"
 
@@ -4902,7 +5025,7 @@ msgstr "无法安装\"%s\""
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_product_catalog
 msgid "Farm Friendly Chicken Supreme"
-msgstr "农场友好鸡"
+msgstr "生态农场至尊鸡肉"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_res_config_settings__favicon
@@ -4991,7 +5114,7 @@ msgstr "控制器文件流帮助器模型"
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_product_catalog
 msgid "Filet Mignon 8oz"
-msgstr "费特米尼翁 8 盎司"
+msgstr "菲力牛柳 8 盎司"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
@@ -5403,6 +5526,15 @@ msgid "Get in touch"
 msgstr "保持联系"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
+#: model_terms:ir.ui.view,arch_db:website.s_social_media
+#, python-format
+msgid "GitHub"
+msgstr "GitHub"
+
+#. module: website
 #: model:ir.model.fields,field_description:website.field_website__social_github
 msgid "GitHub Account"
 msgstr "GitHub账户"
@@ -5504,6 +5636,16 @@ msgstr "Google 地图 API 密钥"
 #: model:ir.model.fields,field_description:website.field_website__google_search_console
 msgid "Google Search Console"
 msgstr "Google 搜索控制台"
+
+#. module: website
+#. odoo-python
+#: code:addons/website/models/res_config_settings.py:0
+#: model_terms:ir.ui.view,arch_db:website.res_config_settings_view_form
+#, python-format
+msgid ""
+"Google doesn't need to be pinged anymore. It will automatically fetch your "
+"/sitemap.xml."
+msgstr "谷歌不需要再被监视了。它将自动获取 /sitemap.xml."
 
 #. module: website
 #: model:ir.model.fields,help:website.field_res_config_settings__google_search_console
@@ -5686,6 +5828,7 @@ msgstr "标题1"
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/js/editor/snippets.editor.js:0
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #, python-format
 msgid "Headings"
 msgstr "标题"
@@ -5696,27 +5839,42 @@ msgid "Headings 1"
 msgstr "标题1"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.bs_debug_view
+#, python-format
 msgid "Headings 2"
 msgstr "标题2"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.bs_debug_view
+#, python-format
 msgid "Headings 3"
 msgstr "标题3"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.bs_debug_view
+#, python-format
 msgid "Headings 4"
 msgstr "标题4"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.bs_debug_view
+#, python-format
 msgid "Headings 5"
 msgstr "标题5"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.bs_debug_view
+#, python-format
 msgid "Headings 6"
 msgstr "标题6"
 
@@ -5783,6 +5941,13 @@ msgid "Hide For"
 msgstr "隐藏"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_popup/000.js:0
+#, python-format
+msgid "Hide the cookies bar"
+msgstr "隐藏 cookies 通知列"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.website_page_properties_view_form
 msgid "Hide this page from search results"
 msgstr "在搜索结果中隐藏该网页"
@@ -5793,7 +5958,10 @@ msgid "High"
 msgstr "高"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/web_editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
+#, python-format
 msgid "Highlight"
 msgstr "高亮"
 
@@ -5851,8 +6019,8 @@ msgid "Home page of the current website"
 msgstr "当前网站的主页"
 
 #. module: website
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/website/models/website.py:0
 #: code:addons/website/static/src/client_actions/website_preview/website_preview.xml:0
 #: model:ir.model.fields,field_description:website.field_website_page__is_homepage
@@ -6043,11 +6211,12 @@ msgstr "如果您放弃当前的编辑，所有未保存的更改都将丢失。
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/resource_editor/resource_editor_warning.xml:0
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #, python-format
 msgid ""
-"If you need to add analytics or marketing tags, inject code in your header "
-"or body instead."
-msgstr "如果需要添加分析或营销标签，请在页眉或正文中注入代码。"
+"If you need to add analytics or marketing tags, inject code in your <head> "
+"or <body> instead."
+msgstr "如果你需要添加分析或营销标签，在你的 <head> 或 <body> 中注入代码."
 
 #. module: website
 #. odoo-javascript
@@ -6256,28 +6425,28 @@ msgstr "输入类型"
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert a badge snippet"
-msgstr "加入徽章小标签"
+msgstr "插入徽章小标签"
 
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert a blockquote snippet"
-msgstr "加入小段引用文字"
+msgstr "插入小段引用文字"
 
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert a card snippet"
-msgstr "加入卡片文字区块"
+msgstr "插入卡片文字区块"
 
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert a chart snippet"
-msgstr "加入统计图表区块"
+msgstr "插入统计图表区块"
 
 #. module: website
 #. odoo-javascript
@@ -6291,35 +6460,35 @@ msgstr "插入进度条片段"
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert a rating snippet"
-msgstr "加入评分区块"
+msgstr "插入评分区块"
 
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert a share snippet"
-msgstr "加入 “分享” 区块"
+msgstr "插入分享 区块"
 
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert a text Highlight snippet"
-msgstr "加入高亮文本区块"
+msgstr "插入高亮文本区块"
 
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert an alert snippet"
-msgstr "加入提醒区块"
+msgstr "插入提醒区块"
 
 #. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/components/wysiwyg_adapter/wysiwyg_adapter.js:0
 #, python-format
 msgid "Insert an horizontal separator snippet"
-msgstr "加入水平分割线区块"
+msgstr "插入水平分割线区块"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_table_of_content
@@ -6336,7 +6505,15 @@ msgid "Inset"
 msgstr "插图"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_instagram_page/000.js:0
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#: model_terms:ir.ui.view,arch_db:website.header_social_links
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
+#: model_terms:ir.ui.view,arch_db:website.s_social_media
+#: model_terms:ir.ui.view,arch_db:website.template_footer_headline
 #: model_terms:ir.ui.view,arch_db:website.template_footer_links
+#, python-format
 msgid "Instagram"
 msgstr "Instagram"
 
@@ -6579,8 +6756,8 @@ msgid ""
 "            still customizable."
 msgstr ""
 "您的网站在某些地方似乎仍在使用旧的\n"
-" Odoo 13.0 颜色系统。我们确保它仍然有效，\n"
-"但我们建议您尝试使用新的颜色系统，该系统仍可自定义。"
+" ERP 13.0 颜色系统。我们确保它仍然有效，\n"
+"但我们建议您尝试使用新的颜色系统，该系统仍可自定义."
 
 #. module: website
 #. odoo-javascript
@@ -6957,7 +7134,10 @@ msgid "Library"
 msgstr "库"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_searchbar/options.js:0
 #: model_terms:ir.ui.view,arch_db:website.s_faq_collapse_options
+#, python-format
 msgid "Light"
 msgstr "明亮"
 
@@ -7024,6 +7204,19 @@ msgid "Link text"
 msgstr "链接文本"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#: model_terms:ir.ui.view,arch_db:website.footer_custom
+#: model_terms:ir.ui.view,arch_db:website.header_social_links
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
+#: model_terms:ir.ui.view,arch_db:website.s_share
+#: model_terms:ir.ui.view,arch_db:website.s_social_media
+#: model_terms:ir.ui.view,arch_db:website.template_footer_centered
+#, python-format
+msgid "LinkedIn"
+msgstr "领英"
+
+#. module: website
 #: model:ir.model.fields,field_description:website.field_website__social_linkedin
 msgid "LinkedIn Account"
 msgstr "领英账号"
@@ -7034,7 +7227,10 @@ msgid "Linkedin"
 msgstr "领英"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
+#, python-format
 msgid "Links"
 msgstr "链接"
 
@@ -7101,10 +7297,11 @@ msgstr "实时聊天小部件"
 #: code:addons/website/static/src/xml/website.background.video.xml:0
 #, python-format
 msgid "Loading..."
-msgstr "正在加载..."
+msgstr "正在加载... 稍安勿躁"
 
 #. module: website
 #. odoo-javascript
+#: code:addons/website/static/src/client_actions/configurator/configurator.xml:0
 #: code:addons/website/static/src/js/editor/snippets.editor.js:0
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 #, python-format
@@ -7196,6 +7393,7 @@ msgid "Management"
 msgstr "管理"
 
 #. module: website
+#: model_terms:ir.ui.view,arch_db:website.s_map
 #: model_terms:ir.ui.view,arch_db:website.snippets
 msgid "Map"
 msgstr "地图"
@@ -7293,6 +7491,13 @@ msgid "Media heading"
 msgstr "媒体标题"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/js/content/snippets.animation.js:0
+#, python-format
+msgid "Media video"
+msgstr "媒体视频"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_three_columns_menu
 msgid "Mediterranean buffet of starters, main dishes and desserts"
 msgstr "由开胃菜、主菜和甜点组成的地中海自助餐"
@@ -7329,6 +7534,11 @@ msgstr "大幅网页菜单群组定义"
 #: model:ir.model.fields,field_description:website.field_website_menu__mega_menu_content
 msgid "Mega Menu Content"
 msgstr "大幅网页菜单内容"
+
+#. module: website
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_menu_image_menu
+msgid "Mega menu default image"
+msgstr "超级菜单默认图像"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_mega_menu_menus_logos
@@ -7606,8 +7816,8 @@ msgid ""
 "push notification. If they have completed one of your forms, you can send "
 "them an SMS, or call them right away while they are browsing your website."
 msgstr ""
-"在访问者使用 Odoo "
-"社交应用程序浏览您的网站时监控他们。使用实时聊天请求或推送通知，只需单击一下即可与他们互动。如果他们填写了您的一份表格，您可以向他们发送短信息，或在他们浏览您的网站时立即致电给他们。"
+"在访客使用 ERP "
+"社交应用程序浏览您的网站时监控他们。使用在线聊天请求或推送通知，只需点击一下即可与他们互动。如果他们填写了您的一份表格，您可以向他们发送短消息，或在他们浏览您的网站时立即致电给他们."
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
@@ -7800,7 +8010,7 @@ msgstr "网络"
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.neutralize_ribbon
 msgid "Neutralized"
-msgstr "中立化的 "
+msgstr "中和"
 
 #. module: website
 #. odoo-javascript
@@ -7867,6 +8077,11 @@ msgstr "新闻信弹出窗口"
 #, python-format
 msgid "Next"
 msgstr "下一页"
+
+#. module: website
+#: model_terms:ir.ui.view,arch_db:website.step_wizard
+msgid "Next:"
+msgstr "下一步："
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_tabs_options
@@ -8297,6 +8512,13 @@ msgid "Other Information:"
 msgstr "其他信息:"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#, python-format
+msgid "Other social network"
+msgstr "其他社交网络"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.new_page_template_landing_s_text_image
 msgid "Our Approach"
 msgstr "我们的方法"
@@ -8511,7 +8733,10 @@ msgid "Page Layout"
 msgstr "网页布局"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/components/dialog/page_properties.xml:0
 #: model_terms:ir.ui.view,arch_db:website.website_page_properties_view_form
+#, python-format
 msgid "Page Name"
 msgstr "网页名称"
 
@@ -8732,6 +8957,11 @@ msgid "Pills"
 msgstr "药丸"
 
 #. module: website
+#: model_terms:ir.ui.view,arch_db:website.s_share
+msgid "Pinterest"
+msgstr "Pinterest"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_website_form_options
 msgid "Placeholder"
 msgstr "占位符"
@@ -8805,10 +9035,16 @@ msgid "Points of sale"
 msgstr "销售点"
 
 #. module: website
+#: model_terms:ir.ui.view,arch_db:website.s_popup
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 #: model_terms:ir.ui.view,arch_db:website.snippets
 msgid "Popup"
 msgstr "弹出"
+
+#. module: website
+#: model:ir.model,name:website.model_portal_wizard_user
+msgid "Portal User Config"
+msgstr "门户用户配置"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_mega_menu_big_icons_subtitles
@@ -8847,6 +9083,13 @@ msgstr "前缀"
 #: model_terms:ir.ui.view,arch_db:website.color_combinations_debug_view
 msgid "Preset"
 msgstr "预制"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/components/fullscreen_indication/fullscreen_indication.js:0
+#, python-format
+msgid "Press %(key)s to exit full screen"
+msgstr "按 %(key)s 离开全屏幕"
 
 #. module: website
 #. odoo-javascript
@@ -8916,6 +9159,13 @@ msgstr "价格方案"
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 msgid "Primary"
 msgstr "首要的"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
+#, python-format
+msgid "Primary Buttons"
+msgstr "主要按钮"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
@@ -9011,6 +9261,11 @@ msgstr "进度条权重"
 #: model_terms:ir.ui.view,arch_db:website.new_page_template_landing_2_s_three_columns
 msgid "Progress Tracking"
 msgstr "进度跟踪"
+
+#. module: website
+#: model_terms:ir.ui.view,arch_db:website.s_progress_bar
+msgid "Progress bar"
+msgstr "进度条"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
@@ -9127,6 +9382,11 @@ msgstr "Qweb"
 #: model:ir.model,name:website.model_ir_qweb_field_contact
 msgid "Qweb Field Contact"
 msgstr "Qweb字段联系人"
+
+#. module: website
+#: model:ir.model,name:website.model_ir_qweb_field_html
+msgid "Qweb Field HTML"
+msgstr "Qweb 字段 HTML"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_chart_options
@@ -9685,8 +9945,8 @@ msgid ""
 "free and high quality photos, makes it possible for you to get the perfect "
 "picture, in just a few clicks."
 msgstr ""
-"当您需要照片来说明您的网站时，请在媒体对话中搜索。 Odoo 与 Unsplash "
-"集成，拥有数百万张免版税和高质量的照片，让您只需点击几下即可获得完美的照片。"
+"当您需要照片来说明您的网站时，请在媒体对话中搜索。 ERP 与 Unsplash "
+"集成，拥有数百万张免版税和高质量的图片，让您只需点击几下即可获得完美的照片."
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_searchbar
@@ -9733,6 +9993,13 @@ msgstr "第二功能列表"
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 msgid "Secondary"
 msgstr "次要的"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
+#, python-format
+msgid "Secondary Buttons"
+msgstr "次要按钮"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
@@ -10050,6 +10317,13 @@ msgid "Show site map"
 msgstr "显示网站地图"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_popup/000.js:0
+#, python-format
+msgid "Show the cookies bar"
+msgstr "显示 Cookies 通知栏"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 msgid "Show/Hide on Desktop"
 msgstr "在桌面上显示/隐藏"
@@ -10136,7 +10410,8 @@ msgid ""
 "Sitemap.xml: Help search engine crawlers to find out what pages are present "
 "and which have recently changed, and to crawl your site accordingly. This "
 "file is automatically generated by Odoo."
-msgstr "Sitemap.xml：帮助搜索引擎爬网程序找出存在哪些网页和最近更改过的网页，并相应地对您的网站进行爬网。此文件由 Odoo 自动生成。"
+msgstr ""
+"站点地图 Sitemap.xml：帮助搜索引擎爬网程序查找存在哪些网页和最近更改过的网页，并相应地对您的网站进行爬网。此文件由 ERP 自动生成."
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_alert_options
@@ -10502,8 +10777,11 @@ msgid "Structure"
 msgstr "结构"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_searchbar/options.js:0
 #: model_terms:ir.ui.view,arch_db:website.s_tabs_options
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
+#, python-format
 msgid "Style"
 msgstr "风格"
 
@@ -10690,10 +10968,13 @@ msgid "Test your robots.txt with Google Search Console"
 msgstr "使用 Google 搜索控制台测试您的robots.txt"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/xml/website.editor.xml:0
 #: model_terms:ir.ui.view,arch_db:website.grid_layout_options
 #: model_terms:ir.ui.view,arch_db:website.s_website_form_options
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 #: model_terms:ir.ui.view,arch_db:website.snippets
+#, python-format
 msgid "Text"
 msgstr "文本"
 
@@ -10780,6 +11061,17 @@ msgid ""
 "battery life that lasts up to 17h, you can enjoy your favorite tunes without"
 " interruption."
 msgstr "小巧的充电盒可提供方便的随身充电功能，电池寿命长达 17 小时，让您可以不间断地享受最喜爱的音乐。"
+
+#. module: website
+#. odoo-python
+#: code:addons/website/models/res_company.py:0
+#, python-format
+msgid ""
+"The company %(company_name)r cannot be archived because it has a linked website %(website_name)r.\n"
+"Change that website's company first."
+msgstr ""
+"公司 %(company_name)r 不能存档，因为它有一个链接的网站 %(website_name)r.\n"
+"首先改变网站的公司."
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.res_config_settings_view_form
@@ -11056,8 +11348,8 @@ msgstr "第三个菜单"
 #. odoo-javascript
 #: code:addons/website/static/src/components/dialog/page_properties.xml:0
 #, python-format
-msgid "This URL is contained in the '%s' of the following '%s'"
-msgstr "这个URL包含在以下“%s”的“%s”中。"
+msgid "This URL is contained in the “%(field)s” of the following “%(model)s”"
+msgstr ""
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.new_page_template_services_0_s_three_columns
@@ -11149,10 +11441,10 @@ msgid ""
 "aliam Aquitani, tertiam. Integer legentibus erat a ante historiarum dapibus."
 " Phasellus laoreet lorem vel dolor tempus vehicula."
 msgstr ""
-"这是一个段落。Ambitioni dedisse scripsisse iudicaretur.Nihilne te nocturnum "
-"praesidium Palati, nihil urbis vigiliae.一个是贝尔加人，一个是水族人，一个是第三人。Integer "
-"legentibus erat a ante historiarum dapibus.Phasellus laoreet lorem vel dolor"
-" tempus vehicula."
+"This is a paragraph. Ambitioni dedisse scripsisse iudicaretur. Nihilne te "
+"nocturnum praesidium Palati, nihil urbis vigiliae. Unam incolunt Belgae, "
+"aliam Aquitani, tertiam. Integer legentibus erat a ante historiarum dapibus."
+" Phasellus laoreet lorem vel dolor tempus vehicula."
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_banner
@@ -11167,6 +11459,16 @@ msgid ""
 "This is a wider card with supporting text below as a natural lead-in to "
 "additional content. This content is a little bit longer."
 msgstr "这是一张较宽的卡片，下面有辅助文字，自然引出其他内容。该内容稍长。"
+
+#. module: website
+#: model:ir.ui.view,website_meta_description:website.contactus
+msgid "This is the contact us page of the website"
+msgstr "这是网站的 \"联系我们\" 页面"
+
+#. module: website
+#: model:ir.ui.view,website_meta_description:website.homepage
+msgid "This is the homepage of the website"
+msgstr "这是网站主页"
 
 #. module: website
 #. odoo-python
@@ -11240,6 +11542,15 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 msgid "Thumbnails"
 msgstr "缩略图"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
+#: model_terms:ir.ui.view,arch_db:website.s_social_media
+#, python-format
+msgid "TikTok"
+msgstr "TikTok"
 
 #. module: website
 #: model:ir.model.fields,field_description:website.field_website__social_tiktok
@@ -11337,8 +11648,8 @@ msgid ""
 "will recommend you the best keywords to target. Then adapt your title and "
 "description accordingly to boost your traffic."
 msgstr ""
-"为了获得更多访问者，您应该定位在 Google 中经常搜索的关键字。借助内置的 SEO 工具，一旦您定义了几个关键字，Odoo "
-"就会向您推荐最佳的目标关键字。然后相应地调整您的标题和描述以增加您的流量。"
+"为了获得更多访客，您应该定位在 Google 中经常搜索的关键字。借助内置的 SEO 工具，一旦您定义了几个关键字，ERP "
+"就会向您推荐最佳的目标关键字。然后相应地调整您的标题和描述以增加您的流量."
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.res_config_settings_view_form
@@ -11496,7 +11807,17 @@ msgid "Turn every feature into a benefit for your reader."
 msgstr "将每个功能转化为读者的利益。"
 
 #. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#: model_terms:ir.ui.view,arch_db:website.footer_custom
+#: model_terms:ir.ui.view,arch_db:website.header_social_links
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
+#: model_terms:ir.ui.view,arch_db:website.s_share
+#: model_terms:ir.ui.view,arch_db:website.s_social_media
+#: model_terms:ir.ui.view,arch_db:website.template_footer_centered
+#: model_terms:ir.ui.view,arch_db:website.template_footer_headline
 #: model_terms:ir.ui.view,arch_db:website.template_footer_links
+#, python-format
 msgid "Twitter"
 msgstr "推特"
 
@@ -11909,6 +12230,7 @@ msgid "Vertical Alignment"
 msgstr "垂直对齐"
 
 #. module: website
+#: model_terms:ir.ui.view,arch_db:website.s_video
 #: model_terms:ir.ui.view,arch_db:website.snippet_options_background_options
 #: model_terms:ir.ui.view,arch_db:website.snippets
 msgid "Video"
@@ -12088,7 +12410,7 @@ msgstr "访客浏览历史"
 #: model:ir.ui.menu,name:website.website_visitor_menu
 #: model_terms:ir.ui.view,arch_db:website.website_visitor_view_graph
 msgid "Visitors"
-msgstr "访问者"
+msgstr "访客"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.website_visitor_view_form
@@ -12176,6 +12498,13 @@ msgid ""
 "understanding your fitness aspirations, your current lifestyle, and any "
 "challenges you face."
 msgstr "我们相信，每一段健身旅程都是独一无二的。我们的方法首先是了解您的健身愿望、您目前的生活方式以及您面临的任何挑战。"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_facebook_page/options.js:0
+#, python-format
+msgid "We couldn't find the Facebook page"
+msgstr "未能找到该 Facebook 页面"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.cookie_policy
@@ -12594,6 +12923,11 @@ msgid "What you see is what you get"
 msgstr "所见即所得"
 
 #. module: website
+#: model_terms:ir.ui.view,arch_db:website.s_share
+msgid "WhatsApp"
+msgstr "WhatsApp"
+
+#. module: website
 #: model_terms:ir.ui.view,arch_db:website.s_hr_options
 #: model_terms:ir.ui.view,arch_db:website.snippet_options
 msgid "Width"
@@ -12685,6 +13019,13 @@ msgstr "年"
 
 #. module: website
 #. odoo-javascript
+#: code:addons/website/static/src/xml/website_form_editor.xml:0
+#, python-format
+msgid "Yes"
+msgstr "是"
+
+#. module: website
+#. odoo-javascript
 #: code:addons/website/static/src/client_actions/website_preview/website_preview.js:0
 #, python-format
 msgid ""
@@ -12757,11 +13098,27 @@ msgid ""
 msgstr "无法删除默认网站%s。尝试更改默认网站的设置"
 
 #. module: website
+#. odoo-python
+#: code:addons/website/models/website_menu.py:0
+#, python-format
+msgid ""
+"You cannot delete this website menu as this serves as the default parent "
+"menu for new websites (e.g., /shop, /event, ...)."
+msgstr "不能删除此网站菜单，因为它用作新网站（例如 /shop、/event...）的默认上级菜单。"
+
+#. module: website
 #. odoo-javascript
 #: code:addons/website/static/src/snippets/s_website_form/options.js:0
 #, python-format
 msgid "You cannot duplicate this field."
 msgstr "该字段不可重复。"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_facebook_page/options.js:0
+#, python-format
+msgid "You didn't provide a valid Facebook link"
+msgstr "您未有提供有效的 Facebook 连结"
 
 #. module: website
 #. odoo-python
@@ -12774,17 +13131,17 @@ msgstr "您没有发布/取消发布的权限"
 #. odoo-javascript
 #: code:addons/website/static/src/components/dialog/seo.xml:0
 #, python-format
+msgid "You don't have permissions to edit this record."
+msgstr "您没有权限编辑此记录。"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/components/dialog/seo.xml:0
+#, python-format
 msgid ""
 "You have hidden this page from search results. It won't be indexed by search"
 " engines."
 msgstr "您已从搜索结果中隐藏此网页。它不会被搜索引擎索引。"
-
-#. module: website
-#. odoo-python
-#: code:addons/website/models/res_config_settings.py:0
-#, python-format
-msgid "You haven't defined your domain"
-msgstr "您还没有定义您的域名"
 
 #. module: website
 #: model_terms:ir.ui.view,arch_db:website.cookie_policy
@@ -12813,6 +13170,15 @@ msgstr "稍后您将能够创建您的网页。"
 
 #. module: website
 #. odoo-javascript
+#: code:addons/website/static/src/snippets/s_social_media/options.js:0
+#: model_terms:ir.ui.view,arch_db:website.s_mega_menu_odoo_menu
+#: model_terms:ir.ui.view,arch_db:website.s_social_media
+#, python-format
+msgid "YouTube"
+msgstr "Youtube"
+
+#. module: website
+#. odoo-javascript
 #: code:addons/website/static/src/js/send_mail_form.js:0
 #, python-format
 msgid "Your Company"
@@ -12831,6 +13197,15 @@ msgstr "您的动态片段将显示在此处... 显示此消息是因为您没�
 #, python-format
 msgid "Your Email"
 msgstr "您的电子邮件"
+
+#. module: website
+#. odoo-javascript
+#: code:addons/website/static/src/snippets/s_embed_code/000.js:0
+#, python-format
+msgid ""
+"Your Embed Code snippet doesn't have anything to display. Click on Edit to "
+"modify it."
+msgstr "您的嵌入代码片段没有任何要显示的内容。单击编辑来修改它."
 
 #. module: website
 #. odoo-javascript
@@ -12890,7 +13265,7 @@ msgstr "如果您丢弃这些 cookie，您的体验可能会下降，但该网�
 #: model_terms:ir.ui.view,arch_db:website.s_instagram_page_options
 msgid ""
 "Your instagram page must be public to be integrated into an Odoo website."
-msgstr "您的 Instagram 页面必须是公开的，才能集成到 Odoo 网站中。"
+msgstr "您的 Instagram 页面必须是公共的，才能集成到 ERP 网站中."
 
 #. module: website
 #. odoo-javascript

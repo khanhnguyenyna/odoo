@@ -3,7 +3,7 @@
 import { _t } from "@web/core/l10n/translation";
 import { registry } from "@web/core/registry";
 import { debounce } from "@web/core/utils/timing";
-import { useService } from "@web/core/utils/hooks";
+import { useService, useAutofocus } from "@web/core/utils/hooks";
 import { useAsyncLockedMethod } from "@point_of_sale/app/utils/hooks";
 import { session } from "@web/session";
 
@@ -37,6 +37,7 @@ export class PartnerListScreen extends Component {
         this.orm = useService("orm");
         this.notification = useService("pos_notification");
         this.searchWordInputRef = useRef("search-word-input-partner");
+        useAutofocus({refName: 'search-word-input-partner'});
 
         this.state = useState({
             query: null,
@@ -167,7 +168,7 @@ export class PartnerListScreen extends Component {
     }
     async saveChanges(processedChanges) {
         const partnerId = await this.orm.call("res.partner", "create_from_ui", [processedChanges]);
-        await this.pos.load_new_partners();
+        await this.pos._loadPartners([partnerId]);
         this.state.selectedPartner = this.pos.db.get_partner_by_id(partnerId);
         this.confirm();
     }
@@ -189,7 +190,7 @@ export class PartnerListScreen extends Component {
         let domain = [];
         const limit = 30;
         if (this.state.query) {
-            const search_fields = ["name", "parent_name", "phone_mobile_search", "email"];
+            const search_fields = ["name", "parent_name", "phone_mobile_search", "email", "barcode"];
             domain = [
                 ...Array(search_fields.length - 1).fill('|'),
                 ...search_fields.map(field => [field, "ilike", this.state.query + "%"])

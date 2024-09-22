@@ -6,6 +6,7 @@ import re
 from operator import itemgetter
 
 from odoo import api, Command, fields, models, modules, _
+from odoo.addons.bus.websocket import WebsocketConnectionHandler
 
 
 class ImLivechatChannel(models.Model):
@@ -91,8 +92,8 @@ class ImLivechatChannel(models.Model):
     @api.depends('channel_ids')
     def _compute_nbr_channel(self):
         data = self.env['discuss.channel']._read_group([
-            ('livechat_channel_id', 'in', self._ids),
-            ('has_message', '=', True)], ['livechat_channel_id'], ['__count'])
+            ('livechat_channel_id', 'in', self.ids),
+        ], ['livechat_channel_id'], ['__count'])
         channel_count = {livechat_channel.id: count for livechat_channel, count in data}
         for record in self:
             record.nbr_channel = channel_count.get(record.id, 0)
@@ -187,23 +188,32 @@ class ImLivechatChannel(models.Model):
             operator is in a call. The list is ordered by the number of active
             chats (ascending) and whether the operator is in a call
             (descending).
-        :param operators: list of operators to choose from
+        :param operators: recordset of :class:`ResUsers` operators to choose from.
+        :return: the :class:`ResUsers` record for the chosen operator
         """
         if not operators:
             return False
-        active_operator_ids = set(map(lambda s: s['livechat_operator_id'], operator_statuses))
-        inactive_operators = [
-            operator for operator in operators if operator.partner_id.id not in active_operator_ids
+
+        # 1) only consider operators in the list to choose from
+        operator_statuses = [
+            s for s in operator_statuses if s['livechat_operator_id'] in set(operators.partner_id.ids)
         ]
-        if inactive_operators:
-            return random.choice(inactive_operators)
-        count, in_call = itemgetter('count', 'in_call')(operator_statuses[0])
-        i = 1
-        while i < len(operator_statuses) and operator_statuses[i]['in_call'] == in_call and operator_statuses[i]['count'] == count:
-            i += 1
-        less_active_operator_id = random.choice(operator_statuses[:i])['livechat_operator_id']
-        # convert the selected 'partner_id' to its corresponding res.users
-        return next(operator for operator in operators if operator.partner_id.id == less_active_operator_id)
+
+        # 2) try to select an inactive op, i.e. one w/ no active status (no recent chat)
+        active_op_partner_ids = {s['livechat_operator_id'] for s in operator_statuses}
+        candidates = operators.filtered(lambda o: o.partner_id.id not in active_op_partner_ids)
+        if candidates:
+            return random.choice(candidates)
+
+        # 3) otherwise select least active ops, based on status ordering (count + in_call)
+        best_status = operator_statuses[0]
+        best_status_op_partner_ids = {
+            s['livechat_operator_id']
+            for s in operator_statuses
+            if (s['count'], s['in_call']) == (best_status['count'], best_status['in_call'])
+        }
+        candidates = operators.filtered(lambda o: o.partner_id.id in best_status_op_partner_ids)
+        return random.choice(candidates)
 
     def _get_operator(self, previous_operator_id=None, lang=None, country_id=None):
         """ Return an operator for a livechat. Try to return the previous
@@ -228,19 +238,24 @@ class ImLivechatChannel(models.Model):
         if not self.available_operator_ids:
             return False
         self.env.cr.execute("""
-            SELECT COUNT(DISTINCT c.id), COUNT(DISTINCT rtc.id) > 0 as in_call, c.livechat_operator_id
+            WITH operator_rtc_session AS (
+                SELECT COUNT(DISTINCT s.id) as nbr, member.partner_id as partner_id
+                  FROM discuss_channel_rtc_session s
+                  JOIN discuss_channel_member member ON (member.id = s.channel_member_id)
+                  GROUP BY member.partner_id
+            )
+            SELECT COUNT(DISTINCT c.id), COALESCE(rtc.nbr, 0) > 0 as in_call, c.livechat_operator_id
             FROM discuss_channel c
             LEFT OUTER JOIN mail_message m ON c.id = m.res_id AND m.model = 'discuss.channel'
-            LEFT OUTER JOIN discuss_channel_member member ON member.partner_id = c.livechat_operator_id
-            LEFT OUTER JOIN discuss_channel_rtc_session rtc ON rtc.channel_member_id = member.id
-            WHERE c.channel_type = 'livechat'
+            LEFT OUTER JOIN operator_rtc_session rtc ON rtc.partner_id = c.livechat_operator_id
+            WHERE c.channel_type = 'livechat' AND c.create_date > ((now() at time zone 'UTC') - interval '24 hours')
             AND (
                 c.livechat_active IS TRUE
                 OR m.create_date > ((now() at time zone 'UTC') - interval '30 minutes')
             )
             AND c.livechat_operator_id in %s
-            GROUP BY c.livechat_operator_id
-            ORDER BY COUNT(DISTINCT c.id) < 2 OR COUNT(DISTINCT rtc.id) = 0 DESC, COUNT(DISTINCT c.id) ASC, COUNT(DISTINCT rtc.id) = 0 DESC""",
+            GROUP BY c.livechat_operator_id, rtc.nbr
+            ORDER BY COUNT(DISTINCT c.id) < 2 OR rtc.nbr IS NULL DESC, COUNT(DISTINCT c.id) ASC, rtc.nbr IS NULL DESC""",
             (tuple(self.available_operator_ids.partner_id.ids),)
         )
         operator_statuses = self.env.cr.dictfetchall()
@@ -303,6 +318,7 @@ class ImLivechatChannel(models.Model):
         info['server_url'] = self.get_base_url()
         if info['available']:
             info['options'] = self._get_channel_infos()
+            info["options"]["websocket_worker_version"] = WebsocketConnectionHandler._VERSION
             info['options']['current_partner_id'] = (
                 self.env.user.partner_id.id if not self.env.user._is_public() else None
             )

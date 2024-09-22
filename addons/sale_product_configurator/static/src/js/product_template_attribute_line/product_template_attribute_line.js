@@ -41,7 +41,7 @@ export class ProductTemplateAttributeLine extends Component {
             type: String,
             validate: type => ["always", "dynamic", "no_variant"].includes(type),
         },
-        customValue: { type: String, optional: true },
+        customValue: {type: [{value: false}, String], optional: true},
     };
 
     //--------------------------------------------------------------------------
@@ -133,7 +133,12 @@ export class ProductTemplateAttributeLine extends Component {
             ptav => this.props.selected_attribute_value_ids.includes(ptav.id)
         )?.is_custom;
     }
-    
+
+    get showValuesChoice() {
+        return this.props.attribute_values.length > 1
+            || this.props.attribute.display_type == 'multi'
+    }
+
     /**
      * Check if the line has a custom ptav or not.
      *

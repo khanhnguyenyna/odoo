@@ -49,10 +49,14 @@ import {
     isVisibleTextNode,
     getCursorDirection,
     resetOuids,
-    firstLeaf,
-    lastLeaf,
     FONT_SIZE_CLASSES,
     TEXT_STYLE_CLASSES,
+    padLinkWithZws,
+    isLinkEligibleForZwnbsp,
+    paragraphRelatedElements,
+    lastLeaf,
+    firstLeaf,
+    convertList,
 } from '../utils/utils.js';
 
 const TEXT_CLASSES_REGEX = /\btext-[^\s]*\b/;
@@ -135,9 +139,9 @@ function hasColor(element, mode) {
         }
     }
     return (
-        (style[mode] && style[mode] !== 'inherit' && style[mode] !== parent.style[mode]) ||
+        (style[mode] && style[mode] !== 'inherit' && (!parent || style[mode] !== parent.style[mode])) ||
         (classRegex.test(element.className) &&
-            getComputedStyle(element)[mode] !== getComputedStyle(parent)[mode])
+            (!parent || getComputedStyle(element)[mode] !== getComputedStyle(parent)[mode]))
     );
 }
 
@@ -158,6 +162,9 @@ export const editorCommands = {
             editor.deleteRange(selection);
         }
         const range = selection.getRangeAt(0);
+        const block = closestBlock(selection.anchorNode);
+        const isSelectionAtStart = firstLeaf(block) === selection.anchorNode && selection.anchorOffset === 0;
+        const isSelectionAtEnd = lastLeaf(block) === selection.focusNode && selection.focusOffset === nodeSize(selection.focusNode);
         if (range.startContainer.nodeType === Node.TEXT_NODE) {
             insertBefore = !range.startOffset;
             splitTextNode(range.startContainer, range.startOffset, DIRECTIONS.LEFT);
@@ -176,36 +183,78 @@ export const editorCommands = {
 
         // In case the html inserted starts with a list and will be inserted within
         // a list, unwrap the list elements from the list.
-        if (closestElement(selection.anchorNode, 'UL, OL') &&
-            (container.firstChild.nodeName === 'UL' || container.firstChild.nodeName === 'OL')) {
-            container.replaceChildren(...container.firstChild.childNodes);
+        const isList = node => ['UL', 'OL'].includes(node.nodeName);
+        const hasSingleChild = container.childNodes.length === 1;
+        if (
+            closestElement(selection.anchorNode, 'UL, OL') &&
+            isList(container.firstChild)
+        ) {
+            unwrapContents(container.firstChild);
+        }
+        // Similarly if the html inserted ends with a list.
+        if (
+            closestElement(selection.focusNode, 'UL, OL') &&
+            isList(container.lastChild) &&
+            !hasSingleChild
+        ) {
+            unwrapContents(container.lastChild);
         }
 
         startNode = startNode || editor.document.getSelection().anchorNode;
-        // If the selection anchorNode is the editable itself, the content
-        // should not be unwrapped.
-        if (selection.anchorNode.oid !== 'root') {
-            // In case the html inserted is all contained in a single root <p> or <li>
-            // tag, we take the all content of the <p> or <li> and avoid inserting the
-            // <p> or <li>. The same is true for a <pre> inside a <pre>.
-            if (container.childElementCount === 1 && (
-                container.firstChild.nodeName === 'P' ||
-                container.firstChild.nodeName === 'LI' ||
-                container.firstChild.nodeName === 'PRE' && closestElement(startNode, 'pre')
-            )) {
-                const p = container.firstElementChild;
-                container.replaceChildren(...p.childNodes);
-            } else if (container.childElementCount > 1) {
-                // Grab the content of the first child block and isolate it.
-                if (isBlock(container.firstChild) && !['TABLE', 'UL', 'OL'].includes(container.firstChild.nodeName)) {
-                    containerFirstChild.replaceChildren(...container.firstElementChild.childNodes);
-                    container.firstElementChild.remove();
+        const shouldUnwrap = (node) => (
+            [...paragraphRelatedElements, 'LI'].includes(node.nodeName) &&
+            block.textContent !== "" && node.textContent !== "" &&
+            (
+                block.nodeName === node.nodeName ||
+                ['BLOCKQUOTE', 'PRE', 'DIV'].includes(block.nodeName)
+            ) && selection.anchorNode.oid !== 'root'
+        );
+
+        // Empty block must contain a br element to allow cursor placement.
+        if (
+            container.lastElementChild &&
+            isBlock(container.lastElementChild) &&
+            !container.lastElementChild.hasChildNodes()
+        ) {
+            fillEmpty(container.lastElementChild);
+        }
+
+        // In case the html inserted is all contained in a single root <p> or <li>
+        // tag, we take the all content of the <p> or <li> and avoid inserting the
+        // <p> or <li>. The same is true for a <pre> inside a <pre>.
+        if (
+            container.childElementCount === 1 &&
+            (
+                ['P', 'LI'].includes(container.firstChild.nodeName) ||
+                shouldUnwrap(container.firstChild)
+            ) && selection.anchorNode.oid !== 'root'
+        ) {
+            const p = container.firstElementChild;
+            container.replaceChildren(...p.childNodes);
+        } else if (container.childElementCount > 1) {
+            // Grab the content of the first child block and isolate it.
+            if (shouldUnwrap(container.firstChild) && !isSelectionAtStart) {
+                // Unwrap the deepest nested first <li> element in the
+                // container to extract and paste the text content of the list.
+                if (container.firstChild.nodeName === 'LI') {
+                    const deepestBlock = closestBlock(firstLeaf(container.firstChild));
+                    splitAroundUntil(deepestBlock, container.firstChild);
+                    container.firstElementChild.replaceChildren(...deepestBlock.childNodes);
                 }
-                // Grab the content of the last child block and isolate it.
-                if (isBlock(container.lastChild) && !['TABLE', 'UL', 'OL'].includes(container.lastChild.nodeName)) {
-                    containerLastChild.replaceChildren(...container.lastElementChild.childNodes);
-                    container.lastElementChild.remove();
+                containerFirstChild.replaceChildren(...container.firstElementChild.childNodes);
+                container.firstElementChild.remove();
+            }
+            // Grab the content of the last child block and isolate it.
+            if (shouldUnwrap(container.lastChild) && !isSelectionAtEnd) {
+                // Unwrap the deepest nested last <li> element in the container
+                // to extract and paste the text content of the list.
+                if (container.lastChild.nodeName === 'LI') {
+                    const deepestBlock = closestBlock(lastLeaf(container.lastChild));
+                    splitAroundUntil(deepestBlock, container.lastChild);
+                    container.lastElementChild.replaceChildren(...deepestBlock.childNodes);
                 }
+                containerLastChild.replaceChildren(...container.lastElementChild.childNodes);
+                container.lastElementChild.remove();
             }
         }
 
@@ -227,6 +276,9 @@ export const editorCommands = {
         // element if it's a block then we insert the content in the right places.
         let currentNode = startNode;
         let lastChildNode = false;
+        const currentList = currentNode && closestElement(currentNode, 'UL, OL');
+        const mode = currentList && getListMode(currentList);
+
         const _insertAt = (reference, nodes, insertBefore) => {
             for (const child of (insertBefore ? nodes.reverse() : nodes)) {
                 reference[insertBefore ? 'before' : 'after'](child);
@@ -257,7 +309,7 @@ export const editorCommands = {
                 // If we arrive here, the o_enter index should always be 0.
                 const parent = currentNode.nextSibling.parentElement;
                 const index = [...parent.childNodes].indexOf(currentNode.nextSibling);
-                currentNode.nextSibling.parentElement.oEnter(index);
+                parent.oEnter(index);
             }
         }
 
@@ -270,7 +322,7 @@ export const editorCommands = {
                 while (
                     currentNode.parentElement !== editor.editable &&
                     (!allowsParagraphRelatedElements(currentNode.parentElement) ||
-                        currentNode.parentElement.nodeName === 'LI')
+                        (currentNode.parentElement.nodeName === 'LI' && nodeToInsert.nodeName !== 'TABLE'))
                 ) {
                     if (isUnbreakable(currentNode.parentElement)) {
                         makeContentsInline(container);
@@ -283,29 +335,92 @@ export const editorCommands = {
                     }
                     if (offset) {
                         const [left, right] = splitElement(currentNode.parentElement, offset);
+                        if (isUnbreakable(nodeToInsert) && container.childNodes.length === 1) {
+                            fillEmpty(right);
+                        } else if (isEmptyBlock(right)) {
+                            right.remove();
+                        }
                         currentNode = insertBefore ? right : left;
                     } else {
                         currentNode = currentNode.parentElement;
                     }
                 }
+                if (currentNode.parentElement.nodeName === 'LI' && nodeToInsert.nodeName === 'TABLE') {
+                    const br = document.createElement('br');
+                    currentNode[currentNode.textContent ? 'after' : 'before'](br);
+                }
             }
+            // Ensure that all adjacent paragraph elements are converted to
+            // <li> when inserting in a list.
+            if (block.nodeName === "LI" && paragraphRelatedElements.includes(nodeToInsert.nodeName)) {
+                setTagName(nodeToInsert, "LI");
+            }
+            // Contenteditable false property changes to true after the node is
+            // inserted into DOM.
+            const isNodeToInsertContentEditable = nodeToInsert.isContentEditable;
             if (insertBefore) {
                 currentNode.before(nodeToInsert);
                 insertBefore = false;
             } else {
                 currentNode.after(nodeToInsert);
             }
+            if (
+                ['BLOCKQUOTE', 'PRE'].includes(block.nodeName) &&
+                paragraphRelatedElements.includes(nodeToInsert.nodeName)
+            ) {
+                nodeToInsert = setTagName(nodeToInsert, block.nodeName);
+            }
+            let convertedList;
+            if (
+                currentList &&
+                (
+                    (nodeToInsert.nodeName === 'LI' && nodeToInsert.classList.contains('oe-nested')) ||
+                    isList(nodeToInsert)
+                )
+            ) {
+                convertedList = convertList(nodeToInsert, mode);
+            }
             if (currentNode.tagName !== 'BR' && isShrunkBlock(currentNode)) {
                 currentNode.remove();
             }
-            currentNode = nodeToInsert;
+            // If the first child of editable is contenteditable false element
+            // a chromium bug prevents selecting the container. Prepend a
+            // zero-width space so it's no longer the first child.
+            if (
+                !isNodeToInsertContentEditable &&
+                editor.editable.firstChild === nodeToInsert &&
+                nodeToInsert.nodeName === 'DIV'
+            ) {
+                const zws = document.createTextNode('\u200B');
+                nodeToInsert.before(zws);
+            }
+            currentNode = convertedList || nodeToInsert;
         }
 
         currentNode = lastChildNode || currentNode;
+        if (
+            !isUnbreakable(currentNode) &&
+            currentNode.nodeName !== 'BR' &&
+            currentNode.nextSibling &&
+            currentNode.nextSibling.nodeName === 'BR' &&
+            lastLeaf(currentNode.parentNode) === currentNode.nextSibling &&
+            !closestElement(currentNode, '[t-field],[t-esc],[t-out]')
+        ) {
+            currentNode.nextSibling.remove();
+        }
         selection.removeAllRanges();
         const newRange = new Range();
-        let lastPosition = rightPos(currentNode);
-        if (lastPosition[0] === editor.editable) {
+        let lastPosition;
+        if (currentNode.nodeName === 'A' && isLinkEligibleForZwnbsp(editor.editable, currentNode)) {
+            padLinkWithZws(editor.editable, currentNode);
+            currentNode = currentNode.nextSibling;
+            lastPosition = getDeepestPosition(...rightPos(currentNode));
+        } else {
+            lastPosition = [...paragraphRelatedElements, 'LI', 'UL', 'OL'].includes(currentNode.nodeName)
+                ? rightPos(lastLeaf(currentNode))
+                : rightPos(currentNode);
+        }
+        if (!editor.options.allowInlineAtRoot && lastPosition[0] === editor.editable) {
             // Correct the position if it happens to be in the editable root.
             lastPosition = getDeepestPosition(...lastPosition);
         }
@@ -333,7 +448,9 @@ export const editorCommands = {
             !descendants(block).some(descendant => selectedBlocks.includes(descendant)) &&
             block.isContentEditable
         ));
-        const [startContainer, startOffset, endContainer, endOffset] = [firstLeaf(range.startContainer), range.startOffset, lastLeaf(range.endContainer), range.endOffset];
+        let { startContainer, startOffset, endContainer, endOffset } = range;
+        const startContainerChild = startContainer.firstChild;
+        const endContainerChild = endContainer.lastChild;
         for (const block of deepestSelectedBlocks) {
             if (
                 ['P', 'PRE', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE'].includes(
@@ -372,10 +489,17 @@ export const editorCommands = {
                 children.forEach(child => newBlock.appendChild(child));
             }
         }
+        const isContextBlock = container => ['TD', 'DIV', 'LI'].includes(container.nodeName);
+        if (!startContainer.isConnected || isContextBlock(startContainer)) {
+            startContainer = startContainerChild.parentNode;
+        }
+        if (!endContainer.isConnected || isContextBlock(endContainer)) {
+            endContainer = endContainerChild.parentNode;
+        }
         const newRange = new Range();
-        newRange.setStart(startContainer,startOffset);
-        newRange.setEnd(endContainer,endOffset);
-        getDeepRange(editor.editable, { range: newRange, select: true, });
+        newRange.setStart(startContainer, startOffset);
+        newRange.setEnd(endContainer, endOffset);
+        getDeepRange(editor.editable, { range: newRange, select: true });
         editor.historyStep();
     },
 
@@ -396,7 +520,11 @@ export const editorCommands = {
         const changedElements = [];
         const defaultDirection = editor.options.direction;
         const shouldApplyStyle = !isSelectionFormat(editor.editable, 'switchDirection');
-        for (const block of new Set(selectedTextNodes.map(textNode => closestElement(textNode, 'ul,ol') || closestBlock(textNode)))) {
+        let blocks = new Set(selectedTextNodes.map(textNode => closestElement(textNode, 'ul,ol') || closestBlock(textNode)));
+        blocks.forEach(block => {
+            blocks = [...blocks, ...block.querySelectorAll('ul,ol')];
+        })
+        for (const block of blocks) {
             if (!shouldApplyStyle) {
                 block.removeAttribute('dir');
             } else {
@@ -422,14 +550,23 @@ export const editorCommands = {
                 textAlignStyles.set(block, block.style.textAlign);
             }
         });
+        // Calling `document.execCommand` will cause an input event with the
+        // input type "formatRemove". This would cause a new history step to be
+        // created in the middle of the process, which we prevent here.
+        editor.historyPauseSteps();
         editor.document.execCommand('removeFormat');
         for (const node of getTraversedNodes(editor.editable)) {
-            // The only possible background image on text is the gradient.
-            closestElement(node).style.backgroundImage = '';
+            if (node.nodeType === Node.ELEMENT_NODE && node.hasAttribute('color')) {
+                node.removeAttribute('color');
+            }
+            const element = closestElement(node);
+            element.style.removeProperty('color');
+            element.style.removeProperty('background');
         }
         textAlignStyles.forEach((textAlign, block) => {
             block.style.setProperty('text-align', textAlign);
         });
+        editor.historyUnpauseSteps();
     },
 
     // Align
@@ -508,7 +645,8 @@ export const editorCommands = {
                 cli.tagName == 'LI' &&
                 !li.has(cli) &&
                 !cli.classList.contains('oe-nested') &&
-                cli.isContentEditable
+                cli.isContentEditable &&
+                !cli.classList.contains('nav-item')
             ) {
                 li.add(cli);
             }
@@ -532,19 +670,34 @@ export const editorCommands = {
             !descendants(block).some(descendant => selectedBlocks.includes(descendant))
         ));
         for (const node of deepestSelectedBlocks) {
-            if (node.nodeType === Node.TEXT_NODE && isWhitespace(node) && closestElement(node).isContentEditable) {
+            let nodeToToggle = closestBlock(node);
+            if (
+                ![...paragraphRelatedElements, 'LI'].includes(nodeToToggle.nodeName) &&
+                node.nodeType === Node.TEXT_NODE && isWhitespace(node) && closestElement(node).isContentEditable
+            ) {
                 node.remove();
             } else {
-                let block = closestBlock(node);
-                if (!['OL', 'UL'].includes(block.tagName) && block.isContentEditable) {
-                    block = block.closest('li') || block;
-                    const ublock = block.closest('ol, ul');
-                    ublock && getListMode(ublock) == mode ? li.add(block) : blocks.add(block);
+                // Ensure nav-item lists are excluded from toggling
+                const isNavItemList = node => node.nodeName === 'LI' && node.classList.contains('nav-item');
+                nodeToToggle = isNavItemList(nodeToToggle) ? node : nodeToToggle;
+                if (!['OL', 'UL'].includes(nodeToToggle.tagName) && (nodeToToggle.isContentEditable || nodeToToggle.nodeType === Node.TEXT_NODE)) {
+                    const closestLi = closestElement(nodeToToggle, 'li');
+                    nodeToToggle = closestLi && !isNavItemList(closestLi) ? closestLi : nodeToToggle;
+                    const ublock = nodeToToggle.nodeName === 'LI' && nodeToToggle.closest('ol, ul');
+                    ublock && getListMode(ublock) == mode ? li.add(nodeToToggle) : blocks.add(nodeToToggle);
                 }
             }
         }
 
         let target = [...(blocks.size ? blocks : li)];
+        if (blocks.size) {
+            // Remove hardcoded padding to have default padding of list element 
+            for (const block of blocks) {
+                if (block.style) {
+                    block.style.padding = "";
+                }
+            }
+        }
         while (target.length) {
             const node = target.pop();
             // only apply one li per ul
@@ -587,7 +740,7 @@ export const editorCommands = {
         if (!range) return;
         const restoreCursor = preserveCursor(editor.document);
         // Get the <font> nodes to color
-        const selectionNodes = getSelectedNodes(editor.editable).filter(node => closestElement(node).isContentEditable);
+        const selectionNodes = getSelectedNodes(editor.editable).filter(node => closestElement(node).isContentEditable && node.nodeName !== "T");
         if (isEmptyBlock(range.endContainer)) {
             selectionNodes.push(range.endContainer, ...descendants(range.endContainer));
         }
@@ -598,57 +751,70 @@ export const editorCommands = {
                 .map(n => closestElement(n, "*[t-field],*[t-out],*[t-esc]"))
                 .filter(Boolean));
 
-        const fonts = selectedNodes.flatMap(node => {
-            let font = closestElement(node, 'font') || closestElement(node, 'span');
-            const children = font && descendants(font);
-            if (font && (font.nodeName === 'FONT' || (font.nodeName === 'SPAN' && font.style[mode]))) {
-                // Partially selected <font>: split it.
-                const selectedChildren = children.filter(child => selectedNodes.includes(child));
-                if (selectedChildren.length) {
-                    font = splitAroundUntil(selectedChildren, font);
+        function getFonts(selectedNodes) {
+            return selectedNodes.flatMap(node => {
+                let font = closestElement(node, 'font') || closestElement(node, 'span');
+                const children = font && descendants(font);
+                if (font && (font.nodeName === 'FONT' || (font.nodeName === 'SPAN' && font.style[mode]))) {
+                    // Partially selected <font>: split it.
+                    const selectedChildren = children.filter(child => selectedNodes.includes(child));
+                    if (selectedChildren.length) {
+                        font = splitAroundUntil(selectedChildren, font);
+                    } else {
+                        font = [];
+                    }
+                } else if ((node.nodeType === Node.TEXT_NODE && !isWhitespace(node) && node.textContent !== '\ufeff')
+                        || (node.nodeName === 'BR' && isEmptyBlock(node.parentNode))
+                        || (node.nodeType === Node.ELEMENT_NODE &&
+                            node.nodeName !== 'FIGURE' &&
+                            ['inline', 'inline-block'].includes(getComputedStyle(node).display) &&
+                            !isWhitespace(node.textContent) &&
+                            !node.classList.contains('btn') &&
+                            !node.querySelector('font')) &&
+                            node.nodeName !== 'A' &&
+                            !(node.nodeName === 'SPAN' && node.style['fontSize'])) {
+                    // Node is a visible text or inline node without font nor a button:
+                    // wrap it in a <font>.
+                    const previous = node.previousSibling;
+                    const classRegex = mode === 'color' ? BG_CLASSES_REGEX : TEXT_CLASSES_REGEX;
+                    if (
+                        previous &&
+                        previous.nodeName === 'FONT' &&
+                        !previous.style[mode === 'color' ? 'backgroundColor' : 'color'] &&
+                        !classRegex.test(previous.className) &&
+                        selectedNodes.includes(previous.firstChild) &&
+                        selectedNodes.includes(previous.lastChild)
+                    ) {
+                        // Directly follows a fully selected <font> that isn't
+                        // colored in the other mode: append to that.
+                        font = previous;
+                    } else {
+                        // No <font> found: insert a new one.
+                        font = document.createElement('font');
+                        node.after(font);
+                    }
+                    if (node.textContent) {
+                        font.appendChild(node);
+                    } else {
+                        fillEmpty(font);
+                    }
                 } else {
-                    font = [];
+                    font = []; // Ignore non-text or invisible text nodes.
                 }
-            } else if ((node.nodeType === Node.TEXT_NODE && !isWhitespace(node))
-                    || (node.nodeName === 'BR' && isEmptyBlock(node.parentNode))
-                    || (node.nodeType === Node.ELEMENT_NODE &&
-                        ['inline', 'inline-block'].includes(getComputedStyle(node).display) &&
-                        !isWhitespace(node.textContent) &&
-                        !node.classList.contains('btn') &&
-                        !node.querySelector('font'))) {
-                // Node is a visible text or inline node without font nor a button:
-                // wrap it in a <font>.
-                const previous = node.previousSibling;
-                const classRegex = mode === 'color' ? BG_CLASSES_REGEX : TEXT_CLASSES_REGEX;
-                if (
-                    previous &&
-                    previous.nodeName === 'FONT' &&
-                    !previous.style[mode === 'color' ? 'backgroundColor' : 'color'] &&
-                    !classRegex.test(previous.className) &&
-                    selectedNodes.includes(previous.firstChild) &&
-                    selectedNodes.includes(previous.lastChild)
-                ) {
-                    // Directly follows a fully selected <font> that isn't
-                    // colored in the other mode: append to that.
-                    font = previous;
-                } else {
-                    // No <font> found: insert a new one.
-                    font = document.createElement('font');
-                    node.after(font);
-                }
-                if (node.textContent) {
-                    font.appendChild(node);
-                } else {
-                    fillEmpty(font);
-                }
-            } else {
-                font = []; // Ignore non-text or invisible text nodes.
-            }
-            return font;
-        });
+                return font;
+            });
+        }
 
         for (const fieldNode of selectedFieldNodes) {
             colorElement(fieldNode, color, mode);
+        }
+
+        let fonts = getFonts(selectedNodes);
+        // Dirty fix as the previous call could have unconnected elements
+        // because of the `splitAroundUntil`. Another call should provide he
+        // correct list of fonts.
+        if (!fonts.every((font) => font.isConnected)) {
+            fonts = getFonts(selectedNodes);
         }
 
         // Color the selected <font>s and remove uncolored fonts.
@@ -693,7 +859,7 @@ export const editorCommands = {
             setSelection(...newPosition, ...newPosition, false);
         }
         const [table] = editorCommands.insert(editor, parseHTML(editor.document, tableHtml));
-        setCursorStart(table.querySelector('td'));
+        setCursorStart(table.querySelector('p'));
     },
     addColumn: (editor, beforeOrAfter, referenceCell) => {
         if (!referenceCell) {
@@ -746,7 +912,6 @@ export const editorCommands = {
         const newRow = document.createElement('tr');
         newRow.style.height = referenceRowHeight + 'px';
         const cells = referenceRow.querySelectorAll('td');
-        const referenceRowWidths = [...cells].map(cell => cell.style.width || cell.clientWidth + 'px');
         newRow.append(...Array.from(Array(cells.length)).map(() => {
             const td = document.createElement('td');
             const p = document.createElement('p');
@@ -756,11 +921,10 @@ export const editorCommands = {
         }));
         referenceRow[beforeOrAfter](newRow);
         newRow.style.height = referenceRowHeight + 'px';
-        // Preserve the width of the columns (applied only on the first row).
         if (getRowIndex(newRow) === 0) {
             let columnIndex = 0;
-            for (const column of newRow.children) {
-                column.style.width = referenceRowWidths[columnIndex];
+            for (const newColumn of newRow.children) {
+                newColumn.style.width = cells[columnIndex].style.width;
                 cells[columnIndex].style.width = '';
                 columnIndex++;
             }
@@ -776,6 +940,11 @@ export const editorCommands = {
         const cells = [...closestElement(cell, 'tr').querySelectorAll('th, td')];
         const index = cells.findIndex(td => td === cell);
         const siblingCell = cells[index - 1] || cells[index + 1];
+        if (table.style.width) {
+            const tableRect = table.getBoundingClientRect();
+            const cellRect = cell.getBoundingClientRect();
+            table.style.width = tableRect.width - cellRect.width + 'px';
+        }
         table.querySelectorAll(`tr td:nth-of-type(${index + 1})`).forEach(td => td.remove());
         siblingCell ? setSelection(...startPos(siblingCell)) : editorCommands.deleteTable(editor, table);
     },
@@ -920,10 +1089,7 @@ export const editorCommands = {
     insertHorizontalRule(editor) {
         const selection = editor.document.getSelection();
         const range = selection.getRangeAt(0);
-        const element = closestElement(
-            range.startContainer,
-            'P, PRE, H1, H2, H3, H4, H5, H6, BLOCKQUOTE',
-        );
+        const element = closestElement(range.startContainer, paragraphRelatedElements) || closestBlock(range.startContainer);
 
         if (element && ancestors(element).includes(editor.editable)) {
             element.before(editor.document.createElement('hr'));

@@ -3,16 +3,17 @@
 # 	* stock_picking_batch
 # 
 # Translators:
-# Wil Odoo, 2023
 # 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023
+# Wil Odoo, 2024
+# Jeffery CHEN <jeffery9@gmail.com>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-01-05 12:32+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023\n"
+"Last-Translator: Jeffery CHEN <jeffery9@gmail.com>, 2024\n"
 "Language-Team: Chinese (China) (https://app.transifex.com/odoo/teams/41243/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -73,7 +74,7 @@ msgid ""
 "A transfer will not be automatically added to batches that will exceed this number of lines if the transfer is added to it.\n"
 "Leave this value as '0' if no line limit."
 msgstr ""
-"如果将传输添加到超过此行数的批中，则不会自动向其添加传输。\n"
+"如果将调拨添加到超过此行数的批中，则不会自动向其添加调拨。\n"
 "如果没有行限制，则将此值保留为“0”。"
 
 #. module: stock_picking_batch
@@ -82,13 +83,13 @@ msgid ""
 "A transfer will not be automatically added to batches that will exceed this number of transfers.\n"
 "Leave this value as '0' if no transfer limit."
 msgstr ""
-"传输将不会自动添加到超过此传输数量的批中。\n"
-"如果没有传输限制，则将此值保留为“0”。"
+"调拨将不会自动添加到超过此调拨数量的批中。\n"
+"如果没有调拨限制，则将此值保留为“0”。"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__message_needaction
 msgid "Action Needed"
-msgstr "所需操作"
+msgstr "待处理"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__activity_ids
@@ -178,7 +179,7 @@ msgstr "自动确认"
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_type__auto_batch
 msgid "Automatic Batches"
-msgstr "自动处理批量调拨"
+msgstr "自动批量调拨"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,help:stock_picking_batch.field_stock_picking_type__batch_group_by_partner
@@ -220,7 +221,7 @@ msgstr "批"
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Batch Name"
-msgstr "批次名称"
+msgstr "批名称"
 
 #. module: stock_picking_batch
 #. odoo-python
@@ -264,7 +265,7 @@ msgstr "关联到此调拨的批"
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.stock_picking_type_kanban_batch
 msgid "Batches"
-msgstr "批量"
+msgstr "批"
 
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.stock_add_to_wave_form
@@ -525,7 +526,7 @@ msgstr "地点 至 名称"
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Lot Number"
-msgstr "地段编号"
+msgstr "批次号码"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_type__batch_max_lines
@@ -535,7 +536,7 @@ msgstr "每批最多生产线数"
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_type__batch_max_pickings
 msgid "Maximum transfers per batch"
-msgstr "每批最大转账数"
+msgstr "每批最大调拨数"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__message_has_error
@@ -591,7 +592,7 @@ msgstr "下一活动类型"
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__message_needaction_counter
 msgid "Number of Actions"
-msgstr "操作数量"
+msgstr "动作数量"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__message_has_error_counter
@@ -616,12 +617,12 @@ msgstr "作业类型"
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.stock_picking_batch_form
 msgid "Operations"
-msgstr "操作"
+msgstr "作业"
 
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Package ID"
-msgstr "套餐 ID"
+msgstr "包裹 ID"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_add_to_wave__picking_ids
@@ -649,7 +650,7 @@ msgstr "打印"
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.stock_picking_batch_form
 msgid "Print Labels"
-msgstr "标签打印"
+msgstr "打印标签"
 
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
@@ -659,7 +660,7 @@ msgstr "产品"
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Product Barcode"
-msgstr "产品条形码"
+msgstr "产品条码"
 
 #. module: stock_picking_batch
 #: model:ir.model,name:stock_picking_batch.model_stock_move_line
@@ -707,7 +708,7 @@ msgstr "责任用户"
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Result Package ID"
-msgstr "结果包 ID"
+msgstr "结果包裹 ID"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__message_has_sms_error
@@ -751,6 +752,11 @@ msgstr "显示检查可用"
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__show_clear_qty_button
 msgid "Show Clear Qty Button"
 msgstr "显示清除Qty按钮"
+
+#. module: stock_picking_batch
+#: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__show_lots_text
+msgid "Show Lots Text"
+msgstr "显示批次文本"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__show_set_qty_button
@@ -837,7 +843,7 @@ msgid ""
 "\n"
 "Incompatibilities: %s"
 msgstr ""
-"以下传输不能添加到批量传输 %s。请检查它们的状态和操作类型。\n"
+"以下调拨不能添加到批量调拨 %s。请检查它们的状态和作业类型。\n"
 "\n"
 "不兼容：%s"
 
@@ -849,7 +855,7 @@ msgid ""
 "            It may also be useful to assign jobs (one person = one batch) or\n"
 "            help the timing management of operations (tasks to be done at 1pm)."
 msgstr ""
-"批量调拨的目标是将可能出现的操作进行分组。\n"
+"批量调拨的目标是将可能出现的作业进行分组。\n"
 "            (需要)一起做，以提高其效率。\n"
 "            分配工作（一个人=一批人），也可能是有用的。\n"
 "            帮助业务的时间管理（下午1点要完成的任务）。"
@@ -862,7 +868,7 @@ msgid ""
 "                    It may also be useful to assign jobs (one person = one batch) or\n"
 "                    help the timing management of operations (tasks to be done at 1pm)."
 msgstr ""
-"波传输的目标是将来自不同传输的操作分组在一起，以提高它们的效率。分配工作(一个人=一批)或帮助操作的时间管理(任务在下午1点完成)也可能很有用。"
+"波调拨的目标是将来自不同调拨的作业分组在一起，以提高它们的效率。分配工作(一个人=一批)或帮助作业的时间管理(任务在下午1点完成)也可能很有用。"
 
 #. module: stock_picking_batch
 #. odoo-python
@@ -911,12 +917,12 @@ msgstr "今日活动"
 #: model:ir.model,name:stock_picking_batch.model_stock_picking
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Transfer"
-msgstr "转账"
+msgstr "调拨"
 
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Transfer Display Name"
-msgstr "转账显示名称"
+msgstr "调拨显示名称"
 
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
@@ -934,7 +940,7 @@ msgstr "调拨"
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__picking_ids
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.stock_picking_batch_form
 msgid "Transfers"
-msgstr "转移"
+msgstr "调拨"
 
 #. module: stock_picking_batch
 #: model:ir.model.fields,field_description:stock_picking_batch.field_stock_picking_batch__picking_type_code
@@ -950,6 +956,11 @@ msgstr "记录中异常活动的类型。"
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.report_picking_batch
 msgid "Unit of Measure"
 msgstr "计量单位"
+
+#. module: stock_picking_batch
+#: model:ir.actions.server,name:stock_picking_batch.action_unreserve_batch_picking
+msgid "Unreserve"
+msgstr "取消预留"
 
 #. module: stock_picking_batch
 #: model_terms:ir.ui.view,arch_db:stock_picking_batch.stock_picking_batch_form

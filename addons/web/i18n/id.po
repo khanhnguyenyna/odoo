@@ -3,16 +3,17 @@
 # 	* web
 # 
 # Translators:
-# Wil Odoo, 2023
-# Abe Manyo, 2023
+# Martin Trigaux, 2024
+# Wil Odoo, 2024
+# Abe Manyo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Abe Manyo, 2023\n"
+"Last-Translator: Abe Manyo, 2024\n"
 "Language-Team: Indonesian (https://app.transifex.com/odoo/teams/41243/id/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -889,6 +890,7 @@ msgstr "ID Tindakan:"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/search/action_menus/action_menus.xml:0
+#: code:addons/web/static/src/search/cog_menu/cog_menu.xml:0
 #, python-format
 msgid "Actions"
 msgstr "Action"
@@ -909,7 +911,6 @@ msgstr "Aktifkan Tes Debug Aset"
 
 #. module: web
 #. odoo-javascript
-#: code:addons/web/static/src/core/debug/debug_providers.js:0
 #: code:addons/web/static/src/core/debug/debug_providers.js:0
 #, python-format
 msgid "Activate debug mode (with assets)"
@@ -1016,6 +1017,7 @@ msgstr "Tambahkan Cabang"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/kanban/kanban_column_quick_create.xml:0
+#: code:addons/web/static/src/views/kanban/kanban_column_quick_create.xml:0
 #, python-format
 msgid "Add column"
 msgstr "Tambahkan Kolom"
@@ -1047,6 +1049,15 @@ msgstr "Tambahkan konteks qweb directive"
 #, python-format
 msgid "Add start date"
 msgstr "Tambahkan tanggal mulai"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/boolean_favorite/boolean_favorite_field.xml:0
+#: code:addons/web/static/src/views/fields/boolean_favorite/boolean_favorite_field.xml:0
+#: code:addons/web/static/src/views/fields/boolean_favorite/boolean_favorite_field.xml:0
+#, python-format
+msgid "Add to Favorites"
+msgstr "Tambahkan ke Favorit"
 
 #. module: web
 #. odoo-javascript
@@ -1114,6 +1125,13 @@ msgstr "Seluruh pengguna"
 #, python-format
 msgid "Almond"
 msgstr "Almond"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/datetime/datetime_field.js:0
+#, python-format
+msgid "Always range"
+msgstr "Always range"
 
 #. module: web
 #. odoo-javascript
@@ -1287,6 +1305,7 @@ msgstr "Sebagai teks standar saat tidak ada value yang ditetapkan"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #, python-format
 msgid "Ascending"
 msgstr "Urutan Teratas"
@@ -1310,6 +1329,7 @@ msgstr "Tetapkan"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/fields/many2many_binary/many2many_binary_field.xml:0
 #: code:addons/web/static/src/views/fields/many2many_binary/many2many_binary_field.xml:0
 #, python-format
 msgid "Attach"
@@ -1422,6 +1442,7 @@ msgstr "Lencana"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #, python-format
 msgid "Bar Chart"
 msgstr "Bagan Bilah"
@@ -1477,6 +1498,17 @@ msgstr "Biru"
 #, python-format
 msgid "Boolean Icon"
 msgstr "Boolean Icon"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/statusbar/statusbar_field.js:0
+#, python-format
+msgid ""
+"Boolean field from the model used in the relation, which indicates whether "
+"the state is folded or not."
+msgstr ""
+"Boolean field dari model yang digunakan, yang mengindikasikan apakah "
+"statusnya dilipat atau tidak."
 
 #. module: web
 #. odoo-javascript
@@ -1781,7 +1813,10 @@ msgstr "Claus"
 #: code:addons/web/static/src/core/model_field_selector/model_field_selector.xml:0
 #: code:addons/web/static/src/core/tree_editor/tree_editor.xml:0
 #: code:addons/web/static/src/views/fields/binary/binary_field.xml:0
+#: code:addons/web/static/src/views/fields/binary/binary_field.xml:0
 #: code:addons/web/static/src/views/fields/image/image_field.xml:0
+#: code:addons/web/static/src/views/fields/image/image_field.xml:0
+#: code:addons/web/static/src/views/fields/pdf_viewer/pdf_viewer_field.xml:0
 #: code:addons/web/static/src/views/fields/pdf_viewer/pdf_viewer_field.xml:0
 #: code:addons/web/static/src/views/view_dialogs/select_create_dialog.xml:0
 #, python-format
@@ -1797,12 +1832,12 @@ msgstr "Clickable"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/core/datetime/datetime_picker_popover.xml:0
 #: code:addons/web/static/src/core/debug/debug_menu_items.xml:0
 #: code:addons/web/static/src/core/debug/debug_menu_items.xml:0
 #: code:addons/web/static/src/core/dialog/dialog.xml:0
 #: code:addons/web/static/src/core/dialog/dialog.xml:0
 #: code:addons/web/static/src/core/domain_selector_dialog/domain_selector_dialog.xml:0
-#: code:addons/web/static/src/core/errors/error_dialogs.xml:0
 #: code:addons/web/static/src/core/errors/error_dialogs.xml:0
 #: code:addons/web/static/src/core/errors/error_dialogs.xml:0
 #: code:addons/web/static/src/core/errors/error_dialogs.xml:0
@@ -2217,6 +2252,7 @@ msgstr "Pengguna Dibuat:"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #, python-format
 msgid "Cumulative"
 msgstr "Kumulatif"
@@ -2486,6 +2522,7 @@ msgstr "Hapus baris"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #, python-format
 msgid "Descending"
 msgstr "Urutan kebawah"
@@ -2569,6 +2606,7 @@ msgstr "Buang"
 #. odoo-javascript
 #: code:addons/web/static/src/views/form/form_error_dialog/form_error_dialog.xml:0
 #: code:addons/web/static/src/views/form/form_status_indicator/form_status_indicator.xml:0
+#: code:addons/web/static/src/views/form/form_status_indicator/form_status_indicator.xml:0
 #, python-format
 msgid "Discard changes"
 msgstr "Buang perubahan"
@@ -2615,6 +2653,13 @@ msgstr "Tampilkan domain menggunakan facet"
 #, python-format
 msgid "Displays a warning icon if the input dates are in the future."
 msgstr "Tampilkan ikon peringatan bila tanggal input di masa depan."
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/datetime/datetime_field.js:0
+#, python-format
+msgid "Displays or hides the time in the datetime value."
+msgstr "Tampilkan atau sembunyikan waktu di value datetime."
 
 #. module: web
 #. odoo-javascript
@@ -2689,6 +2734,7 @@ msgstr "Jangan pergi dulu,"
 #: code:addons/web/static/src/core/file_viewer/file_viewer.xml:0
 #: code:addons/web/static/src/core/file_viewer/file_viewer.xml:0
 #: code:addons/web/static/src/views/fields/binary/binary_field.xml:0
+#: code:addons/web/static/src/views/fields/binary/binary_field.xml:0
 #: code:addons/web/static/src/views/fields/many2many_binary/many2many_binary_field.xml:0
 #, python-format
 msgid "Download"
@@ -2706,6 +2752,7 @@ msgstr "Unduh Pratinjau PDF"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/pivot/pivot_controller.xml:0
 #: code:addons/web/static/src/views/pivot/pivot_controller.xml:0
 #, python-format
 msgid "Download xlsx"
@@ -2767,7 +2814,10 @@ msgstr "Tanggal paling awal diterima"
 #: code:addons/web/static/src/views/calendar/calendar_common/calendar_common_popover.xml:0
 #: code:addons/web/static/src/views/calendar/quick_create/calendar_quick_create.xml:0
 #: code:addons/web/static/src/views/fields/binary/binary_field.xml:0
+#: code:addons/web/static/src/views/fields/binary/binary_field.xml:0
 #: code:addons/web/static/src/views/fields/image/image_field.xml:0
+#: code:addons/web/static/src/views/fields/image/image_field.xml:0
+#: code:addons/web/static/src/views/fields/pdf_viewer/pdf_viewer_field.xml:0
 #: code:addons/web/static/src/views/fields/pdf_viewer/pdf_viewer_field.xml:0
 #: code:addons/web/static/src/views/kanban/kanban_header.js:0
 #: code:addons/web/static/src/views/kanban/kanban_record_quick_create.xml:0
@@ -2930,6 +2980,7 @@ msgstr "Semua"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/pivot/pivot_controller.xml:0
 #: code:addons/web/static/src/views/pivot/pivot_controller.xml:0
 #, python-format
 msgid "Expand all"
@@ -3107,6 +3158,13 @@ msgstr "Tipe Kolom"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/core/expression_editor/expression_editor.js:0
+#, python-format
+msgid "Field properties not supported"
+msgstr "Properti field tidak didukung"
+
+#. module: web
+#. odoo-javascript
 #: code:addons/web/static/src/views/fields/progress_bar/progress_bar_field.js:0
 #, python-format
 msgid ""
@@ -3147,6 +3205,7 @@ msgstr "Penyaring"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/pivot/pivot_controller.xml:0
 #: code:addons/web/static/src/views/pivot/pivot_controller.xml:0
 #, python-format
 msgid "Flip axis"
@@ -3352,6 +3411,7 @@ msgstr "Dapatkan fitur ini dan lebih banyak lagi dengan Odoo Enterprise!"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/fields/url/url_field.xml:0
+#: code:addons/web/static/src/views/fields/url/url_field.xml:0
 #, python-format
 msgid "Go to URL"
 msgstr "Pergi ke URL"
@@ -3408,6 +3468,19 @@ msgstr "Handle"
 #: model:ir.model.fields,help:web.field_base_document_layout__company_details
 msgid "Header text displayed at the top of all reports."
 msgstr "Teks header ditampilkan pada bagian atas semua lapopran."
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/model/relational_model/record.js:0
+#, python-format
+msgid ""
+"Heads up! Your recent changes are too large to save automatically. Please "
+"click the <i class=\"fa fa-cloud-upload fa-fw\"></i> button now to ensure "
+"your work is saved before you exit this tab."
+msgstr ""
+"Perhatian! Perubahan terkini terlalu besar untuk disimpan secara otomatis. "
+"Mohon klik tombol <i class=\"fa fa-cloud-upload fa-fw\"></i> sekarang untuk "
+"memastikan pekerjaan Anda disimpan sebelum Anda keluar dari tab ini."
 
 #. module: web
 #. odoo-javascript
@@ -3515,8 +3588,8 @@ msgstr "ILY"
 #: code:addons/web/static/src/views/fields/datetime/datetime_field.js:0
 #: code:addons/web/static/src/views/fields/datetime/datetime_field.js:0
 #, python-format
-msgid "ISO-formatted date (e.g. \"2018-12-31\") or \"today\"."
-msgstr "Tanggal dengan format ISO (contoh. \"2018-12-31\") atau \"today\"."
+msgid "ISO-formatted date (e.g. \"2018-12-31\") or \"%s\"."
+msgstr "Tanggal format ISO (contoh \"2018-12-31\") atau \"%s\"."
 
 #. module: web
 #. odoo-javascript
@@ -3638,6 +3711,8 @@ msgstr "Bilangan Bulat"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/fields/many2one/many2one_field.xml:0
+#: code:addons/web/static/src/views/fields/many2one/many2one_field.xml:0
+#: code:addons/web/static/src/views/fields/properties/property_value.xml:0
 #: code:addons/web/static/src/views/fields/properties/property_value.xml:0
 #, python-format
 msgid "Internal link"
@@ -4206,6 +4281,7 @@ msgstr "Libra"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #, python-format
 msgid "Line Chart"
 msgstr "Grafik Garis"
@@ -4322,6 +4398,13 @@ msgstr "MailDeliveryException"
 #, python-format
 msgid "Main actions"
 msgstr "Aksi Utama"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/search/custom_favorite_item/custom_favorite_item.xml:0
+#, python-format
+msgid "Make this filter available to other users"
+msgstr "Buat filter ini tersedia untuk user lainnya"
 
 #. module: web
 #. odoo-javascript
@@ -4533,6 +4616,13 @@ msgstr "Model"
 #, python-format
 msgid "Modify Condition"
 msgstr "Ubah Kondisi"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/domain/domain_field.xml:0
+#, python-format
+msgid "Modify filter"
+msgstr "Modifikasi filter"
 
 #. module: web
 #. odoo-javascript
@@ -4770,6 +4860,7 @@ msgstr "Baru: %s"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/core/file_viewer/file_viewer.xml:0
+#: code:addons/web/static/src/core/pager/pager.xml:0
 #: code:addons/web/static/src/core/pager/pager.xml:0
 #: code:addons/web/static/src/views/calendar/calendar_controller.xml:0
 #: code:addons/web/static/src/views/calendar/calendar_controller.xml:0
@@ -5020,6 +5111,13 @@ msgstr "Status tidak aktif"
 #, python-format
 msgid "Not active state, click to change it"
 msgstr "Status tidak aktif, klik untuk mengubah"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/many2many_binary/many2many_binary_field.js:0
+#, python-format
+msgid "Number of files"
+msgstr "Jumlah file"
 
 #. module: web
 #. odoo-javascript
@@ -5437,6 +5535,11 @@ msgid "Password"
 msgstr "Kata Sandi"
 
 #. module: web
+#: model_terms:ir.ui.view,arch_db:web.report_invoice_wizard_preview
+msgid "Payment Communication: <b><span>INV/2023/00003</span></b>"
+msgstr "Komunikasi Pembayaran: <b><span>INV/2023/00003</span></b>"
+
+#. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/webclient/settings_form_view/widgets/res_config_invite_users.xml:0
 #, python-format
@@ -5474,6 +5577,7 @@ msgstr "Telepon"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #, python-format
 msgid "Pie Chart"
@@ -5565,15 +5669,6 @@ msgstr ""
 "Silahkan gunakan tombol salin untuk melaporkan eror ke layanan bantuan Anda."
 
 #. module: web
-#: model_terms:ir.ui.view,arch_db:web.report_invoice_wizard_preview
-msgid ""
-"Please use the following communication for your payment : <b><span>\n"
-"                           INV/2023/00003</span></b>"
-msgstr ""
-"Mohon gunakan referensi berikut untuk pembayaran Anda : <b><span>\n"
-"                           INV/2023/00003</span></b>"
-
-#. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/fields/many2one/many2one_field.js:0
 #, python-format
@@ -5658,6 +5753,7 @@ msgstr "Pratinjau logo"
 #: code:addons/web/static/src/core/file_viewer/file_viewer.xml:0
 #: code:addons/web/static/src/core/model_field_selector/model_field_selector_popover.xml:0
 #: code:addons/web/static/src/core/model_field_selector/model_field_selector_popover.xml:0
+#: code:addons/web/static/src/core/pager/pager.xml:0
 #: code:addons/web/static/src/core/pager/pager.xml:0
 #: code:addons/web/static/src/views/calendar/calendar_controller.xml:0
 #: code:addons/web/static/src/views/calendar/calendar_controller.xml:0
@@ -5751,6 +5847,13 @@ msgstr "Memproses..."
 #, python-format
 msgid "Progress Bar"
 msgstr "Kolom Poses"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/view_components/column_progress.xml:0
+#, python-format
+msgid "Progress bar"
+msgstr "Progress bar"
 
 #. module: web
 #. odoo-javascript
@@ -5902,16 +6005,12 @@ msgstr "Readonly:"
 #, python-format
 msgid ""
 "Ready to make your record disappear into thin air? Are you sure?\n"
-"\n"
 "It will be gone forever!\n"
-"\n"
 "\n"
 "Think twice before you click that 'Delete' button!"
 msgstr ""
 "Siap untuk menghapus record Anda sepenuhnya? Apakah Anda yakin?\n"
-"\n"
 "Akan hilang selama-lamanya!\n"
-"\n"
 "\n"
 "Pikir dua kali sebelum mengeklik tombol 'Hapus'!"
 
@@ -6040,6 +6139,15 @@ msgstr "Hapus Properti"
 #, python-format
 msgid "Remove field"
 msgstr "Hapus Field"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/boolean_favorite/boolean_favorite_field.xml:0
+#: code:addons/web/static/src/views/fields/boolean_favorite/boolean_favorite_field.xml:0
+#: code:addons/web/static/src/views/fields/boolean_favorite/boolean_favorite_field.xml:0
+#, python-format
+msgid "Remove from Favorites"
+msgstr "Hapus dari Favorit"
 
 #. module: web
 #. odoo-javascript
@@ -6263,6 +6371,13 @@ msgstr "Simpan sebagai:"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/search/custom_favorite_item/custom_favorite_item.xml:0
+#, python-format
+msgid "Save current search"
+msgstr "Simpan pencarian saat ini"
+
+#. module: web
+#. odoo-javascript
 #: code:addons/web/static/src/core/debug/debug_menu_items.xml:0
 #, python-format
 msgid "Save default"
@@ -6271,12 +6386,14 @@ msgstr "Simpan sebagai standar"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/form/form_status_indicator/form_status_indicator.xml:0
+#: code:addons/web/static/src/views/form/form_status_indicator/form_status_indicator.xml:0
 #, python-format
 msgid "Save manually"
 msgstr "Simpan secara manual"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/fields/many2one/many2one_field.xml:0
 #: code:addons/web/static/src/views/fields/many2one/many2one_field.xml:0
 #: code:addons/web/static/src/views/fields/many2one/many2one_field.xml:0
 #, python-format
@@ -6524,6 +6641,7 @@ msgstr "Pilihan:"
 #. module: web
 #. odoo-javascript
 #: code:addons/web/static/src/views/fields/email/email_field.xml:0
+#: code:addons/web/static/src/views/fields/email/email_field.xml:0
 #, python-format
 msgid "Send Email"
 msgstr "Kirim Email"
@@ -6570,6 +6688,17 @@ msgstr "Tetapkan status kanban sebagai %s"
 #, python-format
 msgid "Set priority..."
 msgstr "Tetapkan prioritas"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/datetime/datetime_field.js:0
+#, python-format
+msgid ""
+"Set to true the full range input has to be display by default, even if "
+"empty."
+msgstr ""
+"Tetapkan menjadi True input range penuh harus ditampilkan secara default, "
+"bahkan bila kosong."
 
 #. module: web
 #. odoo-javascript
@@ -6625,11 +6754,25 @@ msgstr "Tunjukkan tampilan %s"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/fields/domain/domain_field.xml:0
+#, python-format
+msgid "Show matching records"
+msgstr "Tunjukkan record yang cocok"
+
+#. module: web
+#. odoo-javascript
 #: code:addons/web/static/src/views/view_dialogs/export_data_dialog.xml:0
 #: code:addons/web/static/src/views/view_dialogs/export_data_dialog.xml:0
 #, python-format
 msgid "Show sub-fields"
 msgstr "Tampilkan sub-fields"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/fields/datetime/datetime_field.js:0
+#, python-format
+msgid "Show time"
+msgstr "Tunjukkan waktu"
 
 #. module: web
 #. odoo-javascript
@@ -6693,6 +6836,8 @@ msgstr "Spesial:"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
+#: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #: code:addons/web/static/src/views/graph/graph_controller.xml:0
 #, python-format
@@ -6840,6 +6985,7 @@ msgstr "T-shirt"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/core/commands/command_items.xml:0
 #: code:addons/web/static/src/webclient/user_menu/user_menu_items.xml:0
 #, python-format
 msgid "TIP"
@@ -7026,16 +7172,16 @@ msgstr "File yang dipilih (%sB) melebihi ukuran file maksimum (%sB)."
 
 #. module: web
 #. odoo-javascript
-#: code:addons/web/static/src/core/errors/error_dialogs.xml:0
+#: code:addons/web/static/src/core/errors/scss_error_dialog.js:0
 #, python-format
 msgid ""
-"The style compilation failed, see the error below. This is an administrator "
-"or developer error that must be fixed for the entire database before "
-"continuing working."
+"The style compilation failed. This is an administrator or developer error "
+"that must be fixed for the entire database before continuing working. See "
+"browser console or server logs for details."
 msgstr ""
-"Kompilasi style gagal, lihat error di bawah. Ini adalah error administrator "
-"atau developer yang harus dibetulkan untuk seluruh database sebelum "
-"melanjutkan kerja."
+"Kompilasi style gagal. Ini adalah error administrator atau developer yang "
+"harus dibetulkan untuk seluruh database sebelum melanjutkan kerja. Lihat "
+"console browser atau log server untuk detail"
 
 #. module: web
 #. odoo-python
@@ -7435,6 +7581,13 @@ msgstr "Tidak dapat menemukan Wkhtmltopdf pada sistem. PDF tidak bisa dibuat."
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/form/form_status_indicator/form_status_indicator.xml:0
+#, python-format
+msgid "Unable to save. Correct the issue or discard changes"
+msgstr ""
+
+#. module: web
+#. odoo-javascript
 #: code:addons/web/static/src/views/form/form_controller.js:0
 #: code:addons/web/static/src/views/list/list_controller.js:0
 #, python-format
@@ -7447,27 +7600,6 @@ msgstr "Batalkan Pengarsipan"
 #, python-format
 msgid "Unarchive All"
 msgstr "Batalkan Pengarsipan"
-
-#. module: web
-#. odoo-javascript
-#: code:addons/web/static/src/core/errors/error_service.js:0
-#, python-format
-msgid "Uncaught CORS Error"
-msgstr "Error Uncaught CORS"
-
-#. module: web
-#. odoo-javascript
-#: code:addons/web/static/src/core/errors/error_service.js:0
-#, python-format
-msgid "Uncaught Javascript Error"
-msgstr "Error Uncaught Javascript"
-
-#. module: web
-#. odoo-javascript
-#: code:addons/web/static/src/core/errors/error_service.js:0
-#, python-format
-msgid "Uncaught Promise"
-msgstr "Uncaught Promise"
 
 #. module: web
 #. odoo-javascript
@@ -7487,23 +7619,6 @@ msgstr "Undefined"
 #, python-format
 msgid "Unfold"
 msgstr "Buka"
-
-#. module: web
-#. odoo-javascript
-#: code:addons/web/static/src/core/errors/error_service.js:0
-#, python-format
-msgid ""
-"Unknown CORS error\n"
-"\n"
-"An unknown CORS error occured.\n"
-"The error probably originates from a JavaScript file served from a different origin.\n"
-"(Opening your browser console might give you a hint on the error.)"
-msgstr ""
-"Error Unknown CORS\n"
-"\n"
-"Terjadi error CORS yang tidak diketahui.\n"
-"Error kemungkinan berasal dari file JavaScript yang datang dari lokasi berbeda.\n"
-"(Membuka console browser Anda mungkin akan membantu Anda menemukan errornya.)"
 
 #. module: web
 #. odoo-javascript
@@ -7646,6 +7761,13 @@ msgid ""
 "Use it with the 'User-friendly format' option to customize the formatting."
 msgstr ""
 "Gunakan opsi 'Format yang ramah-pengguna) untuk mengustomisasi format."
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/search/custom_favorite_item/custom_favorite_item.xml:0
+#, python-format
+msgid "Use this filter by default when opening this view"
+msgstr "Gunakan filter ini secara default saat membuka tampilan ini"
 
 #. module: web
 #. odoo-javascript
@@ -8447,6 +8569,7 @@ msgstr "alien monster"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/core/debug/debug_menu_items.xml:0
 #: code:addons/web/static/src/core/tree_editor/tree_editor.xml:0
 #: code:addons/web/static/src/core/tree_editor/tree_editor.xml:0
 #, python-format
@@ -8545,6 +8668,7 @@ msgstr "anchor"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/core/commands/command_items.xml:0
 #: code:addons/web/static/src/core/domain_selector/utils.js:0
 #: code:addons/web/static/src/core/tree_editor/utils.js:0
 #, python-format
@@ -22798,6 +22922,13 @@ msgstr "tab baru"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/view_dialogs/export_data_dialog.xml:0
+#, python-format
+msgid "new_template"
+msgstr "new_template"
+
+#. module: web
+#. odoo-javascript
 #: code:addons/web/static/src/core/emoji_picker/emoji_data.js:0
 #: code:addons/web/static/src/core/emoji_picker/emoji_data.js:0
 #, python-format
@@ -27422,6 +27553,13 @@ msgstr "terpilih"
 #, python-format
 msgid "selected records,"
 msgstr "rekord terpilih,"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/core/debug/debug_menu_items.xml:0
+#, python-format
+msgid "self"
+msgstr "self"
 
 #. module: web
 #. odoo-javascript
@@ -33519,10 +33657,31 @@ msgstr "zombie"
 
 #. module: web
 #. odoo-javascript
+#: code:addons/web/static/src/views/view_components/column_progress.xml:0
+#, python-format
+msgid "{{ bar.count }} {{ bar.string }}"
+msgstr "{{ bar.count }} {{ bar.string }}"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/views/kanban/kanban_column_quick_create.xml:0
+#, python-format
+msgid "{{ relatedFieldName }}..."
+msgstr "{{ relatedFieldName }}..."
+
+#. module: web
+#. odoo-javascript
 #: code:addons/web/static/src/webclient/user_menu/user_menu_items.xml:0
 #, python-format
 msgid "— press"
 msgstr "— pencet"
+
+#. module: web
+#. odoo-javascript
+#: code:addons/web/static/src/core/commands/command_items.xml:0
+#, python-format
+msgid "— search for"
+msgstr "— cari"
 
 #. module: web
 #. odoo-javascript

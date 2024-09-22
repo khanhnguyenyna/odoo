@@ -50,7 +50,7 @@ _DEFAULT_MANIFEST = {
     'new_page_templates': {},  # website themes
     #name, mandatory
     'post_init_hook': '',
-    'post_load': None,
+    'post_load': '',
     'pre_init_hook': '',
     'sequence': 100,
     'summary': '',
@@ -68,13 +68,13 @@ _logger = logging.getLogger(__name__)
 class UpgradeHook(object):
     """Makes the legacy `migrations` package being `odoo.upgrade`"""
 
-    def find_module(self, name, path=None):
-        if re.match(r"^odoo\.addons\.base\.maintenance\.migrations\b", name):
+    def find_spec(self, fullname, path=None, target=None):
+        if re.match(r"^odoo\.addons\.base\.maintenance\.migrations\b", fullname):
             # We can't trigger a DeprecationWarning in this case.
             # In order to be cross-versions, the multi-versions upgrade scripts (0.0.0 scripts),
             # the tests, and the common files (utility functions) still needs to import from the
             # legacy name.
-            return self
+            return importlib.util.spec_from_loader(fullname, self)
 
     def load_module(self, name):
         assert name not in sys.modules
@@ -348,7 +348,8 @@ def load_manifest(module, mod_path=None):
     try:
         manifest['version'] = adapt_version(manifest['version'])
     except ValueError as e:
-        raise ValueError(f"Module {module}: invalid manifest") from e
+        if manifest.get("installable", True):
+            raise ValueError(f"Module {module}: invalid manifest") from e
     manifest['addons_path'] = normpath(opj(mod_path, os.pardir))
 
     return manifest
@@ -430,7 +431,7 @@ def get_modules():
             _logger.warning("addons path does not exist: %s", ad)
             continue
         plist.extend(listdir(ad))
-    return list(set(plist))
+    return sorted(set(plist))
 
 def get_modules_with_version():
     modules = get_modules()

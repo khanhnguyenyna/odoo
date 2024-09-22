@@ -23,13 +23,18 @@ cellMenuRegistry.add("move_lines_see_records", {
         const { args } = getFirstAccountFunction(cell.compiledFormula.tokens);
         let [codes, date_range, offset, companyId, includeUnposted] = args
             .map(astToFormula)
-            .map((arg) => env.model.getters.evaluateFormula(sheetId, arg));
-        codes = toString(codes).split(",");
+            .map((arg) => env.model.getters.evaluateFormulaResult(sheetId, arg));
+        codes = toString(codes?.value).split(",");
         const locale = env.model.getters.getLocale();
         const dateRange = parseAccountingDate(date_range, locale);
+        offset = parseInt(offset?.value) || 0;
         dateRange.year += offset || 0;
-        companyId = companyId || null;
-        includeUnposted = toBoolean(includeUnposted);
+        companyId = parseInt(companyId?.value) || null;
+        try {
+            includeUnposted = toBoolean(includeUnposted.value);
+        } catch {
+            includeUnposted = false;
+        }
 
         const action = await env.services.orm.call(
             "account.account",
@@ -46,6 +51,7 @@ cellMenuRegistry.add("move_lines_see_records", {
             !evaluatedCell.error &&
             evaluatedCell.value !== "" &&
             cell &&
+            cell.isFormula &&
             getNumberOfAccountFormulas(cell.compiledFormula.tokens) === 1
         );
     },

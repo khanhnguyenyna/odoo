@@ -9,22 +9,23 @@
 # Antanas Muliuolis <an.muliuolis@gmail.com>, 2023
 # Donatas <donatasvaliulis16@gmail.com>, 2023
 # UAB "Draugiški sprendimai" <transifex@draugiskisprendimai.lt>, 2023
-# Martin Trigaux, 2023
 # digitouch UAB <digitouchagencyeur@gmail.com>, 2023
-# Linas Versada <linaskrisiukenas@gmail.com>, 2023
-# Ramunė ViaLaurea <ramune.vialaurea@gmail.com>, 2023
 # Aleksandr Jadov <a.jadov@tata.lt>, 2023
 # Monika Raciunaite <monika.raciunaite@gmail.com>, 2023
 # Jonas Zinkevicius <jozi@odoo.com>, 2023
 # Audrius Palenskis <audrius.palenskis@gmail.com>, 2023
+# Linas Versada <linaskrisiukenas@gmail.com>, 2024
+# Martin Trigaux, 2024
+# Ramunė ViaLaurea <ramune.vialaurea@gmail.com>, 2024
+# Gailius Kazlauskas <gailius@vialaurea.lt>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Audrius Palenskis <audrius.palenskis@gmail.com>, 2023\n"
+"Last-Translator: Gailius Kazlauskas <gailius@vialaurea.lt>, 2024\n"
 "Language-Team: Lithuanian (https://app.transifex.com/odoo/teams/41243/lt/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -40,7 +41,7 @@ msgstr ""
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.events_list
 msgid "'. Showing results for '"
-msgstr ""
+msgstr "'. Rezultatai rodomi pagal '"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.registration_complete
@@ -91,7 +92,7 @@ msgstr ""
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.events_list
 msgid "<i class=\"fa fa-ban me-2\"/>Unpublished"
-msgstr ""
+msgstr "<i class=\"fa fa-ban me-2\"/>Nepaskelbta"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_description_full
@@ -252,7 +253,7 @@ msgstr ""
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
 msgid "About Us"
-msgstr ""
+msgstr "Apie mus"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.index_sidebar_about_us
@@ -376,7 +377,7 @@ msgstr "Atšaukti"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
-msgid "Cards"
+msgid "Card design"
 msgstr ""
 
 #. module: website_event
@@ -442,6 +443,7 @@ msgid "Consumers"
 msgstr ""
 
 #. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_location
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
 msgid "Countries"
 msgstr "Valstybės"
@@ -468,7 +470,7 @@ msgid "Created on"
 msgstr "Sukurta"
 
 #. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.index_topbar
+#: model_terms:ir.ui.view,arch_db:website_event.event_time
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
 msgid "Date"
 msgstr "Data"
@@ -481,12 +483,12 @@ msgstr "Data &amp; Laikas"
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_searchbar_input_snippet_options
 msgid "Date (new to old)"
-msgstr ""
+msgstr "Data (nuo naujausio iki seniausio)"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_searchbar_input_snippet_options
 msgid "Date (old to new)"
-msgstr ""
+msgstr "Data (nuo seniausio iki naujausio)"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_searchbar_input_snippet_options
@@ -693,6 +695,16 @@ msgid "Extra Register Button"
 msgstr "Papildomas registracijos mygtukas"
 
 #. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_location
+msgid "Filter by Country"
+msgstr "Filtruoti pagal šalį"
+
+#. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_time
+msgid "Filter by Date"
+msgstr ""
+
+#. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.index_topbar
 msgid "Filters"
 msgstr "Filtrai"
@@ -702,11 +714,6 @@ msgstr "Filtrai"
 msgid ""
 "Find out what people see and say about this event, and join the "
 "conversation."
-msgstr ""
-
-#. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.snippet_options
-msgid "Fold Tickets Details"
 msgstr ""
 
 #. module: website_event
@@ -889,7 +896,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:website_event.event_event_view_form
 #: model_terms:ir.ui.view,arch_db:website_event.event_type_view_form
 msgid "Mandatory"
-msgstr ""
+msgstr "Privaloma"
 
 #. module: website_event
 #: model:ir.model.fields,field_description:website_event.field_event_question__is_mandatory_answer
@@ -975,12 +982,17 @@ msgstr ""
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_pages_kanban_view
 msgid "Not Published"
-msgstr ""
+msgstr "Nepaskelbta"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_event_view_form
 #: model_terms:ir.ui.view,arch_db:website_event.event_type_view_form
 msgid "Once per Order"
+msgstr ""
+
+#. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_location
+msgid "Online Events"
 msgstr ""
 
 #. module: website_event
@@ -1055,8 +1067,8 @@ msgstr "Klausimo tipas"
 #. odoo-python
 #: code:addons/website_event/models/event_question.py:0
 #, python-format
-msgid "Question cannot belong to both the event category and itself."
-msgstr "Klausimas negali priklausyti ir renginio kategorijai, ir sau."
+msgid "Question cannot be linked to both an Event and an Event Type."
+msgstr ""
 
 #. module: website_event
 #: model:ir.model.fields,field_description:website_event.field_event_event__question_ids
@@ -1085,8 +1097,8 @@ msgid "Ref:"
 msgstr ""
 
 #. module: website_event
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/website_event/models/event_event.py:0
 #: code:addons/website_event/static/src/js/register_toaster_widget.js:0
 #: model:ir.model.fields.selection,name:website_event.selection__website_event_menu__menu_type__register
@@ -1133,6 +1145,7 @@ msgstr "Registracija patvirtinta!"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.modal_ticket_registration
+#: model_terms:ir.ui.view,arch_db:website_event.registration_template
 msgid "Registration failed! These tickets are not available anymore."
 msgstr ""
 
@@ -1192,11 +1205,6 @@ msgid "SEO optimized"
 msgstr "SEO optimizuotas"
 
 #. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.event_description_full
-msgid "SHARE"
-msgstr ""
-
-#. module: website_event
 #: model:event.question.answer,name:website_event.event_7_question_0_answer_1
 msgid "Sales"
 msgstr "Pardavimai"
@@ -1248,6 +1256,11 @@ msgstr "SEO pavadinimas"
 #: model:ir.model.fields,field_description:website_event.field_event_question_answer__sequence
 msgid "Sequence"
 msgstr "Seka"
+
+#. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_description_full
+msgid "Share"
+msgstr "Dalintis"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_tag_category_view_form
@@ -1321,8 +1334,8 @@ msgstr "Siūlomas atsakymas"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
-msgid "Templates"
-msgstr "Šablonai"
+msgid "Template badge"
+msgstr ""
 
 #. module: website_event
 #: model:ir.model.fields.selection,name:website_event.selection__event_question__question_type__text_box
@@ -1620,11 +1633,6 @@ msgid ""
 msgstr ""
 
 #. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.registration_template
-msgid "alert-link my-3"
-msgstr ""
-
-#. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.modal_ticket_registration
 msgid "available)"
 msgstr ""
@@ -1643,9 +1651,4 @@ msgstr ""
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_description_full
 msgid "iCal/Outlook"
-msgstr ""
-
-#. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.registration_template
-msgid "ms-2"
 msgstr ""

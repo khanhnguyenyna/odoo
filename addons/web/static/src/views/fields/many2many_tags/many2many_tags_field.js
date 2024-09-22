@@ -81,6 +81,7 @@ export class Many2ManyTagsField extends Component {
                 create: this.props.canCreate && this.props.createDomain,
                 createEdit: this.props.canCreateEdit,
                 onDelete: removeRecord,
+                edit: this.props.record.isInEdition,
             },
             getEvalParams: (props) => {
                 return {
@@ -222,10 +223,9 @@ export const many2ManyTagsField = {
         return relatedFields;
     },
     extractProps({ attrs, options, string }, dynamicInfo) {
+        const hasCreatePermission = attrs.can_create ? evaluateBooleanExpr(attrs.can_create) : true;
         const noCreate = Boolean(options.no_create);
-        const canCreate = noCreate
-            ? false
-            : attrs.can_create && evaluateBooleanExpr(attrs.can_create);
+        const canCreate = noCreate ? false : hasCreatePermission;
         const noQuickCreate = Boolean(options.no_quick_create);
         const noCreateEdit = Boolean(options.no_create_edit);
         return {

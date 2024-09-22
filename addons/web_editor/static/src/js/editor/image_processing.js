@@ -15,6 +15,8 @@ const modifierFields = [
     'originalSrc',
     'resizeWidth',
     'aspectRatio',
+    "bgSrc",
+    "mimetypeBeforeConversion",
 ];
 export const isGif = (mimetype) => mimetype === 'image/gif';
 
@@ -233,6 +235,8 @@ export async function applyModifications(img, dataOptions = {}) {
     // Crop
     const container = document.createElement('div');
     const original = await loadImage(originalSrc);
+    // loadImage may have ended up loading a different src (see: LOAD_IMAGE_404)
+    originalSrc = original.getAttribute('src');
     container.appendChild(original);
     await activateCropper(original, 0, data);
     let croppedImg = $(original).cropper('getCroppedCanvas', {width, height});
@@ -349,12 +353,30 @@ export async function applyModifications(img, dataOptions = {}) {
  * @param {String} src URL of the image to load
  * @param {HTMLImageElement} [img] img element in which to load the image
  * @returns {Promise<HTMLImageElement>} Promise that resolves to the loaded img
+ *     or a placeholder image if the src is not found.
  */
 export function loadImage(src, img = new Image()) {
+    const handleImage = (source, resolve, reject) => {
+        img.addEventListener("load", () => resolve(img), {once: true});
+        img.addEventListener("error", reject, {once: true});
+        img.src = source;
+    };
+    // The server will return a placeholder image with the following src.
+    // grep: LOAD_IMAGE_404
+    const placeholderHref = "/web/image/__odoo__unknown__src__/";
+
     return new Promise((resolve, reject) => {
-        img.addEventListener('load', () => resolve(img), {once: true});
-        img.addEventListener('error', reject, {once: true});
-        img.src = src;
+        fetch(src)
+            .then(response => {
+                if (!response.ok) {
+                    src = placeholderHref;
+                }
+                handleImage(src, resolve, reject);
+            })
+            .catch(error => {
+                src = placeholderHref;
+                handleImage(src, resolve, reject);
+            });
     });
 }
 
@@ -402,6 +424,8 @@ async function _updateImageData(src, key = 'objectURL') {
 }
 /**
  * Returns the size of a cached image.
+ * Warning: this supposes that the image is already in the cache, i.e. that
+ * _updateImageData was called before.
  *
  * @param {String} src used as a key on the image cache map.
  * @returns {Number} size of the image in bytes.
@@ -417,7 +441,9 @@ function _getImageSizeFromCache(src) {
  * @param {DOMStringMap} dataset dataset containing the cropperDataFields
  */
 export async function activateCropper(image, aspectRatio, dataset) {
-    image.src = await _loadImageObjectURL(image.getAttribute('src'));
+    const oldSrc = image.src;
+    const newSrc = await _loadImageObjectURL(image.getAttribute('src'));
+    image.src = newSrc;
     $(image).cropper({
         viewMode: 2,
         dragMode: 'move',
@@ -429,6 +455,9 @@ export async function activateCropper(image, aspectRatio, dataset) {
         minContainerWidth: 1,
         minContainerHeight: 1,
     });
+    if (oldSrc === newSrc && image.complete) {
+        return;
+    }
     return new Promise(resolve => image.addEventListener('ready', resolve, {once: true}));
 }
 /**
@@ -448,22 +477,31 @@ export async function loadImageInfo(img, rpc, attachmentSrc = '') {
     if ((img.dataset.originalSrc && img.dataset.mimetypeBeforeConversion) || !src) {
         return;
     }
-
-    // Only consider the "relative" part of the URL. Needed because some
-    // relative URLs were wrongly converted to absolute URLs at some point and
-    // user domains could have been changed meanwhile.
-    let relativeSrc;
-    try {
-        const srcUrl = new URL(src);
-        relativeSrc = srcUrl.pathname;
-    } catch {
-        relativeSrc = src;
+    // In order to be robust to absolute, relative and protocol relative URLs,
+    // the src of the img is first converted to an URL object. To do so, the URL
+    // of the document in which the img is located is used as a base to build
+    // the URL object if the src of the img is a relative or protocol relative
+    // URL. The original attachment linked to the img is then retrieved thanks
+    // to the path of the built URL object.
+    let docHref = img.ownerDocument.defaultView.location.href;
+    if (docHref === "about:srcdoc") {
+        docHref = window.location.href;
     }
-    const {original} = await rpc('/web_editor/get_image_info', {src: relativeSrc.split(/[?#]/)[0]});
+
+    const srcUrl = new URL(src, docHref);
+    const relativeSrc = srcUrl.pathname;
+
+    const {original} = await rpc('/web_editor/get_image_info', {src: relativeSrc});
     // If src was an absolute "external" URL, we consider unlikely that its
     // relative part matches something from the DB and even if it does, nothing
     // bad happens, besides using this random image as the original when using
-    // the options, instead of having no option.
+    // the options, instead of having no option. Note that we do not want to
+    // check if the image is local or not here as a previous bug converted some
+    // local (relative src) images to absolute URL... and that before users had
+    // setup their website domain. That means they can have an absolute URL that
+    // looks like "https://mycompany.odoo.com/web/image/123" that leads to a
+    // "local" image even if the domain name is now "mycompany.be".
+    //
     // The "redirect" check is for when it is a redirect image attachment due to
     // an external URL upload.
     if (original && original.image_src && !/\/web\/image\/\d+-redirect\//.test(original.image_src)) {
@@ -513,6 +551,31 @@ export function isImageSupportedForStyle(img) {
 
     return !isTFieldImg && !isEditableRootElement;
 }
+/**
+ * @param {HTMLImageElement} img
+ * @returns {Promise<Boolean>}
+ */
+export async function isImageCorsProtected(img) {
+    const src = img.getAttribute('src');
+    if (!src) {
+        return false;
+    }
+    let isCorsProtected = false;
+    if (!src.startsWith("/") || /\/web\/image\/\d+-redirect\//.test(src)) {
+        // The `fetch()` used later in the code might fail if the image is
+        // CORS protected. We check upfront if it's the case.
+        // Two possible cases:
+        // 1. the `src` is an absolute URL from another domain.
+        //    For instance, abc.odoo.com vs abc.com which are actually the
+        //    same database behind.
+        // 2. A "attachment-url" which is just a redirect to the real image
+        //    which could be hosted on another website.
+        isCorsProtected = await fetch(src, {method: 'HEAD'})
+            .then(() => false)
+            .catch(() => true);
+    }
+    return isCorsProtected;
+}
 
 /**
  * @param {Blob} blob
@@ -537,7 +600,7 @@ export function getDataURLBinarySize(dataURL) {
     return dataURL.split(',')[1].length / 4 * 3;
 }
 
-export const removeOnImageChangeAttrs = [...cropperDataFields, ...modifierFields, 'aspectRatio'];
+export const removeOnImageChangeAttrs = [...cropperDataFields, ...modifierFields];
 
 export default {
     applyModifications,

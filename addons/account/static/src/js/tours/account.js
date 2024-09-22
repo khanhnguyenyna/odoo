@@ -75,15 +75,15 @@ registry.category("web_tour.tours").add('account_tour', {
     {
         trigger: "button[name=action_post]",
         extra_trigger: "button.o_form_button_create",
-        content: _t("After the data extraction, check and validate the bill. If no vendor has been found, add one before validating."),
+        content: _t("Once your invoice is ready, confirm it."),
     }, {
         trigger: "button[name=action_invoice_sent]",
         extra_trigger: "[name=move_type] [raw-value=out_invoice]",
         content: _t("Send the invoice to the customer and check what he'll receive."),
         position: "bottom",
     }, {
-        trigger: "button[name=action_open_partners_without_email]",
-        extra_trigger: "[name=move_type] [raw-value=out_invoice], [name=move_type][raw-value=out_invoice]",
+        trigger: "div[name=partner_missing_email] a",
+        extra_trigger: "[name=move_type] [raw-value=out_invoice]",
         content: _t("Complete the partner data with email"),
     }, {
         trigger: ".o_field_widget[name=email] input, input[name=email]",

@@ -5,15 +5,16 @@
 # Translators:
 # Noma Yuki, 2023
 # Wil Odoo, 2023
-# Junko Augias, 2023
+# Ryoko Tsuda <ryoko@quartile.co>, 2024
+# Junko Augias, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-01-05 12:31+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Junko Augias, 2023\n"
+"Last-Translator: Junko Augias, 2024\n"
 "Language-Team: Japanese (https://app.transifex.com/odoo/teams/41243/ja/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -224,7 +225,7 @@ msgid ""
 "                                        <span class=\"text-muted\">Air your tracks online through a Youtube integration</span>"
 msgstr ""
 "<br/>\n"
-"                                        <span class=\"text-muted\">Youtubeとの連携によるトラックのオンライン配信</span>"
+"                                        <span class=\"text-muted\">Youtubeとの連携によるセッションのオンライン配信</span>"
 
 #. module: event
 #: model_terms:ir.ui.view,arch_db:event.res_config_settings_view_form
@@ -382,7 +383,7 @@ msgid ""
 "                                    <span class=\"text-muted\" invisible=\"state != 'cancel'\">Canceled</span>"
 msgstr ""
 "<span class=\"text-muted\" invisible=\"state != 'done'\">参加済</span>\n"
-"                                    <span class=\"text-muted\" invisible=\"state != 'cancel'\">キャンセル済</span>"
+"                                    <span class=\"text-muted\" invisible=\"state != 'cancel'\">取消済</span>"
 
 #. module: event
 #: model_terms:ir.ui.view,arch_db:event.event_report_template_badge_card
@@ -1273,7 +1274,7 @@ msgid ""
 "                    </div>\n"
 "                    <t t-if=\"object.barcode\"> \n"
 "                        <div style=\"margin-bottom: 5px;\">\n"
-"                            <img t-attf-src=\"/report/barcode/QR/{{object.barcode}}?&amp;width=100&amp;height=100&amp;quiet=0\" alt=\"QR Code\">\n"
+"                            <img t-attf-src=\"/report/barcode/QR/{{object.barcode}}?&amp;width=100&amp;height=100&amp;quiet=0\" width=\"100\" height=\"100\" alt=\"QR Code\">\n"
 "                        </div>\n"
 "                    </t>\n"
 "                    <t t-if=\"not object.company_id.uses_default_logo\">\n"
@@ -1509,7 +1510,7 @@ msgstr ""
 "                    </div>\n"
 "                    <t t-if=\"object.barcode\"> \n"
 "                        <div style=\"margin-bottom: 5px;\">\n"
-"                            <img t-attf-src=\"/report/barcode/QR/{{object.barcode}}?&amp;width=100&amp;height=100&amp;quiet=0\" alt=\"QR Code\">\n"
+"                            <img t-attf-src=\"/report/barcode/QR/{{object.barcode}}?&amp;width=100&amp;height=100&amp;quiet=0\" width=\"100\" height=\"100\" alt=\"QR Code\">\n"
 "                        </div>\n"
 "                    </t>\n"
 "                    <t t-if=\"not object.company_id.uses_default_logo\">\n"
@@ -1787,7 +1788,7 @@ msgstr "説明を追加..."
 msgid ""
 "Add a navigation menu to your event web pages with schedule, tracks, a track"
 " proposal form, etc."
-msgstr "スケジュール、トラック、トラック提案書などを含むイベントWebページにナビゲーションメニューを追加する。"
+msgstr "スケジュール、セッション、セッション提案フォームなどを含むイベントWebページにナビゲーションメニューを追加する。"
 
 #. module: event
 #: model_terms:ir.ui.view,arch_db:event.view_event_form
@@ -1919,7 +1920,7 @@ msgstr "出席"
 #: model_terms:ir.ui.view,arch_db:event.view_event_registration_form
 #: model_terms:ir.ui.view,arch_db:event.view_registration_search
 msgid "Attended"
-msgstr "出席した"
+msgstr "出席済"
 
 #. module: event
 #: model:ir.model.fields,field_description:event.field_event_registration__date_closed
@@ -2087,19 +2088,19 @@ msgstr "キャンペーン"
 #. module: event
 #: model_terms:ir.ui.view,arch_db:event.view_event_registration_tree
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "取消"
 
 #. module: event
 #: model_terms:ir.ui.view,arch_db:event.view_event_registration_form
 msgid "Cancel Registration"
-msgstr "登録をキャンセル"
+msgstr "登録を取消"
 
 #. module: event
 #. odoo-javascript
 #: code:addons/event/static/src/client_action/event_registration_summary_dialog.xml:0
 #, python-format
 msgid "Canceled registration"
-msgstr "キャンセルされた登録"
+msgstr "取消済登録"
 
 #. module: event
 #: model:event.stage,name:event.event_stage_cancelled
@@ -2153,7 +2154,7 @@ msgstr "ライブを見に来てください、お会いできるのを楽しみ
 #: model_terms:ir.ui.view,arch_db:event.view_event_form
 #: model_terms:ir.ui.view,arch_db:event.view_event_type_form
 msgid "Communication"
-msgstr "通信費"
+msgstr "通信"
 
 #. module: event
 #: model:ir.model.fields,help:event.field_event_mail__mail_registration_ids
@@ -3747,8 +3748,8 @@ msgid "Registered"
 msgstr "登録"
 
 #. module: event
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/event/models/event_ticket.py:0
 #: code:addons/event/models/event_ticket.py:0
 #: code:addons/event/static/src/client_action/event_registration_summary_dialog.xml:0
@@ -3914,7 +3915,7 @@ msgstr "バッジのスキャン"
 #. module: event
 #: model_terms:ir.ui.view,arch_db:event.res_config_settings_view_form
 msgid "Schedule & Tracks"
-msgstr "スケジュールとトラック"
+msgstr "スケジュールとセッション"
 
 #. module: event
 #: model:ir.model.fields,field_description:event.field_event_mail__scheduled_date
@@ -4353,8 +4354,8 @@ msgid "This ticket is not for an ongoing event"
 msgstr "このチケットは進行中のイベント用ではありません"
 
 #. module: event
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/event/controllers/main.py:0
 #: code:addons/event/static/src/client_action/event_registration_summary_dialog.xml:0
 #: model_terms:ir.ui.view,arch_db:event.event_event_ticket_view_form_from_event
@@ -4491,7 +4492,7 @@ msgstr ""
 "未確認: アクション(特定のケース、特に販売ステータス)を有する保留状態の登録\n"
 "登録済: 顧客によって登録されたとみなされる登録\n"
 "出席済: 出席者がイベントに出席した登録\n"
-"キャンセル済: 手動でキャンセルされた登録"
+"取消済: 手動で取消された登録"
 
 #. module: event
 #: model_terms:ir.actions.act_window,help:event.action_event_mail
@@ -4627,13 +4628,13 @@ msgstr "天候に恵まれない場合、イベントの中止、名称変更、
 #: model:ir.model.fields,field_description:event.field_event_event__website_message_ids
 #: model:ir.model.fields,field_description:event.field_event_registration__website_message_ids
 msgid "Website Messages"
-msgstr "サイトメッセージ"
+msgstr "ウェブサイトメッセージ"
 
 #. module: event
 #: model:ir.model.fields,help:event.field_event_event__website_message_ids
 #: model:ir.model.fields,help:event.field_event_registration__website_message_ids
 msgid "Website communication history"
-msgstr "サイト通信履歴"
+msgstr "ウェブサイト通信履歴"
 
 #. module: event
 #: model:ir.model.fields.selection,name:event.selection__event_mail__interval_unit__weeks

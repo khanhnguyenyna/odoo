@@ -2,13 +2,14 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import Command, fields
-from odoo.tests.common import Form
+from odoo.tests.common import Form, tagged
 from odoo.tools.float_utils import float_round, float_compare
 
 from odoo.addons.mrp_subcontracting.tests.common import TestMrpSubcontractingCommon
 from odoo.addons.mrp_account.tests.test_bom_price import TestBomPriceCommon
 
 
+@tagged('post_install', '-at_install')
 class TestAccountSubcontractingFlows(TestMrpSubcontractingCommon):
     def test_subcontracting_account_flow_1(self):
         # pylint: disable=bad-whitespace
@@ -16,9 +17,34 @@ class TestAccountSubcontractingFlows(TestMrpSubcontractingCommon):
         self.customer_location = self.env.ref('stock.stock_location_customers')
         self.supplier_location = self.env.ref('stock.stock_location_suppliers')
         self.uom_unit = self.env.ref('uom.product_uom_unit')
+
         product_category_all = self.env.ref('product.product_category_all')
         product_category_all.property_cost_method = 'fifo'
         product_category_all.property_valuation = 'real_time'
+        in_account = self.env['account.account'].create({
+            'name': 'IN Account',
+            'code': '000001',
+            'account_type': 'asset_current',
+        })
+        out_account = self.env['account.account'].create({
+            'name': 'OUT Account',
+            'code': '000002',
+            'account_type': 'asset_current',
+        })
+        valu_account = self.env['account.account'].create({
+            'name': 'VALU Account',
+            'code': '000003',
+            'account_type': 'asset_current',
+        })
+        production_cost_account = self.env['account.account'].create({
+            'name': 'PROD COST Account',
+            'code': '000004',
+            'account_type': 'asset_current',
+        })
+        product_category_all.property_stock_account_input_categ_id = in_account
+        product_category_all.property_stock_account_output_categ_id = out_account
+        product_category_all.property_stock_account_production_cost_id = production_cost_account
+        product_category_all.property_stock_valuation_account_id = valu_account
         stock_in_acc_id = product_category_all.property_stock_account_input_categ_id.id
         stock_out_acc_id = product_category_all.property_stock_account_output_categ_id.id
         stock_valu_acc_id = product_category_all.property_stock_valuation_account_id.id
@@ -134,7 +160,7 @@ class TestAccountSubcontractingFlows(TestMrpSubcontractingCommon):
 
     def test_subcontracting_account_flow_2(self):
         """Test when set Cost of Production account on production location, subcontracting
-        won't use it.
+        should use it.
         """
         # pylint: disable=bad-whitespace
         self.stock_location = self.env.ref('stock.stock_location_stock')
@@ -144,6 +170,30 @@ class TestAccountSubcontractingFlows(TestMrpSubcontractingCommon):
         product_category_all = self.env.ref('product.product_category_all')
         product_category_all.property_cost_method = 'fifo'
         product_category_all.property_valuation = 'real_time'
+        in_account = self.env['account.account'].create({
+            'name': 'IN Account',
+            'code': '000001',
+            'account_type': 'asset_current',
+        })
+        out_account = self.env['account.account'].create({
+            'name': 'OUT Account',
+            'code': '000002',
+            'account_type': 'asset_current',
+        })
+        valu_account = self.env['account.account'].create({
+            'name': 'VALU Account',
+            'code': '000003',
+            'account_type': 'asset_current',
+        })
+        production_cost_account = self.env['account.account'].create({
+            'name': 'PROD COST Account',
+            'code': '000004',
+            'account_type': 'asset_current',
+        })
+        product_category_all.property_stock_account_input_categ_id = in_account
+        product_category_all.property_stock_account_output_categ_id = out_account
+        product_category_all.property_stock_account_production_cost_id = production_cost_account
+        product_category_all.property_stock_valuation_account_id = valu_account
         stock_in_acc_id = product_category_all.property_stock_account_input_categ_id.id
         stock_valu_acc_id = product_category_all.property_stock_valuation_account_id.id
         stock_cop_acc_id = product_category_all.property_stock_account_production_cost_id.id
@@ -207,17 +257,21 @@ class TestAccountSubcontractingFlows(TestMrpSubcontractingCommon):
 
         amls = self.env['account.move.line'].search([('id', 'not in', all_amls_ids)])
         all_amls_ids += amls.ids
+        # get the account/input account of production location
+        production_location = self.env['stock.location'].search([('usage', '=', 'production'), ('company_id', '=', self.env.company.id)])
+        production_in_acc_id = production_location.valuation_in_account_id.id
+        production_out_acc_id = production_location.valuation_out_account_id.id
         self.assertRecordValues(amls, [
-            # Receipt from subcontractor
-            {'account_id': stock_valu_acc_id,   'product_id': self.finished.id,    'debit': 60.0,  'credit': 0.0},
-            {'account_id': stock_in_acc_id,     'product_id': self.finished.id,    'debit': 0.0,   'credit': 30.0},
-            {'account_id': stock_cop_acc_id,    'product_id': self.finished.id,    'debit': 0.0,   'credit': 30.0},
-            # Delivery com2 to subcontractor
-            {'account_id': stock_valu_acc_id,   'product_id': self.comp2.id,       'debit': 0.0,   'credit': 20.0},
-            {'account_id': stock_cop_acc_id,    'product_id': self.comp2.id,       'debit': 20.0,  'credit': 0.0},
-            # Delivery com2 to subcontractor
-            {'account_id': stock_valu_acc_id,   'product_id': self.comp1.id,       'debit': 0.0,   'credit': 10.0},
-            {'account_id': stock_cop_acc_id,    'product_id': self.comp1.id,       'debit': 10.0,  'credit': 0.0},
+            # Receipt from subcontractor     | should use output account of production location
+            {'account_id': stock_valu_acc_id,      'product_id': self.finished.id,    'debit': 60.0,  'credit': 0.0},
+            {'account_id': stock_in_acc_id,        'product_id': self.finished.id,    'debit': 0.0,   'credit': 30.0},
+            {'account_id': production_out_acc_id,  'product_id': self.finished.id,    'debit': 0.0,   'credit': 30.0},
+            # Delivery com2 to subcontractor | should use input account of production location
+            {'account_id': stock_valu_acc_id,      'product_id': self.comp2.id,       'debit': 0.0,   'credit': 20.0},
+            {'account_id': production_in_acc_id,   'product_id': self.comp2.id,       'debit': 20.0,  'credit': 0.0},
+            # Delivery com2 to subcontractor | should use input account of production location
+            {'account_id': stock_valu_acc_id,      'product_id': self.comp1.id,       'debit': 0.0,   'credit': 10.0},
+            {'account_id': production_in_acc_id,   'product_id': self.comp1.id,       'debit': 10.0,  'credit': 0.0},
         ])
 
     def test_subcontracting_account_backorder(self):
@@ -356,10 +410,34 @@ class TestAccountSubcontractingFlows(TestMrpSubcontractingCommon):
         product_category_all = self.env.ref('product.product_category_all')
         product_category_all.property_cost_method = 'standard'
         product_category_all.property_valuation = 'real_time'
+
+        in_account = self.env['account.account'].create({
+            'name': 'IN Account',
+            'code': '000001',
+            'account_type': 'asset_current',
+        })
+        out_account = self.env['account.account'].create({
+            'name': 'OUT Account',
+            'code': '000002',
+            'account_type': 'asset_current',
+        })
+        valu_account = self.env['account.account'].create({
+            'name': 'VALU Account',
+            'code': '000003',
+            'account_type': 'asset_current',
+        })
+        production_cost_account = self.env['account.account'].create({
+            'name': 'PROD COST Account',
+            'code': '000004',
+            'account_type': 'asset_current',
+        })
+        product_category_all.property_stock_account_input_categ_id = in_account
+        product_category_all.property_stock_account_output_categ_id = out_account
+        product_category_all.property_stock_account_production_cost_id = production_cost_account
+        product_category_all.property_stock_valuation_account_id = valu_account
         stock_in_acc_id = product_category_all.property_stock_account_input_categ_id.id
         stock_valu_acc_id = product_category_all.property_stock_valuation_account_id.id
         stock_cop_acc_id = product_category_all.property_stock_account_production_cost_id.id
-
         self.comp1.standard_price = 10
         self.comp2.standard_price = 20
         self.finished.standard_price = 40
@@ -393,6 +471,47 @@ class TestAccountSubcontractingFlows(TestMrpSubcontractingCommon):
             # Delivery com2 to subcontractor
             {'account_id': stock_valu_acc_id,   'product_id': self.comp1.id,       'debit': 0.0,   'credit': 10.0},
             {'account_id': stock_cop_acc_id,    'product_id': self.comp1.id,       'debit': 10.0,  'credit': 0.0},
+        ])
+
+    def test_input_output_accout_with_subcontract(self):
+        """
+        Test that the production stock account is optional, and we will fallback on input/output accounts.
+        """
+        product_category_all = self.env.ref('product.product_category_all')
+        product_category_all.property_cost_method = 'fifo'
+        product_category_all.property_valuation = 'real_time'
+        # set the production account to False
+        product_category_all.property_stock_account_production_cost_id = False
+        product_category_all.invalidate_recordset()
+        self.assertFalse(product_category_all.property_stock_account_production_cost_id)
+        self.assertEqual(self.bom.type, 'subcontract')
+        self.comp1.standard_price = 1.0
+        picking_form = Form(self.env['stock.picking'])
+        picking_form.picking_type_id = self.env.ref('stock.picking_type_in')
+        picking_form.partner_id = self.subcontractor_partner1
+        with picking_form.move_ids_without_package.new() as move:
+            move.product_id = self.finished
+            move.product_uom_qty = 1
+        picking_receipt = picking_form.save()
+        picking_receipt.action_confirm()
+        picking_receipt.move_ids.quantity = 1.0
+        picking_receipt.move_ids.picked = True
+        picking_receipt._action_done()
+        self.assertEqual(picking_receipt.state, 'done')
+
+        mo = picking_receipt._get_subcontract_production()
+        stock_valu_acc_id = product_category_all.property_stock_valuation_account_id.id
+        out_account = product_category_all.property_stock_account_output_categ_id.id
+        in_account = product_category_all.property_stock_account_input_categ_id.id
+        # Check that the input account is used for the finished move, as the production account is set to False.
+        self.assertRecordValues(mo.move_finished_ids.stock_valuation_layer_ids.account_move_id.line_ids, [
+            {'account_id': in_account, 'product_id': self.finished.id, 'debit': 0.0, 'credit': 1.0},
+            {'account_id': stock_valu_acc_id, 'product_id': self.finished.id, 'debit': 1.0, 'credit': 0.0},
+        ])
+        # Check that the output account is used for the move raw, as the production account is set to False.
+        self.assertRecordValues(mo.move_raw_ids.stock_valuation_layer_ids.account_move_id.line_ids, [
+            {'account_id': stock_valu_acc_id, 'product_id': self.comp1.id, 'debit': 0.0, 'credit': 1.0},
+            {'account_id': out_account, 'product_id': self.comp1.id, 'debit': 1.0, 'credit': 0.0},
         ])
 
 

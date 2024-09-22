@@ -19,16 +19,18 @@ class PaymentTransaction(models.Model):
 
     @api.depends('invoice_ids')
     def _compute_invoices_count(self):
-        self.env.cr.execute(
-            '''
-            SELECT transaction_id, count(invoice_id)
-            FROM account_invoice_transaction_rel
-            WHERE transaction_id IN %s
-            GROUP BY transaction_id
-            ''',
-            [tuple(self.ids)]
-        )
-        tx_data = dict(self.env.cr.fetchall())  # {id: count}
+        tx_data = {}
+        if self.ids:
+            self.env.cr.execute(
+                '''
+                SELECT transaction_id, count(invoice_id)
+                FROM account_invoice_transaction_rel
+                WHERE transaction_id IN %s
+                GROUP BY transaction_id
+                ''',
+                [tuple(self.ids)]
+            )
+            tx_data = dict(self.env.cr.fetchall())  # {id: count}
         for tx in self:
             tx.invoices_count = tx_data.get(tx.id, 0)
 
@@ -123,7 +125,7 @@ class PaymentTransaction(models.Model):
         # Create and post missing payments for transactions requiring reconciliation
         for tx in self.filtered(lambda t: t.operation != 'validation' and not t.payment_id):
             if not any(child.state in ['done', 'cancel'] for child in tx.child_transaction_ids):
-                tx._create_payment()
+                tx.with_company(tx.company_id)._create_payment()
 
     def _create_payment(self, **extra_create_values):
         """Create an `account.payment` record for the current transaction.
@@ -144,7 +146,7 @@ class PaymentTransaction(models.Model):
                     )
 
         payment_method_line = self.provider_id.journal_id.inbound_payment_method_line_ids\
-            .filtered(lambda l: l.code == self.provider_id._get_code())
+            .filtered(lambda l: l.payment_provider_id == self.provider_id)
         payment_values = {
             'amount': abs(self.amount),  # A tx may have a negative amount, but a payment must >= 0
             'payment_type': 'inbound' if self.amount > 0 else 'outbound',
@@ -194,15 +196,15 @@ class PaymentTransaction(models.Model):
         :return: None
         """
         self.ensure_one()
-        self = self.with_user(SUPERUSER_ID)  # Log messages as 'OdooBot'
+        author = self.env.user.partner_id if self.env.uid == SUPERUSER_ID else self.partner_id
         if self.source_transaction_id:
             for invoice in self.source_transaction_id.invoice_ids:
-                invoice.message_post(body=message)
+                invoice.message_post(body=message, author_id=author.id)
             payment_id = self.source_transaction_id.payment_id
             if payment_id:
-                payment_id.message_post(body=message)
+                payment_id.message_post(body=message, author_id=author.id)
         for invoice in self.invoice_ids:
-            invoice.message_post(body=message)
+            invoice.message_post(body=message, author_id=author.id)
 
     #=== BUSINESS METHODS - POST-PROCESSING ===#
 

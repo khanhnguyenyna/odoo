@@ -80,13 +80,12 @@ registry.category('website_custom_menus').add('website.menu_edit_menu', {
     Component: EditMenuDialog,
     isDisplayed: (env) => !!env.services.website.currentWebsite
         && env.services.website.isDesigner
-        && !env.services.ui.isSmall
         && !env.services.website.currentWebsite.metadata.translatable,
 });
 registry.category('website_custom_menus').add('website.menu_optimize_seo', {
     Component: OptimizeSEODialog,
     isDisplayed: (env) => env.services.website.currentWebsite
-        && env.services.website.isDesigner
+        && env.services.website.isRestrictedEditor
         && !!env.services.website.currentWebsite.metadata.canOptimizeSeo,
 });
 registry.category('website_custom_menus').add('website.menu_ace_editor', {
@@ -116,6 +115,5 @@ registry.category('website_custom_menus').add('website.custom_menu_edit_menu', {
     // the 'EditMenuDialog' component.
     isDisplayed: (env) => env.services.website.currentWebsite
         && env.services.website.currentWebsite.metadata.contentMenus
-        && env.services.website.currentWebsite.metadata.contentMenus.length
-        && !env.services.ui.isSmall,
+        && env.services.website.currentWebsite.metadata.contentMenus.length,
 });

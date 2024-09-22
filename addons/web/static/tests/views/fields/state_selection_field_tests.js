@@ -209,6 +209,21 @@ QUnit.module("Fields", (hooks) => {
         assert.isNotVisible(target.querySelector(".dropdown-menu"));
     });
 
+    QUnit.test("StateSelectionField for form view with hide_label option", async function (assert) {
+        await makeView({
+            type: "form",
+            resModel: "partner",
+            serverData,
+            arch: `
+                <form>
+                    <field name="selection" widget="state_selection" options="{'hide_label': False}"/>
+                </form>
+            `,
+            resId: 1,
+        });
+        assert.containsOnce(target, ".o_status_label");
+    });
+
     QUnit.test("StateSelectionField for list view with hide_label option", async function (assert) {
         Object.assign(serverData.models.partner.fields, {
             graph_type: {
@@ -230,7 +245,7 @@ QUnit.module("Fields", (hooks) => {
             arch: `
                 <tree>
                     <field name="graph_type" widget="state_selection" options="{'hide_label': True}"/>
-                    <field name="selection" widget="state_selection"/>
+                    <field name="selection" widget="state_selection" options="{'hide_label': False}"/>
                 </tree>`,
         });
 
@@ -625,6 +640,60 @@ QUnit.module("Fields", (hooks) => {
             await click(target, ".o_field_widget.o_field_state_selection .o_status");
             await click(target, ".dropdown-menu .dropdown-item:last-child");
             assert.verifySteps([]);
+        }
+    );
+
+    QUnit.test(
+        "StateSelectionField - hotkey handling when there are more than 3 options available",
+        async function (assert) {
+            serverData.models.partner.fields.selection.selection.push(
+                ["martin", "Martin"],
+                ["martine", "Martine"]
+            );
+            serverData.models.partner.records[0].selection = null;
+
+            await makeView({
+                type: "form",
+                resModel: "partner",
+                serverData,
+                arch: `
+                    <form>
+                        <sheet>
+                            <group>
+                                <field name="selection" widget="state_selection" options="{'autosave': False}"/>
+                            </group>
+                        </sheet>
+                    </form>`,
+                resId: 1,
+            });
+
+            await click(target, ".o_field_widget.o_field_state_selection .o_status");
+            assert.containsN(
+                target,
+                ".dropdown-menu .dropdown-item",
+                5,
+                "Five choices are displayed"
+            );
+            triggerHotkey("control+k");
+
+            await nextTick();
+            assert.strictEqual(
+                target.querySelector(".o_command#o_command_2").textContent,
+                "Set kanban state as DoneALT + G",
+                "hotkey and command are present"
+            );
+            assert.strictEqual(
+                target.querySelector(".o_command#o_command_4").textContent,
+                "Set kanban state as Martine",
+                "no hotkey is present, but the command exists"
+            );
+
+            await click(target.querySelector(".o_command#o_command_2"));
+            assert.hasClass(
+                target.querySelector(".o_status"),
+                "o_status_green",
+                "green color and Done state have been set"
+            );
         }
     );
 });

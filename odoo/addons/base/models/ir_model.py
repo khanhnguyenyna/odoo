@@ -182,6 +182,7 @@ class IrModel(models.Model):
     _description = "Models"
     _order = 'model'
     _rec_names_search = ['name', 'model']
+    _allow_sudo_commands = False
 
     def _default_field_id(self):
         if self.env.context.get('install_mode'):
@@ -244,8 +245,7 @@ class IrModel(models.Model):
     def _check_model_name(self):
         for model in self:
             if model.state == 'manual':
-                if not model.model.startswith('x_'):
-                    raise ValidationError(_("The model name must start with 'x_'."))
+                self._check_manual_name(model.model)
             if not models.check_object_name(model.model):
                 raise ValidationError(_("The model name can only contain lowercase characters, digits, underscores and dots."))
 
@@ -314,10 +314,9 @@ class IrModel(models.Model):
 
     def unlink(self):
         # prevent screwing up fields that depend on these models' fields
-        if self.state == 'manual':
-            self.field_id.filtered(lambda f: f.state == 'manual')._prepare_update()
-        else:
-            self.field_id._prepare_update()
+        manual_models = self.filtered(lambda model: model.state == 'manual')
+        manual_models.field_id.filtered(lambda f: f.state == 'manual')._prepare_update()
+        (self - manual_models).field_id._prepare_update()
 
         # delete fields whose comodel is being removed
         self.env['ir.model.fields'].search([('relation', 'in', self.mapped('model'))]).unlink()
@@ -386,7 +385,7 @@ class IrModel(models.Model):
             'model': model._name,
             'name': model._description,
             'order': model._order,
-            'info': next(cls.__doc__ for cls in type(model).mro() if cls.__doc__),
+            'info': next(cls.__doc__ for cls in self.env.registry[model._name].mro() if cls.__doc__),
             'state': 'manual' if model._custom else 'base',
             'transient': model._transient,
         }
@@ -444,6 +443,15 @@ class IrModel(models.Model):
 
         return CustomModel
 
+    @api.model
+    def _is_manual_name(self, name):
+        return name.startswith('x_')
+
+    @api.model
+    def _check_manual_name(self, name):
+        if not self._is_manual_name(name):
+            raise ValidationError(_("The model name must start with 'x_'."))
+
     def _add_manual_models(self):
         """ Add extra models to the registry. """
         # clean up registry first
@@ -492,6 +500,7 @@ class IrModelFields(models.Model):
     _description = "Fields"
     _order = "name"
     _rec_name = 'field_description'
+    _allow_sudo_commands = False
 
     name = fields.Char(string='Field Name', default='x_', required=True, index=True)
     complete_name = fields.Char(index=True)
@@ -769,14 +778,14 @@ class IrModelFields(models.Model):
                     'message': _("The table %r if used for other, possibly incompatible fields.", self.relation_table),
                 }}
 
-    @api.onchange('required', 'ttype', 'on_delete')
-    def _onchange_required(self):
+    @api.constrains('required', 'ttype', 'on_delete')
+    def _check_on_delete_required_m2o(self):
         for rec in self:
             if rec.ttype == 'many2one' and rec.required and rec.on_delete == 'set null':
-                return {'warning': {'title': _("Warning"), 'message': _(
+                raise ValidationError(_(
                     "The m2o field %s is required but declares its ondelete policy "
                     "as being 'set null'. Only 'restrict' and 'cascade' make sense.", rec.name,
-                )}}
+                ))
 
     def _get(self, model_name, name):
         """ Return the (sudoed) `ir.model.fields` record with the given model and name.
@@ -1256,7 +1265,7 @@ class IrModelFields(models.Model):
         elif field_data['ttype'] == 'monetary':
             # be sure that custom monetary field are always instanciated
             if not self.pool.loaded and \
-                not (field_data['currency_field'] and field_data['currency_field'].startswith('x_')):
+                not (field_data['currency_field'] and self._is_manual_name(field_data['currency_field'])):
                 return
             attrs['currency_field'] = field_data['currency_field']
         # add compute function if given
@@ -1269,6 +1278,10 @@ class IrModelFields(models.Model):
         attrs = self._instanciate_attrs(field_data)
         if attrs:
             return fields.Field.by_type[field_data['ttype']](**attrs)
+
+    @api.model
+    def _is_manual_name(self, name):
+        return name.startswith('x_')
 
     def _add_manual_fields(self, model):
         """ Add extra fields on model. """
@@ -1411,6 +1424,7 @@ class IrModelSelection(models.Model):
     _name = 'ir.model.fields.selection'
     _order = 'sequence, id'
     _description = "Fields Selection"
+    _allow_sudo_commands = False
 
     field_id = fields.Many2one("ir.model.fields",
         required=True, ondelete="cascade", index=True,
@@ -1718,6 +1732,7 @@ class IrModelConstraint(models.Model):
     """
     _name = 'ir.model.constraint'
     _description = 'Model Constraint'
+    _allow_sudo_commands = False
 
     name = fields.Char(string='Constraint', required=True, index=True,
                        help="PostgreSQL constraint or foreign key name.")
@@ -1736,13 +1751,9 @@ class IrModelConstraint(models.Model):
          'Constraints with the same name are unique per module.'),
     ]
 
-    def _module_data_uninstall(self):
-        """
-        Delete PostgreSQL foreign keys and constraints tracked by this model.
-        """
-        if not self.env.is_system():
-            raise AccessError(_('Administrator access is required to uninstall a module'))
-
+    def unlink(self):
+        self.check_access_rights('unlink')
+        self.check_access_rule('unlink')
         ids_set = set(self.ids)
         for data in self.sorted(key='id', reverse=True):
             name = tools.ustr(data.name)
@@ -1787,7 +1798,7 @@ class IrModelConstraint(models.Model):
                         sql.Identifier(table), sql.Identifier(hname)))
                     _logger.info('Dropped CONSTRAINT %s@%s', name, data.model.model)
 
-        self.unlink()
+        return super().unlink()
 
     def copy(self, default=None):
         default = dict(default or {})
@@ -1848,7 +1859,7 @@ class IrModelConstraint(models.Model):
         # map each constraint on the name of the module where it is defined
         constraint_module = {
             constraint[0]: cls._module
-            for cls in reversed(type(model).mro())
+            for cls in reversed(self.env.registry[model._name].mro())
             if models.is_definition_class(cls)
             for constraint in getattr(cls, '_local_sql_constraints', ())
         }
@@ -1858,9 +1869,11 @@ class IrModelConstraint(models.Model):
             conname = '%s_%s' % (model._table, key)
             module = constraint_module.get(key)
             record = self._reflect_constraint(model, conname, 'u', cons_text(definition), module, message)
+            xml_id = '%s.constraint_%s' % (module, conname)
             if record:
-                xml_id = '%s.constraint_%s' % (module, conname)
                 data_list.append(dict(xml_id=xml_id, record=record))
+            else:
+                self.env['ir.model.data']._load_xmlid(xml_id)
         if data_list:
             self.env['ir.model.data']._update_xmlids(data_list)
 
@@ -1872,6 +1885,7 @@ class IrModelRelation(models.Model):
     """
     _name = 'ir.model.relation'
     _description = 'Relation Model'
+    _allow_sudo_commands = False
 
     name = fields.Char(string='Relation Name', required=True, index=True,
                        help="PostgreSQL table name implementing a many2many relation.")
@@ -1934,6 +1948,7 @@ class IrModelAccess(models.Model):
     _name = 'ir.model.access'
     _description = 'Model Access'
     _order = 'model_id,group_id,name,id'
+    _allow_sudo_commands = False
 
     name = fields.Char(required=True, index=True)
     active = fields.Boolean(default=True, help='If you uncheck the active field, it will disable the ACL without deleting it (if you delete a native ACL, it will be re-created when you reload the module).')
@@ -2102,6 +2117,7 @@ class IrModelData(models.Model):
     _name = 'ir.model.data'
     _description = 'Model Data'
     _order = 'module, model, name'
+    _allow_sudo_commands = False
 
     name = fields.Char(string='External Identifier', required=True,
                        help="External Key/Identifier that can be used for "
@@ -2261,7 +2277,7 @@ class IrModelData(models.Model):
                     for module, name, model, res_id, create_date, write_date in result:
                         # small optimisation: during install a lot of xmlid are created/updated.
                         # Instead of clearing the cache, set the correct value in the cache to avoid a bunch of query
-                        self._xmlid_lookup.cache.add_value(self, f"{module}.{name}", cache_value=(model, res_id))
+                        self._xmlid_lookup.__cache__.add_value(self, f"{module}.{name}", cache_value=(model, res_id))
                         if create_date != write_date:
                             # something was updated, notify other workers
                             # it is possible that create_date and write_date
@@ -2429,8 +2445,6 @@ class IrModelData(models.Model):
         modules._remove_copied_views()
 
         # remove constraints
-        constraints = self.env['ir.model.constraint'].search([('module', 'in', modules.ids)])
-        constraints._module_data_uninstall()
         delete(self.env['ir.model.constraint'].browse(unique(constraint_ids)))
 
         # If we delete a selection field, and some of its values have ondelete='cascade',

@@ -5,7 +5,7 @@ import json
 import re
 from datetime import datetime
 
-from odoo import models, fields, _
+from odoo import models, fields, _, api
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -17,6 +17,18 @@ class AccountMove(models.Model):
     l10n_ke_cu_serial_number = fields.Char(string='CU Serial Number', copy=False)
     l10n_ke_cu_invoice_number = fields.Char(string='CU Invoice Number', copy=False)
     l10n_ke_cu_qrcode = fields.Char(string='CU QR Code', copy=False)
+    l10n_ke_cu_show_send_button = fields.Boolean(string='Show Send to Tremol button', compute='_compute_l10n_ke_cu_show_send_button')
+
+    @api.depends('country_code', 'l10n_ke_cu_qrcode', 'state', 'move_type', 'company_id')
+    def _compute_l10n_ke_cu_show_send_button(self):
+        for move in self:
+            move.l10n_ke_cu_show_send_button = (
+                move.country_code == 'KE'
+                and not move.l10n_ke_cu_qrcode
+                and move.state == 'posted'
+                and move.move_type in ['out_invoice', 'out_refund']
+                and not move.company_id.l10n_ke_oscu_is_active
+            )
 
     # -------------------------------------------------------------------------
     # HELPERS
@@ -68,20 +80,30 @@ class AccountMove(models.Model):
                 move_errors.append(_("This credit note must reference the previous invoice, and this previous invoice must have already been submitted."))
 
             for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
-                if not line.tax_ids or len(line.tax_ids) > 1:
-                    move_errors.append(_("On line %s, you must select one and only one tax.", line.name))
+                vat_taxes = line.tax_ids.filtered(lambda tax: tax.amount in (16, 8, 0))
+                if not vat_taxes or len(vat_taxes) > 1:
+                    move_errors.append(_("On line %s, you must select one and only one VAT tax.", line.name))
                 else:
-                    if line.tax_ids.amount == 0 and not line.tax_ids[0].l10n_ke_item_code_id:
+                    if vat_taxes[0].amount == 0 and not line.tax_ids[0].l10n_ke_item_code_id:
                         move_errors.append(_("On line %s, a tax with a KRA item code must be selected, since the tax is 0%% or exempt.", line.name))
-
-            for tax in move.invoice_line_ids.tax_ids:
-                if tax.amount not in (16, 8, 0):
-                    move_errors.append(_("Tax '%s' is used, but only taxes of 16%%, 8%%, 0%% or Exempt can be sent. Please reconfigure or change the tax.", tax.name))
 
             if move_errors:
                 errors.append((move.name, move_errors))
 
         return errors
+
+    def _l10n_ke_fiscal_device_details_filled(self):
+        self.ensure_one()
+        # If the company is configured for OSCU, don't block the Send & Print.
+        if self.company_id.l10n_ke_oscu_is_active:
+            return True
+        return all([
+            self.country_code == 'KE',
+            self.l10n_ke_cu_invoice_number,
+            self.l10n_ke_cu_serial_number,
+            self.l10n_ke_cu_qrcode,
+            self.l10n_ke_cu_datetime,
+        ])
 
     # -------------------------------------------------------------------------
     # SERIALISERS
@@ -167,18 +189,25 @@ class AccountMove(models.Model):
                     break
 
         msgs = []
+        tax_details = self._prepare_invoice_aggregated_taxes()
         for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product' and l.quantity and l.price_total > 0 and not discount_dict.get(l.id) >= 100):
             # Here we use the original discount of the line, since it the distributed discount has not been applied in the price_total
-            price = round(line.price_total / abs(line.quantity) * 100 / (100 - line.discount), 2) * currency_rate
-            percentage = line.tax_ids[0].amount
+            price_total = 0
+            percentage = 0
             item_code = line.tax_ids[0].l10n_ke_item_code_id
-
+            for tax in tax_details['tax_details_per_record'][line]['tax_details']:
+                if tax['tax'].amount in (16, 8, 0): # This should only occur once
+                    line_tax_details = tax_details['tax_details_per_record'][line]['tax_details'][tax]
+                    price_total = abs(line_tax_details['base_amount_currency']) + abs(line_tax_details['tax_amount_currency'])
+                    percentage = tax['tax'].amount
+            price = round(price_total / abs(line.quantity) * 100 / (100 - line.discount), 2) * currency_rate
+            price = ('%.5f' % price).rstrip('0').rstrip('.')
             uom = line.product_uom_id and line.product_uom_id.name or ''
 
             line_data = b';'.join([
                 self._l10n_ke_fmt(line.name, 36),                       # 36 symbols for the article's name
                 self._l10n_ke_fmt(item_code.tax_rate or 'A', 1),        # 1 symbol for article's vat class ('A', 'B', 'C', 'D', or 'E')
-                str(price)[:13].encode('cp1251'),                       # 1 to 13 symbols for article's price
+                price[:15].encode('cp1251'),                    # 1 to 15 symbols for article's price with up to 5 digits after decimal point
                 self._l10n_ke_fmt(uom, 3),                              # 3 symbols for unit of measure
                 (item_code.code or '').ljust(10).encode('cp1251'),      # 10 symbols for KRA item code in the format xxxx.xx.xx (can be empty)
                 self._l10n_ke_fmt(item_code.description or '', 20),     # 20 symbols for KRA item code description (can be empty)
@@ -218,6 +247,11 @@ class AccountMove(models.Model):
         """ Returns the client action descriptor dictionary for sending the
             invoice(s) to the control unit (the fiscal device).
         """
+        # If l10n_ke_edi_oscu is configured for the company, disable sending via TREMOL.
+        if self.company_id.l10n_ke_oscu_is_active:
+            raise UserError(
+                _('An OSCU has been initialized for this company. Please send the e-invoice via Send and Print -> Send to eTIMS instead.')
+            )
         # Check the configuration of the invoice
         errors = self._l10n_ke_validate_move()
         if errors:

@@ -258,6 +258,28 @@ QUnit.module("Fields", (hooks) => {
         );
     });
 
+    QUnit.test("ReferenceField respects no_quick_create", async function (assert) {
+        await makeView({
+            type: "form",
+            resModel: "partner",
+            serverData,
+            arch: `<form><field name="reference" options="{'no_quick_create': 1}" /></form>`,
+        });
+
+        await editSelect(target, "select", "partner");
+        await click(target, ".o_field_widget[name='reference'] input");
+        await editInput(target, ".o_field_widget[name='reference'] input", "new partner");
+        assert.containsOnce(
+            target,
+            ".ui-autocomplete .o_m2o_dropdown_option",
+            "Dropdown should be opened and have only one item"
+        );
+        assert.hasClass(
+            target.querySelector(".ui-autocomplete .o_m2o_dropdown_option"),
+            "o_m2o_dropdown_option_create_edit"
+        );
+    });
+
     QUnit.test("ReferenceField in modal readonly mode", async function (assert) {
         serverData.models.partner.records[0].p = [2];
         serverData.models.partner.records[1].trululu = 1;
@@ -501,6 +523,37 @@ QUnit.module("Fields", (hooks) => {
             target.querySelector(".o_field_widget[name=reference] input").value,
             "gold",
             "should contain a link with the new value"
+        );
+    });
+
+    QUnit.test("Many2One 'Search more...' updates on resModel change", async function (assert) {
+
+        serverData.views = {
+            "product,false,list": '<tree><field name="display_name"/></tree>',
+            "product,false,search": '<search/>',
+        };
+
+        await makeView({
+            type: "form",
+            resModel: "partner",
+            serverData,
+            arch: '<form><field name="reference"/></form>',
+        });
+
+        // Selecting a relation
+        await editSelect(target.querySelector("div.o_field_reference"), "select.o_input", "partner_type");
+
+        // Selecting another relation
+        await editSelect(target.querySelector("div.o_field_reference"), "select.o_input", "product");
+
+        // Opening the Search More... option
+        await click(target.querySelector("div.o_field_reference"), "input.o_input");
+        await click(target.querySelector("div.o_field_reference"), ".o_m2o_dropdown_option_search_more");
+
+        assert.strictEqual(
+            target.querySelector("div.modal td.o_data_cell").innerText,
+            "xphone",
+            "The search more should lead to the values of product."
         );
     });
 
@@ -789,6 +842,7 @@ QUnit.module("Fields", (hooks) => {
 
         await editInput(target, ".o_field_widget[name='model_id'] input", "Partner");
         await click(target, ".ui-autocomplete .ui-menu-item:first-child");
+        await nextTick();
         assert.strictEqual(
             target.querySelector(".o_field_widget[name='reference'] input").value,
             "",
@@ -1006,6 +1060,7 @@ QUnit.module("Fields", (hooks) => {
             //Select the "Partner" option, different from original "Product"
             const dropdownItems = [...target.querySelectorAll(".o_list_table .o_list_many2one .o_input_dropdown .dropdown-item")];
             await click(dropdownItems.filter(item => item.text === "Partner")[0]);
+            await nextTick();
             assert.strictEqual(target.querySelector(".reference_field input").value, "");
             assert.strictEqual(target.querySelector(".o_list_many2one input").value, "Partner");
             //Void the associated, required, "reference" field and make sure the form marks the field as required

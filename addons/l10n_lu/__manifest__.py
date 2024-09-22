@@ -4,7 +4,7 @@
     'website': 'https://www.odoo.com/documentation/17.0/applications/finance/fiscal_localizations/luxembourg.html',
     'icon': '/account/static/description/l10n.png',
     'countries': ['lu'],
-    'version': '2.1',
+    'version': '2.2',
     'category': 'Accounting/Localizations/Account Charts',
     'description': """
 This is the base module to manage the accounting chart for Luxembourg.
@@ -27,6 +27,7 @@ Notes:
         'base_vat',
     ],
     'data': [
+        'data/account.account.tag.csv',
         'data/l10n_lu_chart_data.xml',
         'data/tax_report/section_1.xml',
         'data/tax_report/section_2.xml',

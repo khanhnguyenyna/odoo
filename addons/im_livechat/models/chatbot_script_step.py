@@ -330,7 +330,7 @@ class ChatbotScriptStep(models.Model):
 
         if discuss_channel.livechat_channel_id:
             human_operator = discuss_channel.livechat_channel_id._get_operator(
-                lang=discuss_channel.livechat_visitor_id.lang_id.code,
+                lang=discuss_channel.livechat_visitor_id.lang_id.code if hasattr(discuss_channel, "livechat_visitor_id") else None,
                 country_id=discuss_channel.country_id.id
             )
 
@@ -341,6 +341,12 @@ class ChatbotScriptStep(models.Model):
                 human_operator.partner_id.ids,
                 open_chat_window=True,
                 post_joined_message=False)
+
+            # rename the channel to include the operator's name
+            discuss_channel.sudo().name = ' '.join([
+                self.env.user.display_name if not self.env.user._is_public() else discuss_channel.anonymous_name,
+                human_operator.livechat_username if human_operator.livechat_username else human_operator.name
+            ])
 
             if self.message:
                 # first post the message of the step (if we have one)

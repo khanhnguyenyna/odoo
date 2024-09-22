@@ -13,6 +13,8 @@ from odoo.exceptions import UserError
 from odoo.osv import expression
 from odoo.addons.mail.tools import link_preview
 
+LINK_TRACKER_MIN_CODE_LENGTH = 3
+
 
 class LinkTracker(models.Model):
     """ Link trackers allow users to wrap any URL into a short URL that can be
@@ -100,7 +102,7 @@ class LinkTracker(models.Model):
             utms = {}
             for key, field_name, cook in self.env['utm.mixin'].tracking_fields():
                 field = self._fields[field_name]
-                attr = getattr(tracker, field_name)
+                attr = tracker[field_name]
                 if field.type == 'many2one':
                     attr = attr.name
                 if attr:
@@ -156,6 +158,8 @@ class LinkTracker(models.Model):
             if 'url' not in vals:
                 raise ValueError(_('Creating a Link Tracker without URL is not possible'))
 
+            if vals['url'].startswith(('?', '#')):
+                raise UserError(_("%r is not a valid link, links cannot redirect to the current page.", vals['url']))
             vals['url'] = tools.validate_url(vals['url'])
 
             if not vals.get('title'):
@@ -183,6 +187,8 @@ class LinkTracker(models.Model):
     def search_or_create(self, vals):
         if 'url' not in vals:
             raise ValueError(_('Creating a Link Tracker without URL is not possible'))
+        if vals['url'].startswith(('?', '#')):
+            raise UserError(_("%r is not a valid link, links cannot redirect to the current page.", vals['url']))
         vals['url'] = tools.validate_url(vals['url'])
 
         search_domain = [
@@ -253,7 +259,7 @@ class LinkTrackerCode(models.Model):
 
     @api.model
     def _get_random_code_strings(self, n=1):
-        size = 3
+        size = LINK_TRACKER_MIN_CODE_LENGTH
         while True:
             code_propositions = [
                 ''.join(random.choices(string.ascii_letters + string.digits, k=size))
@@ -272,7 +278,7 @@ class LinkTrackerClick(models.Model):
     _description = "Link Tracker Click"
 
     campaign_id = fields.Many2one(
-        'utm.campaign', 'UTM Campaign',
+        'utm.campaign', 'UTM Campaign', index='btree_not_null',
         related="link_id.campaign_id", store=True, ondelete="set null")
     link_id = fields.Many2one(
         'link.tracker', 'Link',

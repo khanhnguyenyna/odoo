@@ -4,14 +4,15 @@
 # 
 # Translators:
 # Wil Odoo, 2023
+# Thi Huong Nguyen, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-01-05 12:31+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Thi Huong Nguyen, 2024\n"
 "Language-Team: Vietnamese (https://app.transifex.com/odoo/teams/41243/vi/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -52,6 +53,8 @@ msgstr "<span class=\"o_stat_value\">%</span>"
 #: model_terms:ir.ui.view,arch_db:purchase_stock.purchase_order_view_form_inherit
 msgid "<span invisible=\"on_time_rate &gt;= 0\">No On-time Delivery Data</span>"
 msgstr ""
+"<span invisible=\"on_time_rate &gt;= 0\">Không có dữ liệu giao hàng đúng "
+"hạn</span>"
 
 #. module: purchase_stock
 #: model_terms:ir.ui.view,arch_db:purchase_stock.res_config_settings_view_form_stock
@@ -61,7 +64,7 @@ msgstr "<span> ngày</span>"
 #. module: purchase_stock
 #: model_terms:ir.ui.view,arch_db:purchase_stock.product_view_kanban_catalog_purchase_only
 msgid "<span>Forecasted: </span>"
-msgstr ""
+msgstr "<span>Được dự báo: </span>"
 
 #. module: purchase_stock
 #: model_terms:ir.ui.view,arch_db:purchase_stock.report_purchaseorder_document
@@ -89,7 +92,7 @@ msgstr ""
 #. module: purchase_stock
 #: model:ir.model.fields,field_description:purchase_stock.field_stock_rule__action
 msgid "Action"
-msgstr "Hành động"
+msgstr "Tác vụ"
 
 #. module: purchase_stock
 #: model:ir.model.fields,field_description:purchase_stock.field_purchase_order__effective_date
@@ -288,13 +291,6 @@ msgid "Go back to the purchase order to generate the vendor bill."
 msgstr "Quay lại đơn mua hàng để tạo hóa đơn mua hàng."
 
 #. module: purchase_stock
-#. odoo-python
-#: code:addons/purchase_stock/wizard/product_replenish.py:0
-#, python-format
-msgid "Go on the product form and add the list of vendors"
-msgstr "Đi đến biểu mẫu sản phẩm và thêm danh sách nhà cung cấp"
-
-#. module: purchase_stock
 #: model:ir.model.fields,field_description:purchase_stock.field_vendor_delay_report__id
 msgid "ID"
 msgstr "ID"
@@ -361,9 +357,10 @@ msgid ""
 "Orders for reordering products,they will be scheduled that many days earlier"
 " to cope with unexpected vendor delays."
 msgstr ""
-"Biên độ sai lệch thời gian mua hàng. Khi hệ thống tạo các đơn mua hàng để "
-"tái đặt hàng sản phẩm, số ngày này sẽ được thêm vào thời gian mua hàng để "
-"ngăn ngừa sự trễ hạn không mong muốn từ phía nhà cung cấp."
+"Biên độ sai lệch thời gian hoàn thành đơn hàng của nhà cung cấp. Khi hệ "
+"thống tạo các đơn mua hàng để tái đặt hàng sản phẩm, số ngày này sẽ được "
+"thêm vào thời gian mua hàng để ngăn ngừa sự trễ hạn không mong muốn từ phía "
+"nhà cung cấp."
 
 #. module: purchase_stock
 #: model:ir.model,name:purchase_stock.model_stock_warehouse_orderpoint
@@ -642,7 +639,6 @@ msgstr "Hiển thị nút đặt nhà cung cấp"
 
 #. module: purchase_stock
 #: model:ir.model.fields,field_description:purchase_stock.field_product_replenish__show_vendor
-#: model_terms:ir.ui.view,arch_db:purchase_stock.view_product_replenish_form_inherit_stock
 msgid "Show Vendor"
 msgstr "Hiển thị nhà cung cấp"
 
@@ -843,13 +839,6 @@ msgstr "Báo cáo mức độ chậm trễ của nhà cung cấp"
 #, python-format
 msgid "Vendor Lead Time"
 msgstr "Thời gian giao hàng của nhà cung cấp"
-
-#. module: purchase_stock
-#. odoo-python
-#: code:addons/purchase_stock/wizard/product_replenish.py:0
-#, python-format
-msgid "Vendor Not Found in Product %s"
-msgstr "Không tìm thấy nhà cung cấp trong sản phẩm %s"
 
 #. module: purchase_stock
 #: model_terms:ir.actions.act_window,help:purchase_stock.action_purchase_vendor_delay_report

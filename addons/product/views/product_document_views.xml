@@ -7,18 +7,27 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
+                    <field name="res_model" invisible="True"/>
                     <label for="name"/>
                     <h1>
                         <field name="name" readonly="not datas and type != 'url'"/>
                     </h1>
                     <group>
-                        <field name="type" readonly="datas or id"/>
-                        <field name="datas" filename="name" invisible="type == 'url'" required="type == 'binary'"/>
+                        <field name="type" readonly="datas or id" class="oe_inline"/>
+                        <field name="datas"
+                               filename="name"
+                               invisible="type == 'url'"
+                               required="type == 'binary'"
+                               class="oe_inline"/>
                         <field name="url" widget="url" invisible="type == 'binary'" required="type == 'url'"/>
+                        <field name="res_name" string="Product Variant" invisible="res_model != 'product.product'"/>
                     </group>
                     <group string="Attached To" groups="base.group_no_one">
                         <field name="res_name"/>
-                        <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
+                        <field name="company_id"
+                               groups="base.group_multi_company"
+                               options="{'no_create': True}"
+                               class="oe_inline"/>
                     </group>
                     <group string="History" groups="base.group_no_one" invisible="not create_date">
                         <label for="create_uid" string="Creation"/>
@@ -51,8 +60,12 @@
                     </t>
                     <t t-name="kanban-box">
                         <div class="oe_kanban_global_area o_kanban_attachment">
+                            <field name="res_model" invisible="True"/>
                             <div class="ribbon ribbon-top-right" invisible="active">
                                 <span class="text-bg-danger">Archived</span>
+                            </div>
+                            <div class="ribbon ribbon-top-right" invisible="not active or res_model != 'product.product'">
+                                <span class="text-bg-secondary">Variant</span>
                             </div>
                             <div class="o_kanban_image">
                                 <t t-set="webimage" t-value="new RegExp('image.*(gif|jpeg|jpg|png|webp)').test(record.mimetype.value)"/>
@@ -64,8 +77,8 @@
                                     <div t-else="" class="o_image o_image_thumbnail" t-att-data-mimetype="record.mimetype.value"/>
                                 </div>
                             </div>
-                            <div class="o_kanban_details">
-                                <div class="o_kanban_details_wrapper">
+                            <div class="o_kanban_details h-100">
+                                <div class="o_kanban_details_wrapper h-100 justify-content-between">
                                     <div class="o_kanban_record_title">
                                         <field name="name" class="o_text_overflow"/>
                                     </div>
@@ -74,7 +87,12 @@
                                          t-if="record.type.raw_value == 'url'">
                                         <field name="url" widget="url" invisible="type == 'binary'"/>
                                     </div>
-                                    <div class="o_kanban_record_bottom flex-column" name="bottom"/>
+                                    <div class="o_kanban_record_bottom flex-column" name="bottom">
+                                        <div class="mt-2" invisible="res_model != 'product.product'">
+                                            <span>Variant </span>
+                                            <field name="res_name" style="font-style: italic; text-decoration-line: underline;"/>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -102,6 +120,10 @@
             <search>
                 <field name="name"/>
                 <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+                <filter
+                    string="Documents of this variant"
+                    name="context_variant"
+                    domain="[('res_model', '=', 'product.product'), ('res_id', '=', context.get('default_res_id'))]"/>
             </search>
         </field>
     </record>

@@ -46,20 +46,9 @@ class StockMove(models.Model):
         return self.sale_line_id.order_id or res
 
     def _get_sale_order_lines(self):
-        """ Return all possible sale order lines for one or multiple stock moves. """
-        def _get_origin_moves(move):
-            origin_moves = move.move_orig_ids
-            if origin_moves:
-                origin_moves += _get_origin_moves(origin_moves)
-            return origin_moves
-
-        def _get_destination_moves(move):
-            destination_moves = move.move_dest_ids
-            if destination_moves:
-                destination_moves += _get_destination_moves(destination_moves)
-            return destination_moves
-
-        return (self + _get_origin_moves(self) + _get_destination_moves(self)).sale_line_id
+        """ Return all possible sale order lines for one stock move. """
+        self.ensure_one()
+        return (self + self.browse(self._rollup_move_origs() | self._rollup_move_dests())).sale_line_id
 
     def _assign_picking_post_process(self, new=False):
         super(StockMove, self)._assign_picking_post_process(new=new)
@@ -76,6 +65,14 @@ class StockMove(models.Model):
     def _get_all_related_sm(self, product):
         return super()._get_all_related_sm(product) | self.filtered(lambda m: m.sale_line_id.product_id == product)
 
+
+class StockMoveLine(models.Model):
+    _inherit = "stock.move.line"
+
+    def _should_show_lot_in_invoice(self):
+        return 'customer' in {self.location_id.usage, self.location_dest_id.usage}
+
+
 class ProcurementGroup(models.Model):
     _inherit = 'procurement.group'
 
@@ -87,7 +84,7 @@ class StockRule(models.Model):
 
     def _get_custom_move_fields(self):
         fields = super(StockRule, self)._get_custom_move_fields()
-        fields += ['sale_line_id', 'partner_id', 'sequence']
+        fields += ['sale_line_id', 'partner_id', 'sequence', 'to_refund']
         return fields
 
 

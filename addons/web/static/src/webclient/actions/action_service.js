@@ -125,6 +125,7 @@ function makeActionManager(env) {
     let dialogCloseProm;
     let actionCache = {};
     let dialog = null;
+    let nextDialog = null;
 
     // The state action (or default user action if none) is loaded as soon as possible
     // so that the next "doAction" will have its action ready when needed.
@@ -315,9 +316,19 @@ function makeActionManager(env) {
         const options = { clearBreadcrumbs: true };
         let actionRequest = null;
         if (state.action) {
+            const context = {};
+            if (state.active_id) {
+                context.active_id = state.active_id;
+            }
+            if (state.active_ids) {
+                context.active_ids = parseActiveIds(state.active_ids);
+            } else if (state.active_id) {
+                context.active_ids = [state.active_id];
+            }
             // ClientAction
             if (actionRegistry.contains(state.action)) {
                 actionRequest = {
+                    context,
                     params: state,
                     tag: state.action,
                     type: "ir.actions.client",
@@ -325,15 +336,7 @@ function makeActionManager(env) {
             } else {
                 // The action to load isn't the current one => executes it
                 actionRequest = state.action;
-                const context = { params: state };
-                if (state.active_id) {
-                    context.active_id = state.active_id;
-                }
-                if (state.active_ids) {
-                    context.active_ids = parseActiveIds(state.active_ids);
-                } else if (state.active_id) {
-                    context.active_ids = [state.active_id];
-                }
+                context.params = state;
                 Object.assign(options, {
                     additionalContext: context,
                     viewType: state.view_type,
@@ -674,9 +677,6 @@ function makeActionManager(env) {
                 onError(this.onError);
             }
             onError(error) {
-                if (!this.isMounted) {
-                    reject(error);
-                }
                 if (this.isMounted) {
                     // the error occurred on the controller which is
                     // already in the DOM, so simply show the error
@@ -690,11 +690,13 @@ function makeActionManager(env) {
                     } else {
                         const lastCt = controllerStack[controllerStack.length - 1];
                         if (lastCt) {
-                            // the error occurred while rendering a new controller,
-                            // so go back to the last non faulty controller
-                            // (the error will be shown anyway as the promise
-                            // has been rejected)
-                            restore(lastCt.jsId);
+                            if (lastCt.jsId !== controller.jsId) {
+                                // the error occurred while rendering a new controller,
+                                // so go back to the last non faulty controller
+                                // (the error will be shown anyway as the promise
+                                // has been rejected)
+                                restore(lastCt.jsId);
+                            }
                         } else {
                             env.bus.trigger("ACTION_MANAGER:UPDATE", {});
                         }
@@ -771,7 +773,6 @@ function makeActionManager(env) {
         ControllerComponent.props = {
             "*": true,
         };
-        let nextDialog = null;
         if (action.target === "new") {
             const actionDialogProps = {
                 ActionComponent: ControllerComponent,
@@ -795,6 +796,9 @@ function makeActionManager(env) {
                     }
                 },
             });
+            if (nextDialog) {
+                nextDialog.remove();
+            }
             nextDialog = {
                 remove: removeDialogFn,
                 onClose: onClose || options.onClose,
@@ -849,6 +853,7 @@ function makeActionManager(env) {
             Component: ControllerComponent,
             componentProps: controller.props,
         };
+        env.services.dialog.closeAll();
         env.bus.trigger("ACTION_MANAGER:UPDATE", controller.__info__);
         return Promise.all([currentActionProm, closingProm]).then((r) => r[0]);
     }
@@ -1451,6 +1456,7 @@ export const actionService = {
         "title",
         "ui",
         "user",
+        "dialog",
     ],
     start(env) {
         return makeActionManager(env);

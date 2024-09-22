@@ -23,15 +23,17 @@ publicWidget.registry.hrRecruitment = publicWidget.Widget.extend({
     },
 
     _onClickApplyButton (ev) {
-        const linkedin_profile = $('#recruitment4').val();
-        const resume = $('#recruitment6').val();
-        if (linkedin_profile.trim() === '' &&
-            resume.trim() === '') {
-            $('#recruitment4').attr('required', true);
-            $('#recruitment6').attr('required', true);
+        const $linkedin_profile = $('#recruitment4');
+        const $resume = $('#recruitment6');
+
+        const is_linkedin_empty = !$linkedin_profile.length || $linkedin_profile.val().trim() === '';
+        const is_resume_empty = !$resume.length || !$resume[0].files.length;
+        if (is_linkedin_empty && is_resume_empty) {
+            $linkedin_profile.attr('required', true);
+            $resume.attr('required', true);
         } else {
-            $('#recruitment4').attr('required', false);
-            $('#recruitment6').attr('required', false);
+            $linkedin_profile.attr('required', false);
+            $resume.attr('required', false);
         }
     },
 

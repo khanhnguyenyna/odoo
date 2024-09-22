@@ -3,10 +3,13 @@
 import { makeFakeNotificationService } from "@web/../tests/helpers/mock_services";
 import {
     click,
+    clickSave,
     editInput,
     getFixture,
+    getNodesTextContent,
     nextTick,
     patchWithCleanup,
+    selectDropdownItem,
     triggerHotkey,
 } from "@web/../tests/helpers/utils";
 import { makeView, setupViewRegistries } from "@web/../tests/views/helpers";
@@ -707,4 +710,187 @@ QUnit.module("Fields", (hooks) => {
             assert.verifySteps(["search_read"]);
         }
     );
+
+    QUnit.test(
+        "clickable statusbar with readonly modifier set to false is editable",
+        async function (assert) {
+            await makeView({
+                type: "form",
+                resModel: "partner",
+                resId: 2,
+                serverData,
+                arch: `
+                <form>
+                    <header>
+                        <field name="product_id" widget="statusbar" options="{'clickable': true}" readonly="False"/>
+                    </header>
+                </form>`,
+            });
+            assert.containsN(target, ".o_statusbar_status button:visible", 2);
+            assert.containsNone(
+                target,
+                ".o_statusbar_status button[disabled][aria-checked='false']:visible"
+            );
+        }
+    );
+
+    QUnit.test(
+        "clickable statusbar with readonly modifier set to true is not editable",
+        async function (assert) {
+            await makeView({
+                type: "form",
+                resModel: "partner",
+                resId: 2,
+                serverData,
+                arch: `
+                <form>
+                    <header>
+                        <field name="product_id" widget="statusbar" options="{'clickable': true}" readonly="True"/>
+                    </header>
+                </form>`,
+            });
+            assert.containsN(target, ".o_statusbar_status button[disabled]:visible", 2);
+        }
+    );
+
+    QUnit.test(
+        "non-clickable statusbar with readonly modifier set to false is not editable",
+        async function (assert) {
+            await makeView({
+                type: "form",
+                resModel: "partner",
+                resId: 2,
+                serverData,
+                arch: `
+                <form>
+                    <header>
+                        <field name="product_id" widget="statusbar" options="{'clickable': false}" readonly="False"/>
+                    </header>
+                </form>`,
+            });
+            assert.containsN(target, ".o_statusbar_status button[disabled]:visible", 2);
+        }
+    );
+
+    QUnit.test(
+        "last status bar button have a border radius (no arrow shape) on the right side when a prior folded stage gets selected",
+        async function (assert) {
+            serverData.models = {
+                stage: {
+                    fields: {
+                        name: { string: "Name", type: "char" },
+                        folded: { string: "Folded", type: "boolean", default: false },
+                    },
+                    records: [
+                        { id: 1, name: "New" },
+                        { id: 2, name: "In Progress", folded: true },
+                        { id: 3, name: "Done" },
+                    ],
+                },
+                task: {
+                    fields: {
+                        status: { string: "Status", type: "many2one", relation: "stage" },
+                    },
+                    records: [
+                        { id: 1, status: 1 },
+                        { id: 2, status: 2 },
+                        { id: 3, status: 3 },
+                    ],
+                },
+            };
+
+            await makeView({
+                type: "form",
+                resModel: "task",
+                resId: 3,
+                serverData,
+                arch: `
+                <form>
+                    <header>
+                        <field name="status" widget="statusbar" options="{'clickable': true, 'fold_field': 'folded'}" />
+                    </header>
+                </form>`,
+            });
+            await click(target, ".o_statusbar_status .dropdown-toggle:not(.d-none)");
+            await click(target, ".o-dropdown .dropdown-item");
+
+            const button = target.querySelector(".o_statusbar_status button[data-value='3']");
+            assert.notEqual(button.style.borderTopRightRadius, "0px");
+            assert.hasClass(button, "o_first");
+        }
+    );
+
+    QUnit.test("correctly load statusbar when dynamic domain changes", async function (assert) {
+        serverData.models = {
+            stage: {
+                fields: {
+                    name: { string: "Name", type: "char" },
+                    folded: { string: "Folded", type: "boolean", default: false },
+                    project_ids: { string: "Project", type: "many2many", relation: "project" },
+                },
+                records: [
+                    { id: 1, name: "Stage Project 1", project_ids: [1] },
+                    { id: 2, name: "Stage Project 2", project_ids: [2] },
+                ],
+            },
+            project: {
+                fields: {
+                    display_name: { string: "Name", type: "char" },
+                },
+                records: [
+                    { id: 1, display_name: "Project 1" },
+                    { id: 2, display_name: "Project 2" },
+                ],
+            },
+            task: {
+                fields: {
+                    status: { string: "Status", type: "many2one", relation: "stage" },
+                    project_id: { string: "Project", type: "many2one", relation: "project" },
+                },
+                records: [{ id: 1, project_id: 1, status: 1 }],
+            },
+        };
+        serverData.models.task.onchanges = {
+            project_id: (obj) => {
+                obj.status = obj.project_id === 1 ? 1 : 2;
+            },
+        };
+
+        await makeView({
+            type: "form",
+            resModel: "task",
+            resId: 1,
+            serverData,
+            arch: `
+                <form>
+                    <header>
+                    <field name="status" widget="statusbar" domain="[('project_ids', 'in', project_id)]" />
+                    </header>
+                    <field name="project_id"/>
+                </form>`,
+            mockRPC(route, args) {
+                if (args.method === "search_read") {
+                    assert.step(JSON.stringify(args.kwargs.domain));
+                }
+            },
+        });
+
+        assert.deepEqual(
+            getNodesTextContent(target.querySelectorAll(".o_statusbar_status button:not(.d-none)")),
+            ["Stage Project 1"]
+        );
+        assert.verifySteps(['["|",["id","=",1],["project_ids","in",1]]']);
+        await selectDropdownItem(target, "project_id", "Project 2");
+        assert.deepEqual(
+            getNodesTextContent(target.querySelectorAll(".o_statusbar_status button:not(.d-none)")),
+            ["Stage Project 2"]
+        );
+        assert.verifySteps(['["|",["id","=",2],["project_ids","in",2]]']);
+        await clickSave(target);
+        assert.deepEqual(
+            getNodesTextContent(target.querySelectorAll(".o_statusbar_status button:not(.d-none)")),
+            ["Stage Project 2"]
+        );
+        assert.verifySteps([]);
+    });
 });

@@ -2,11 +2,13 @@
 
 import { DateSection } from "@mail/core/common/date_section";
 import { Message } from "@mail/core/common/message";
+import { Record } from "@mail/core/common/record";
 import { useVisible } from "@mail/utils/common/hooks";
 
 import {
     Component,
     onMounted,
+    onWillDestroy,
     onWillPatch,
     onWillUpdateProps,
     toRaw,
@@ -84,20 +86,20 @@ export class Thread extends Component {
         this.loadOlderState = useVisible(
             "load-older",
             () => {
-                if (this.loadOlderState.isVisible && !this.isJumpingRecent) {
+                if (this.loadOlderState.isVisible) {
                     this.threadService.fetchMoreMessages(this.props.thread);
                 }
             },
-            { init: null }
+            { init: null, ready: false }
         );
         this.loadNewerState = useVisible(
             "load-newer",
             () => {
-                if (this.loadNewerState.isVisible && !this.isJumpingRecent) {
+                if (this.loadNewerState.isVisible) {
                     this.threadService.fetchMoreMessages(this.props.thread, "newer");
                 }
             },
-            { init: null }
+            { init: null, ready: false }
         );
         this.presentThresholdState = useVisible(
             "present-treshold",
@@ -112,18 +114,18 @@ export class Thread extends Component {
         useEffect(
             () => {
                 if (this.props.jumpPresent !== this.lastJumpPresent) {
+                    this.messageHighlight?.clearHighlight();
                     if (this.props.thread.loadNewer) {
-                        this.jumpToPresent("instant");
+                        this.jumpToPresent();
                     } else {
                         if (this.props.order === "desc") {
                             this.scrollableRef.el.scrollTop = 0;
-                            this.props.thread.scrollTop = 0;
                         } else {
                             this.scrollableRef.el.scrollTop =
                                 this.scrollableRef.el.scrollHeight -
                                 this.scrollableRef.el.clientHeight;
-                            this.props.thread.scrollTop = "bottom";
                         }
+                        this.props.thread.scrollTop = "bottom";
                     }
                     this.lastJumpPresent = this.props.jumpPresent;
                 }
@@ -141,10 +143,25 @@ export class Thread extends Component {
             },
             () => [this.state.mountedAndLoaded]
         );
-        onMounted(async () => {
-            await this.threadService.fetchNewMessages(this.props.thread);
-            this.state.mountedAndLoaded = true;
+        onMounted(() => {
+            if (!this.env.chatter || this.env.chatter?.fetchMessages) {
+                if (this.env.chatter) {
+                    this.env.chatter.fetchMessages = false;
+                }
+                this.threadService.fetchNewMessages(this.props.thread);
+            }
         });
+        useEffect(
+            (isLoaded) => {
+                this.state.mountedAndLoaded = isLoaded;
+            },
+            /**
+             * Observe `mountedAndLoaded` as well because it might change from
+             * other parts of the code without `useEffect` detecting any change
+             * for `isLoaded`, and it should still be reset when patching.
+             */
+            () => [this.props.thread.isLoaded, this.state.mountedAndLoaded]
+        );
         useBus(this.env.bus, "MAIL:RELOAD-THREAD", ({ detail }) => {
             const { model, id } = this.props.thread;
             if (detail.model === model && detail.id === id) {
@@ -155,7 +172,12 @@ export class Thread extends Component {
             if (nextProps.thread.notEq(this.props.thread)) {
                 this.lastJumpPresent = nextProps.jumpPresent;
             }
-            this.threadService.fetchNewMessages(nextProps.thread);
+            if (!this.env.chatter || this.env.chatter?.fetchMessages) {
+                if (this.env.chatter) {
+                    this.env.chatter.fetchMessages = false;
+                }
+                this.threadService.fetchNewMessages(nextProps.thread);
+            }
         });
     }
 
@@ -217,11 +239,53 @@ export class Thread extends Component {
          * in place (point 1).
          */
         let loadNewer;
+        const reset = () => {
+            this.state.mountedAndLoaded = false;
+            this.loadOlderState.ready = false;
+            this.loadNewerState.ready = false;
+            lastSetValue = undefined;
+            snapshot = undefined;
+            newestPersistentMessage = undefined;
+            oldestPersistentMessage = undefined;
+            loadedAndPatched = false;
+            loadNewer = false;
+        };
+        /**
+         * These states need to be immediately reset when the value changes on
+         * the record, because the transition is important, not only the final
+         * value. If resetting is depending on the update cycle, it can happen
+         * that the value quickly changes and then back again before there is
+         * any mounting/patching, and the change would therefore be undetected.
+         */
+        let stopOnChange = Record.onChange(this.props.thread, "isLoaded", () => {
+            if (!this.props.thread.isLoaded || !this.state.mountedAndLoaded) {
+                reset();
+            }
+        });
+        onWillUpdateProps((nextProps) => {
+            if (nextProps.thread.notEq(this.props.thread)) {
+                stopOnChange();
+                stopOnChange = Record.onChange(nextProps.thread, "isLoaded", () => {
+                    if (!nextProps.thread.isLoaded || !this.state.mountedAndLoaded) {
+                        reset();
+                    }
+                });
+            }
+        });
+        onWillDestroy(() => stopOnChange());
         const saveScroll = () => {
-            this.props.thread.scrollTop =
-                ref.el.scrollHeight - ref.el.scrollTop - ref.el.clientHeight < 30
-                    ? "bottom"
-                    : ref.el.scrollTop;
+            const isBottom =
+                this.props.order === "asc"
+                    ? ref.el.scrollHeight - ref.el.scrollTop - ref.el.clientHeight < 30
+                    : ref.el.scrollTop < 30;
+            if (isBottom) {
+                this.props.thread.scrollTop = "bottom";
+            } else {
+                this.props.thread.scrollTop =
+                    this.props.order === "asc"
+                        ? ref.el.scrollTop
+                        : ref.el.scrollHeight - ref.el.scrollTop - ref.el.clientHeight;
+            }
         };
         const setScroll = (value) => {
             ref.el.scrollTop = value;
@@ -229,9 +293,8 @@ export class Thread extends Component {
             saveScroll();
         };
         const applyScroll = () => {
-            if (this.state.mountedAndLoaded) {
-                loadedAndPatched = true;
-            } else {
+            if (!this.props.thread.isLoaded || !this.state.mountedAndLoaded) {
+                reset();
                 return;
             }
             // Use toRaw() to prevent scroll check from triggering renders.
@@ -246,18 +309,24 @@ export class Thread extends Component {
                 (this.props.order === "asc" &&
                     newerMessages &&
                     (loadNewer || thread.scrollTop !== "bottom"));
-            if (snapshot && !this.isJumpingRecent && messagesAtTop) {
+            if (snapshot && messagesAtTop) {
                 setScroll(snapshot.scrollTop + ref.el.scrollHeight - snapshot.scrollHeight);
-            } else if (snapshot && !this.isJumpingRecent && messagesAtBottom) {
+            } else if (snapshot && messagesAtBottom) {
                 setScroll(snapshot.scrollTop);
             } else if (
                 !this.env.messageHighlight?.highlightedMessageId &&
                 thread.scrollTop !== undefined
             ) {
-                const value =
-                    thread.scrollTop === "bottom"
-                        ? ref.el.scrollHeight - ref.el.clientHeight
-                        : thread.scrollTop;
+                let value;
+                if (thread.scrollTop === "bottom") {
+                    value =
+                        this.props.order === "asc" ? ref.el.scrollHeight - ref.el.clientHeight : 0;
+                } else {
+                    value =
+                        this.props.order === "asc"
+                            ? thread.scrollTop
+                            : ref.el.scrollHeight - thread.scrollTop - ref.el.clientHeight;
+                }
                 if (lastSetValue === undefined || Math.abs(lastSetValue - value) > 1) {
                     setScroll(value);
                 }
@@ -266,6 +335,11 @@ export class Thread extends Component {
             newestPersistentMessage = thread.newestPersistentMessage;
             oldestPersistentMessage = thread.oldestPersistentMessage;
             loadNewer = thread.loadNewer;
+            if (!loadedAndPatched) {
+                loadedAndPatched = true;
+                this.loadOlderState.ready = true;
+                this.loadNewerState.ready = true;
+            }
         };
         onWillPatch(() => {
             if (!loadedAndPatched) {
@@ -307,21 +381,12 @@ export class Thread extends Component {
         this.threadService.fetchMoreMessages(this.props.thread);
     }
 
-    async jumpToPresent(behavior) {
-        this.isJumpingRecent = true;
+    async jumpToPresent() {
+        this.messageHighlight?.clearHighlight();
         await this.threadService.loadAround(this.props.thread);
         this.props.thread.loadNewer = false;
-        this.present.el?.scrollIntoView({
-            behavior: behavior ?? (this.props.order === "asc" ? "smooth" : "instant"), // FIXME somehow smooth not working in desc mode
-            block: "center",
-        });
-        // Let smooth scroll a bit so load more is not visible
-        // smooth scrolling starts after 1 animation frame, hence needs to wait 2 animation frames
-        // for load more becoming not visible
-        await new Promise((resolve) => setTimeout(() => requestAnimationFrame(resolve)));
-        await new Promise((resolve) => setTimeout(() => requestAnimationFrame(resolve)));
+        this.props.thread.scrollTop = "bottom";
         this.state.showJumpPresent = false;
-        this.isJumpingRecent = false;
     }
 
     /**

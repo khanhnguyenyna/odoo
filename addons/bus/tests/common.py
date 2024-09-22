@@ -12,19 +12,22 @@ except ImportError:
     websocket = None
 
 import odoo.tools
-from odoo.tests import HOST, common
+from odoo.tests import HOST, HttpCase
 from ..websocket import CloseCode, Websocket, WebsocketConnectionHandler
 from ..models.bus import dispatch, hashable, channel_with_db
 
 
-class WebsocketCase(common.HttpCase):
+class WebsocketCase(HttpCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         if websocket is None:
             cls._logger.warning("websocket-client module is not installed")
             raise unittest.SkipTest("websocket-client module is not installed")
-        cls._WEBSOCKET_URL = f"ws://{HOST}:{odoo.tools.config['http_port']}/websocket"
+        cls._BASE_WEBSOCKET_URL = f"ws://{HOST}:{odoo.tools.config['http_port']}/websocket"
+        cls._WEBSOCKET_URL = f"{cls._BASE_WEBSOCKET_URL}?version={WebsocketConnectionHandler._VERSION}"
+        websocket_allowed_patch = patch.object(WebsocketConnectionHandler, "websocket_allowed", return_value=True)
+        cls.startClassPatcher(websocket_allowed_patch)
 
     def setUp(self):
         super().setUp()
@@ -61,7 +64,7 @@ class WebsocketCase(common.HttpCase):
                 ws.close(CloseCode.CLEAN)
         self.wait_remaining_websocket_connections()
 
-    def websocket_connect(self, *args, **kwargs):
+    def websocket_connect(self, *args, ping_after_connect=True, **kwargs):
         """
         Connect a websocket. If no cookie is given, the connection is
         opened with a default session. The created websocket is closed
@@ -73,8 +76,11 @@ class WebsocketCase(common.HttpCase):
         if 'timeout' not in kwargs:
             kwargs['timeout'] = 5
         ws = websocket.create_connection(
-            type(self)._WEBSOCKET_URL, *args, **kwargs
+            self._WEBSOCKET_URL, *args, **kwargs
         )
+        if ping_after_connect:
+            ws.ping()
+            ws.recv_data_frame(control_frame=True)  # pong
         self._websockets.add(ws)
         return ws
 
@@ -98,7 +104,7 @@ class WebsocketCase(common.HttpCase):
             sub = {'event_name': 'subscribe', 'data': {
                 'channels': channels or [],
             }}
-            if last:
+            if last is not None:
                 sub['data']['last'] = last
             websocket.send(json.dumps(sub))
             if wait_for_dispatch:
@@ -109,9 +115,9 @@ class WebsocketCase(common.HttpCase):
         notifications are available. Usefull since the bus is not able to do
         it during tests.
         """
+        self.env.cr.precommit.run()  # trigger the creation of bus.bus records
         channels = [
-            hashable(channel_with_db(self.registry.db_name, c))
-            if isinstance(c, str) else c for c in channels
+            hashable(channel_with_db(self.registry.db_name, c)) for c in channels
         ]
         websockets = set()
         for channel in channels:
@@ -124,7 +130,7 @@ class WebsocketCase(common.HttpCase):
         for event in self._websocket_events:
             event.wait(5)
 
-    def assert_close_with_code(self, websocket, expected_code):
+    def assert_close_with_code(self, websocket, expected_code, expected_reason=None):
         """
         Assert that the websocket is closed with the expected_code.
         """
@@ -134,3 +140,6 @@ class WebsocketCase(common.HttpCase):
         code = struct.unpack('!H', payload[:2])[0]
         # ensure the close code is the one we expected
         self.assertEqual(code, expected_code)
+        if expected_reason:
+            # ensure the close reason is the one we expected
+            self.assertEqual(payload[2:].decode(), expected_reason)

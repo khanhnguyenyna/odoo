@@ -179,13 +179,12 @@ class TestEventNotifications(TransactionCase, MailCase, CronMixinCase):
 
         self.assertEqual(len(capt.records), 1)
         self.assertLessEqual(capt.records.call_at, now)
-
         with patch.object(fields.Datetime, 'now', lambda: now):
-            with self.assertSinglePostNotifications([{'partner': self.partner, 'type': 'inbox'}], {
-                'message_type': 'user_notification',
-                'subtype': 'mail.mt_note',
-            }):
-                self.env['calendar.alarm_manager'].with_context(lastcall=now - relativedelta(minutes=15))._send_reminder()
+            self.env['calendar.alarm_manager'].with_context(lastcall=now - relativedelta(minutes=25))._send_reminder()
+            self.env.flush_all()
+            new_messages = self.env['mail.message'].search([('model', '=', 'calendar.event'), ('res_id', '=', self.event.id), ('subject', '=', 'test event - Reminder')])
+            user_message = new_messages.filtered(lambda x: self.event.user_id.partner_id in x.partner_ids)
+            self.assertTrue(user_message, "Organizer must receive a reminder")
 
     def test_email_alarm_recurrence(self):
         # test that only a single cron trigger is created for recurring events.
@@ -267,3 +266,130 @@ class TestEventNotifications(TransactionCase, MailCase, CronMixinCase):
                 }).with_context(mail_notrack=True)
                 self.env.flush_all()
                 self.assertEqual(len(capt.records), 1)
+
+        with self.capture_triggers('calendar.ir_cron_scheduler_alarm') as capt:
+            # Create alarm with one hour interval.
+            alarm_hour = self.env['calendar.alarm'].create({
+                'name': 'Alarm',
+                'alarm_type': 'email',
+                'interval': 'hours',
+                'duration': 1,
+            })
+            # Create monthly recurrence, ensure the next alarm is set to the first event
+            # and then one month later must be set one hour before to the last event.
+            with freeze_time('2024-04-16 10:00+0000'):
+                now = fields.Datetime.now()
+                self.env['calendar.event'].create({
+                    'name': "Single Doom's day",
+                    'start': now + relativedelta(hours=2),
+                    'stop': now + relativedelta(hours=3),
+                    'recurrency': True,
+                    'rrule_type': 'monthly',
+                    'count': 2,
+                    'day': 16,
+                    'alarm_ids': [fields.Command.link(alarm_hour.id)],
+                }).with_context(mail_notrack=True)
+                self.env.flush_all()
+                # Ensure that there is only one alarm set, exactly for one hour previous the event.
+                self.assertEqual(len(capt.records), 1, "Only one trigger must be created for the entire recurrence.")
+                self.assertEqual(capt.records.mapped('call_at'), [datetime(2024, 4, 16, 11, 0)], "Alarm must be one hour before the first event.")
+
+            # Garbage-collect the previous trigger from the cron.
+            with freeze_time('2024-05-10 11:00+0000'):
+                self.env['ir.cron.trigger']._gc_cron_triggers()
+
+            with freeze_time('2024-04-22 10:00+0000'):
+                # The next alarm will be set through the next_date selection for the next event.
+                # Ensure that there is only one alarm set, exactly for one hour previous the event.
+                self.env['calendar.alarm_manager']._send_reminder()
+                self.assertEqual(len(capt.records), 1, "Only one trigger must be created for the entire recurrence.")
+                self.assertEqual(capt.records.mapped('call_at'), [datetime(2024, 5, 16, 11, 0)], "Alarm must be one hour before the second event.")
+
+    def test_email_alarm_daily_recurrence(self):
+        # test email alarm is sent correctly on daily recurrence
+        alarm = self.env['calendar.alarm'].create({
+            'name': 'Alarm',
+            'alarm_type': 'email',
+            'interval': 'minutes',
+            'duration': 5,
+        })
+        cron = self.env.ref('calendar.ir_cron_scheduler_alarm')
+        cron.lastcall = False
+        with self.capture_triggers('calendar.ir_cron_scheduler_alarm') as capt:
+            with freeze_time('2022-04-13 10:00+0000'):
+                now = fields.Datetime.now()
+                self.env['calendar.event'].create({
+                    'name': "Recurring Event",
+                    'start': now + relativedelta(minutes=15),
+                    'stop': now + relativedelta(minutes=20),
+                    'recurrency': True,
+                    'rrule_type': 'daily',
+                    'count': 3,
+                    'alarm_ids': [fields.Command.link(alarm.id)],
+                }).with_context(mail_notrack=True)
+                self.env.flush_all()
+                self.assertEqual(len(capt.records), 1, "1 trigger should have been created for the whole recurrence (1)")
+                self.assertEqual(capt.records.call_at, datetime(2022, 4, 13, 10, 10))
+
+        with self.capture_triggers('calendar.ir_cron_scheduler_alarm') as capt:
+            with freeze_time('2022-04-13 10:11+0000'):
+                self.env['calendar.alarm_manager']._send_reminder()
+                self.assertEqual(len(capt.records), 1)
+
+        with self.capture_triggers('calendar.ir_cron_scheduler_alarm') as capt:
+            with freeze_time('2022-04-14 10:11+0000'):
+                self.env['calendar.alarm_manager']._send_reminder()
+                self.assertEqual(len(capt.records), 1, "1 trigger should have been created for the whole recurrence (2)")
+                self.assertEqual(capt.records.call_at, datetime(2022, 4, 15, 10, 10))
+
+    def test_notification_event_timezone(self):
+        """
+            Check the domain that decides when calendar events should be notified to the user.
+        """
+        def search_event():
+            return self.env['calendar.event'].search(self.env['res.users']._systray_get_calendar_event_domain())
+
+        self.env.user.tz = 'Europe/Brussels' # UTC +1 15th November 2023
+        event = self.env['calendar.event'].create({
+            'name': "Meeting",
+            'start': datetime(2023, 11, 15, 18, 0), # 19:00
+            'stop': datetime(2023, 11, 15, 19, 0),  # 20:00
+        }).with_context(mail_notrack=True)
+        with freeze_time('2023-11-15 17:30:00'):    # 18:30 before event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-15 18:00:00'):    # 19:00 during event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-15 18:30:00'):    # 19:30 during event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-15 19:00:00'):    # 20:00 during event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-15 19:30:00'):    # 20:30 after event
+            self.assertEqual(len(search_event()), 0)
+        event.unlink()
+
+        self.env.user.tz = 'America/Lima' # UTC -5 15th November 2023
+        event = self.env['calendar.event'].create({
+            'name': "Meeting",
+            'start': datetime(2023, 11, 16, 0, 0), # 19:00 15th November
+            'stop': datetime(2023, 11, 16, 1, 0),  # 20:00 15th November
+        }).with_context(mail_notrack=True)
+        with freeze_time('2023-11-15 23:30:00'):    # 18:30 before event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-16 00:00:00'):    # 19:00 during event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-16 00:30:00'):    # 19:30 during event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-16 01:00:00'):    # 20:00 during event
+            self.assertEqual(search_event(), event)
+        with freeze_time('2023-11-16 01:30:00'):    # 20:30 after event
+            self.assertEqual(len(search_event()), 0)
+        event.unlink()
+
+        event = self.env['calendar.event'].create({
+            'name': "Meeting",
+            'start': datetime(2023, 11, 16, 21, 0), # 16:00 16th November
+            'stop': datetime(2023, 11, 16, 22, 0),  # 27:00 16th November
+        }).with_context(mail_notrack=True)
+        with freeze_time('2023-11-15 19:00:00'):    # 14:00 the day before event
+            self.assertEqual(len(search_event()), 0)
+        event.unlink()

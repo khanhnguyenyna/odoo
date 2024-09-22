@@ -33,7 +33,9 @@ class Pricelist(models.Model):
     company_id = fields.Many2one(
         comodel_name='res.company',
         tracking=5,
+        default=lambda self: self.env.company,
     )
+
     country_group_ids = fields.Many2many(
         comodel_name='res.country.group',
         relation='res_country_group_pricelist_rel',
@@ -68,6 +70,22 @@ class Pricelist(models.Model):
     def _compute_display_name(self):
         for pricelist in self:
             pricelist.display_name = f'{pricelist.name} ({pricelist.currency_id.name})'
+
+    def write(self, values):
+        res = super().write(values)
+
+        # Make sure that there is no multi-company issue in the existing rules after the company
+        # change.
+        if 'company_id' in values and len(self) == 1:
+            self.item_ids._check_company()
+
+        return res
+
+    def copy_data(self, default=None):
+        default = default or {}
+        if not default.get('name'):
+            default['name'] = _('%s (copy)', self.name)
+        return super().copy_data(default=default)
 
     def _get_products_price(self, products, *args, **kwargs):
         """Compute the pricelist prices for the specified products, quantity & uom.
@@ -219,12 +237,15 @@ class Pricelist(models.Model):
     # Split methods to ease (community) overrides
     def _get_applicable_rules(self, products, date, **kwargs):
         self and self.ensure_one()  # self is at most one record
+        if not self:
+            return self.env['product.pricelist.item']
+
         # Do not filter out archived pricelist items, since it means current pricelist is also archived
         # We do not want the computation of prices for archived pricelist to always fallback on the Sales price
         # because no rule was found (thanks to the automatic orm filtering on active field)
         return self.env['product.pricelist.item'].with_context(active_test=False).search(
             self._get_applicable_rules_domain(products=products, date=date, **kwargs)
-        )
+        ).with_context(self.env.context)
 
     def _get_applicable_rules_domain(self, products, date, **kwargs):
         self and self.ensure_one()  # self is at most one record
@@ -292,10 +313,26 @@ class Pricelist(models.Model):
         pl_domain = self._get_partner_pricelist_multi_search_domain_hook(company_id)
 
         # if no specific property, try to find a fitting pricelist
-        result = Property._get_multi('property_product_pricelist', Partner._name, partner_ids)
+        specific_properties = Property._get_multi(
+            'property_product_pricelist', Partner._name,
+            list(models.origin_ids(partner_ids)),  # Some NewID can be in the partner_ids
+        )
+        result = {}
+        remaining_partner_ids = []
+        for pid in partner_ids:
+            if (
+                specific_properties.get(pid)
+                and specific_properties[pid]._get_partner_pricelist_multi_filter_hook()
+            ):
+                result[pid] = specific_properties[pid]
+            elif (
+                isinstance(pid, models.NewId) and specific_properties.get(pid.origin)
+                and specific_properties[pid.origin]._get_partner_pricelist_multi_filter_hook()
+            ):
+                result[pid] = specific_properties[pid.origin]
+            else:
+                remaining_partner_ids.append(pid)
 
-        remaining_partner_ids = [pid for pid, val in result.items() if not val or
-                                 not val._get_partner_pricelist_multi_filter_hook()]
         if remaining_partner_ids:
             # get fallback pricelist when no pricelist for a given country
             pl_fallback = (
@@ -309,8 +346,7 @@ class Pricelist(models.Model):
             for country, partners in partners_by_country.items():
                 pl = Pricelist.search(pl_domain + [('country_group_ids.country_ids', '=', country.id if country else False)], limit=1)
                 pl = pl or pl_fallback
-                for pid in partners.ids:
-                    result[pid] = pl
+                result.update(dict.fromkeys(partners._ids, pl))
 
         return result
 

@@ -56,11 +56,17 @@ class AccountMove(models.Model):
         for move in self:
             if all([
                 move.company_id.account_peppol_proxy_state == 'active',
-                move.partner_id.account_peppol_is_endpoint_valid,
+                move.commercial_partner_id.account_peppol_is_endpoint_valid,
                 move.state == 'posted',
                 move.move_type in ('out_invoice', 'out_refund', 'out_receipt'),
                 not move.peppol_move_state,
             ]):
                 move.peppol_move_state = 'ready'
+            elif (
+                move.state == 'draft'
+                and move.is_sale_document(include_receipts=True)
+                and move.peppol_move_state not in ('processing', 'done')
+            ):
+                move.peppol_move_state = False
             else:
                 move.peppol_move_state = move.peppol_move_state

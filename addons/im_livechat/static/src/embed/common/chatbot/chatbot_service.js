@@ -26,7 +26,6 @@ export class ChatBotService {
     /** @type {number} */
     nextStepTimeout;
     hasPostedWelcomeSteps = false;
-    shouldRestore = false;
     isTyping = false;
 
     constructor(env, services) {
@@ -70,11 +69,6 @@ export class ChatBotService {
             this.chatbot = this.livechatService.rule?.chatbot
                 ? new Chatbot(this.livechatService.rule.chatbot)
                 : undefined;
-            this.shouldRestore = Boolean(
-                localStorage.getItem(
-                    `im_livechat.chatbot.state.uuid_${this.livechatService.sessionCookie?.uuid}`
-                )
-            );
         });
         this.bus.addEventListener("MESSAGE_POST", ({ detail: message }) => {
             if (this.currentStep?.type === "free_input_multi") {
@@ -93,18 +87,12 @@ export class ChatBotService {
             await this.postWelcomeSteps();
             this.save();
         }
-        if (this.shouldRestore && this.livechatService.state !== SESSION_STATE.PERSISTED) {
-            // We need to repost the welcome steps as they were not saved.
-            this.chatbot.welcomeStepIndex = 0;
-            this.currentStep = null;
-        }
         if (!this.currentStep?.expectAnswer) {
             this._triggerNextStep();
         } else if (this.livechatService.thread?.isLastMessageFromCustomer) {
             // Answer was posted but is yet to be processed.
             this._processUserAnswer(this.livechatService.thread.newestMessage);
         }
-        this.shouldRestore = false;
     }
 
     /**
@@ -128,11 +116,22 @@ export class ChatBotService {
         if (!this.completed || !this.livechatService.thread) {
             return;
         }
-        const message = await this.rpc("/chatbot/restart", {
-            channel_uuid: this.livechatService.thread.uuid,
-            chatbot_script_id: this.chatbot.scriptId,
-        });
-        this.livechatService.thread?.messages.push({ ...message, body: markup(message.body) });
+        localStorage.removeItem(
+            `im_livechat.chatbot.state.uuid_${this.livechatService.thread.uuid}`
+        );
+        const message = this.store.Message.insert(
+            await this.rpc("/chatbot/restart", {
+                channel_uuid: this.livechatService.thread.uuid,
+                chatbot_script_id: this.chatbot.scriptId,
+            }),
+            { html: true }
+        );
+        if (!this.livechatService.thread) {
+            return;
+        }
+        if (message.notIn(this.livechatService.thread.messages)) {
+            this.livechatService.thread.messages.push(message);
+        }
         this.currentStep = null;
         this.start();
     }
@@ -166,7 +165,7 @@ export class ChatBotService {
         if (this.completed) {
             return;
         }
-        this.isTyping = true;
+        this.isTyping = !this.isRestoringSavedState;
         this.nextStepTimeout = browser.setTimeout(async () => {
             const { step, stepMessage } = await this._getNextStep();
             if (!this.active) {
@@ -255,15 +254,21 @@ export class ChatBotService {
         }
         this.currentStep.hasAnswer = true;
         this.save();
+        let isRedirecting = false;
         if (answer) {
+            if (answer.redirectLink && URL.canParse(answer.redirectLink, window.location.href)) {
+                const url = new URL(window.location.href);
+                const nextURL = new URL(answer.redirectLink, window.location.href);
+                isRedirecting = url.pathname !== nextURL.pathname || url.origin !== nextURL.origin;
+                browser.location.assign(answer.redirectLink);
+            }
             await this.rpc("/chatbot/answer/save", {
                 channel_uuid: this.livechatService.thread.uuid,
                 message_id: stepMessage.id,
                 selected_answer_id: answer.id,
             });
         }
-        if (answer?.redirectLink) {
-            browser.location.assign(answer.redirectLink);
+        if (isRedirecting) {
             return;
         }
         this._triggerNextStep();
@@ -298,21 +303,23 @@ export class ChatBotService {
      * Restore the chatbot from the state saved in the local storage and
      * clear outdated storage.
      */
-    async restore() {
-        const chatbotStorageKey = `im_livechat.chatbot.state.uuid_${this.livechatService.sessionCookie?.uuid}`;
-        const { _chatbotCurrentStep, _chatbot } = JSON.parse(
-            browser.localStorage.getItem(chatbotStorageKey) ?? "{}"
-        );
+    async _restore() {
+        const { _chatbotCurrentStep, _chatbot } = this.savedState;
         this.currentStep = _chatbotCurrentStep ? new ChatbotStep(_chatbotCurrentStep) : undefined;
         this.chatbot = _chatbot ? new Chatbot(_chatbot) : undefined;
+        if (this.livechatService.state !== SESSION_STATE.PERSISTED) {
+            // We need to repost the welcome steps as they were not saved.
+            this.chatbot.welcomeStepIndex = 0;
+            this.currentStep = null;
+        }
     }
 
     /**
      * Clear outdated storage.
      */
     async clear() {
-        const chatbotStorageKey = this.livechatService.sessionCookie
-            ? `im_livechat.chatbot.state.uuid_${this.livechatService.sessionCookie.uuid}`
+        const chatbotStorageKey = this.livechatService.savedState
+            ? `im_livechat.chatbot.state.uuid_${this.livechatService.savedState.uuid}`
             : "";
         for (let i = 0; i < browser.localStorage.length; i++) {
             const key = browser.localStorage.key(i);
@@ -326,6 +333,9 @@ export class ChatBotService {
      * Save the chatbot state in the local storage.
      */
     async save() {
+        if (this.isRestoringSavedState) {
+            return;
+        }
         browser.localStorage.setItem(
             `im_livechat.chatbot.state.uuid_${this.livechatService.thread.uuid}`,
             JSON.stringify({
@@ -340,16 +350,13 @@ export class ChatBotService {
     // =============================================================================
 
     get stepDelay() {
-        return (this.shouldRestore && !this.chatbot.welcomeCompleted) ||
-            this.livechatService.thread?.isLastMessageFromCustomer
+        return this.isRestoringSavedState || this.livechatService.thread?.isLastMessageFromCustomer
             ? 0
             : STEP_DELAY;
     }
 
     get messageDelay() {
-        return (this.shouldRestore && !this.chatbot.welcomeCompleted) || !this.currentStep
-            ? 0
-            : MESSAGE_DELAY;
+        return this.isRestoringSavedState | !this.currentStep ? 0 : MESSAGE_DELAY;
     }
 
     get active() {
@@ -395,6 +402,17 @@ export class ChatBotService {
             default:
                 return _t("Say something");
         }
+    }
+
+    get savedState() {
+        const raw = browser.localStorage.getItem(
+            `im_livechat.chatbot.state.uuid_${this.livechatService.savedState?.uuid}`
+        );
+        return raw ? JSON.parse(raw) : null;
+    }
+
+    get isRestoringSavedState() {
+        return this.savedState?._chatbotCurrentStep.id > this.currentStep?.id;
     }
 }
 

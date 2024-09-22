@@ -99,6 +99,7 @@ class Registry(Mapping):
         t0 = time.time()
         registry = object.__new__(cls)
         registry.init(db_name)
+        registry.new = registry.init = registry.registries = None
 
         # Initializing a registry will call general code which will in
         # turn call Registry() to obtain the registry being initialized.
@@ -127,7 +128,6 @@ class Registry(Mapping):
         registry._init = False
         registry.ready = True
         registry.registry_invalidated = bool(update_module)
-        registry.new = registry.init = registry.registries = None
 
         _logger.info("Registry loaded in %.3fs", time.time() - t0)
         return registry
@@ -273,6 +273,7 @@ class Registry(Mapping):
 
         return self.descendants(model_names, '_inherit', '_inherits')
 
+    @locked
     def setup_models(self, cr):
         """ Complete the setup of models.
             This must be called after loading modules and before using the ORM.
@@ -331,6 +332,9 @@ class Registry(Mapping):
                 depends, depends_context = field.get_depends(model)
                 self.field_depends[field] = tuple(depends)
                 self.field_depends_context[field] = tuple(depends_context)
+
+        # clean the lazy_property again in case they are cached by another ongoing registry readonly request
+        lazy_property.reset_all(self)
 
         # Reinstall registry hooks. Because of the condition, this only happens
         # on a fully loaded registry, and not on a registry being loaded.
@@ -703,8 +707,8 @@ class Registry(Mapping):
         env = odoo.api.Environment(cr, SUPERUSER_ID, {})
         table2model = {
             model._table: name
-            for name, model in env.items()
-            if not model._abstract and model.__class__._table_query is None
+            for name, model in env.registry.items()
+            if not model._abstract and model._table_query is None
         }
         missing_tables = set(table2model).difference(existing_tables(cr, table2model))
 

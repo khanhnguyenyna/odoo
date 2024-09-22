@@ -3,16 +3,16 @@
 # 	* hr
 # 
 # Translators:
-# Thi Huong Nguyen, 2023
-# Wil Odoo, 2023
+# Wil Odoo, 2024
+# Thi Huong Nguyen, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Thi Huong Nguyen, 2024\n"
 "Language-Team: Vietnamese (https://app.transifex.com/odoo/teams/41243/vi/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -297,7 +297,7 @@ msgstr "Đạt được mục tiêu kinh doanh hằng tháng"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__message_needaction
 #: model:ir.model.fields,field_description:hr.field_hr_job__message_needaction
 msgid "Action Needed"
-msgstr "Hành động cần thiết"
+msgstr "Tác vụ cần thiết"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_department__active
@@ -371,6 +371,17 @@ msgstr "Thêm kế hoạch mới"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__departure_description
 msgid "Additional Information"
 msgstr "Thông tin bổ sung"
+
+#. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee.py:0
+#, python-format
+msgid ""
+"Additional Information: \n"
+" %(description)s"
+msgstr ""
+"Thông tin bổ sung: \n"
+" %(description)s"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__additional_note
@@ -661,7 +672,7 @@ msgstr "Cấp chứng chỉ"
 #. module: hr
 #: model:ir.actions.act_window,name:hr.res_users_action_my
 msgid "Change my Preferences"
-msgstr "Change my Preferences"
+msgstr "Thay đổi tùy chọn của tôi"
 
 #. module: hr
 #. odoo-javascript
@@ -683,7 +694,7 @@ msgstr "Tổng giám đốc kỹ thuật"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_department__child_ids
 msgid "Child Departments"
-msgstr "Phòng ban con"
+msgstr "Phòng ban cấp dưới"
 
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.res_users_view_form_profile
@@ -877,6 +888,16 @@ msgid "Create a new department"
 msgstr "Thêm phòng ban mới"
 
 #. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_contract_type_action
+msgid "Create a new employment type"
+msgstr "Tạo một loại hình công việc mới"
+
+#. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
+msgid "Create a new work location"
+msgstr "Tạo một vị trí làm việc mới"
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -975,6 +996,8 @@ msgstr ""
 "Duy trì tương tác thường xuyên với các khách hàng chủ chốt để khai thác và mở rộng tốt hơn."
 
 #. module: hr
+#. odoo-javascript
+#: code:addons/hr/static/src/components/avatar_card/avatar_card_popover_patch.xml:0
 #: model:ir.model,name:hr.model_hr_department
 #: model:ir.model.fields,field_description:hr.field_hr_employee__department_id
 #: model:ir.model.fields,field_description:hr.field_hr_employee_base__department_id
@@ -987,6 +1010,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:hr.view_department_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_job_filter
+#, python-format
 msgid "Department"
 msgstr "Bộ phận"
 
@@ -1027,7 +1051,7 @@ msgstr "Ngày khỏi hành"
 #: model:ir.model.fields,field_description:hr.field_hr_departure_wizard__departure_reason_id
 #: model:ir.model.fields,field_description:hr.field_hr_employee__departure_reason_id
 msgid "Departure Reason"
-msgstr "Lý do kỷ luật"
+msgstr "Lý do nghỉ việc"
 
 #. module: hr
 #: model:ir.actions.act_window,name:hr.hr_departure_reason_action
@@ -2099,11 +2123,6 @@ msgid "No Tags found ! Let's create one"
 msgstr "Không tìm thấy thẻ nào! Hãy tạo một thẻ"
 
 #. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid "No Work Locations found ! Let's create one"
-msgstr "Không tìm thấy địa điểm làm việc! Hãy tạo một địa điểm"
-
-#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2149,7 +2168,7 @@ msgstr "Ghi chú"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__message_needaction_counter
 #: model:ir.model.fields,field_description:hr.field_hr_job__message_needaction_counter
 msgid "Number of Actions"
-msgstr "Số lượng hành động"
+msgstr "Số lượng tác vụ"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__children
@@ -2297,7 +2316,7 @@ msgstr "Phòng/Ban cấp trên"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_department__parent_path
 msgid "Parent Path"
-msgstr "Tuyến cha"
+msgstr "Tuyến chính"
 
 #. module: hr
 #: model:hr.contract.type,name:hr.contract_type_part_time
@@ -2342,20 +2361,6 @@ msgstr "Bảng lương"
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid "Perfect written English"
 msgstr "Kỹ năng viết tiếng Anh xuất sắc"
-
-#. module: hr
-#: model_terms:hr.job,description:hr.job_consultant
-#: model_terms:hr.job,description:hr.job_developer
-#: model_terms:hr.job,description:hr.job_marketing
-msgid ""
-"Perform assigned responsibilities, collaborate with team members, and adhere"
-" to company policies. Strong communication, problem-solving, and work ethic "
-"required. Adaptability, initiative, and willingness to learn are valued."
-msgstr ""
-"Thực hiện trách nhiệm được giao, cộng tác với các thành viên trong đội ngũ "
-"và tuân thủ các chính sách của công ty. Yêu cầu kỹ năng giao tiếp và giải "
-"quyết vấn đề tốt, đồng thời có đạo đức nghề nghiệp. Khả năng thích ứng, sáng"
-" kiến và sẵn sàng học hỏi được đánh giá cao."
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -2856,6 +2861,13 @@ msgid "Software Developer"
 msgstr "Nhà phát triển phần mềm"
 
 #. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee_base.py:0
+#, python-format
+msgid "Some employee already have a work contact"
+msgstr "Một số nhân viên đã có liên hệ công việc."
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -3002,6 +3014,19 @@ msgid ""
 msgstr ""
 "Mã quốc gia ISO với hai ký tự.\n"
 "Bạn có thể sử dụng trường này để tìm kiếm nhanh."
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_marketing
+msgid ""
+"The Marketing Manager defines the mid- to long-term marketing strategy for his covered market segments in the World.\n"
+"              He develops and monitors the annual budget in collaboration with Sales.\n"
+"              He defines the products and customers portfolio according to the marketing plan.\n"
+"              This mission requires strong collaboration with Technical Service and Sales."
+msgstr ""
+"Quản lý Marketing xác định chiến lược marketing trung và dài hạn cho các phân khúc thị trường mà mình phụ trách trên Thế giới.\n"
+"                Phát triển và giám sát ngân sách hàng năm với sự cộng tác của Bộ phận Kinh doanh.\n"
+"                Xác định danh mục khách hàng và sản phẩm theo kế hoạch marketing.\n"
+"                Nhiệm vụ này đòi hỏi mối quan hệ hợp tác chặt chẽ với Bộ phận Dịch vụ Kỹ thuật và Kinh doanh."
 
 #. module: hr
 #. odoo-python
@@ -3187,7 +3212,7 @@ msgstr "Đào tạo"
 #. module: hr
 #: model:ir.model.fields,help:hr.field_hr_employee__activity_exception_decoration
 msgid "Type of the exception activity on record."
-msgstr "Loại hoạt động ngoại lệ trong tập dữ liệu."
+msgstr "Loại hoạt động ngoại lệ trong bản ghi."
 
 #. module: hr
 #: model:ir.model.fields.selection,name:hr.selection__hr_employee__hr_icon_display__presence_undetermined
@@ -3255,8 +3280,8 @@ msgstr "Xem hồ sơ"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_expire
 #: model:ir.model.fields,field_description:hr.field_res_users__visa_expire
-msgid "Visa Expire Date"
-msgstr "Ngày hết hạn Visa"
+msgid "Visa Expiration Date"
+msgstr "Ngày hết hạn visa"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_no
@@ -3270,6 +3295,23 @@ msgstr "Số Visa"
 #, python-format
 msgid "Warning"
 msgstr "Cảnh báo"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_consultant
+msgid ""
+"We are currently looking for someone like that to join our Consultant team."
+msgstr ""
+"Chúng tôi hiện đang tìm kiếm một người như vậy để tham gia đội ngũ Tư vấn "
+"viên của mình"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_developer
+msgid ""
+"We are currently looking for someone like that to join our Web team.\n"
+"                Someone who can snap out of coding and perform analysis or meet clients to explain the technical possibilities that can meet their needs."
+msgstr ""
+"Chúng tôi hiện đang tìm kiếm một người như vậy để tham gia Bộ phận Web của mình.\n"
+"                 Ai đó có thể gác viết mã sang một bên và tiến hành phân tích hoặc gặp gỡ khách hàng để giải thích các khả năng kỹ thuật có thể đáp ứng nhu cầu của họ."
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -3301,8 +3343,8 @@ msgid ""
 "Whether the employee is a member of the active user's department or one of "
 "it's child department."
 msgstr ""
-"Cho dù nhân viên là thành viên của bộ phận người dùng đang hoạt động hay một"
-" trong những bộ phận con của nó."
+"Cho dù nhân viên là thành viên của phòng ban của người dùng đang hoạt động "
+"hay một trong những phòng ban cấp dưới của nó."
 
 #. module: hr
 #: model:ir.model.fields.selection,name:hr.selection__hr_employee__marital__widower
@@ -3381,15 +3423,6 @@ msgstr "Địa điểm làm việc"
 #: model:ir.ui.menu,name:hr.menu_hr_work_location_tree
 msgid "Work Locations"
 msgstr "Địa điểm làm việc"
-
-#. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid ""
-"Work Locations are used to define more precisely where your employee is "
-"located everyday."
-msgstr ""
-"Địa điểm làm việc được sử dụng để xác định chính xác hơn nơi nhân viên của "
-"bạn làm việc hàng ngày."
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__mobile_phone

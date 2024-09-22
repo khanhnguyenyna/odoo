@@ -10,8 +10,8 @@ from uuid import uuid4
 from dateutil.relativedelta import relativedelta
 
 from odoo import _, api, exceptions, fields, models
-from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
-from odoo.tools import safe_eval
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT, safe_eval
+from odoo.http import request
 
 _logger = logging.getLogger(__name__)
 
@@ -65,6 +65,15 @@ TIME_TRIGGERS = [
     'on_time_updated',
 ]
 
+def get_webhook_request_payload():
+    if not request:
+        return None
+    try:
+        payload = request.get_json_data()
+    except ValueError:
+        payload = {**request.httprequest.args}
+    return payload
+
 
 class BaseAutomation(models.Model):
     _name = 'base.automation'
@@ -73,7 +82,8 @@ class BaseAutomation(models.Model):
     name = fields.Char(string="Automation Rule Name", required=True, translate=True)
     description = fields.Html(string="Description")
     model_id = fields.Many2one(
-        "ir.model", string="Model", required=True, ondelete="cascade", help="Model on which the automation rule runs."
+        "ir.model", string="Model", domain=[("field_id", "!=", False)], required=True, ondelete="cascade",
+        help="Model on which the automation rule runs."
     )
     model_name = fields.Char(related="model_id.model", string="Model Name", readonly=True, inverse="_inverse_model_name")
     model_is_mail_thread = fields.Boolean(related="model_id.is_mail_thread")
@@ -86,7 +96,7 @@ class BaseAutomation(models.Model):
     )
     url = fields.Char(compute='_compute_url')
     webhook_uuid = fields.Char(string="Webhook UUID", readonly=True, copy=False, default=lambda self: str(uuid4()))
-    record_getter = fields.Char(default="env[payload.get('_model')].browse(payload.get('id'))",
+    record_getter = fields.Char(default="model.env[payload.get('_model')].browse(int(payload.get('_id')))",
                                 help="This code will be run to find on which record the automation rule should be run.")
     log_webhook_calls = fields.Boolean(string="Log Calls", default=False)
     active = fields.Boolean(default=True, help="When unchecked, the rule is hidden and will not be executed.")
@@ -292,7 +302,7 @@ class BaseAutomation(models.Model):
 
     @api.depends('trg_field_ref', 'trigger_field_ids')
     def _compute_trg_field_ref__model_and_display_names(self):
-        to_compute = self.filtered(lambda a: a.trg_field_ref is not False)
+        to_compute = self.filtered(lambda a: a.trigger in ['on_stage_set', 'on_tag_set'] and a.trg_field_ref is not False)
         # wondering why we check based on 'is not'? Because the ref could be an empty recordset
         # and we still need to introspec on the model in that case - not just ignore it
         to_reset = (self - to_compute)
@@ -432,6 +442,14 @@ class BaseAutomation(models.Model):
         self._update_registry()
         return res
 
+    def copy(self, default=None):
+        """Copy the actions of the automation while
+        copying the automation itself."""
+        actions = self.action_server_ids.copy_multi()
+        record_copy = super().copy(default)
+        record_copy.action_server_ids = actions
+        return record_copy
+
     def action_rotate_webhook_uuid(self):
         for automation in self:
             automation.webhook_uuid = str(uuid4())
@@ -489,7 +507,7 @@ class BaseAutomation(models.Model):
 
         if not record.exists():
             msg = "Webhook #%s could not be triggered because no record to run it on was found."
-            msg_args = (self.id)
+            msg_args = (self.id,)
             _logger.warning(msg, *msg_args)
             if self.log_webhook_calls:
                 ir_logging_sudo.create(self._prepare_loggin_values(message=msg % msg_args, level="ERROR"))
@@ -574,22 +592,30 @@ class BaseAutomation(models.Model):
         msg = _("Note that this automation rule can be triggered up to %d minutes after its schedule.")
         self.least_delay_msg = msg % self._get_cron_interval()
 
-    def _filter_pre(self, records):
+    def _filter_pre(self, records, feedback=False):
         """ Filter the records that satisfy the precondition of automation ``self``. """
         self_sudo = self.sudo()
         if self_sudo.filter_pre_domain and records:
+            if feedback:
+                # this context flag enables to detect the executions of
+                # automations while evaluating their precondition
+                records = records.with_context(__action_feedback=True)
             domain = safe_eval.safe_eval(self_sudo.filter_pre_domain, self._get_eval_context())
             return records.sudo().filtered_domain(domain).with_env(records.env)
         else:
             return records
 
-    def _filter_post(self, records):
-        return self._filter_post_export_domain(records)[0]
+    def _filter_post(self, records, feedback=False):
+        return self._filter_post_export_domain(records, feedback)[0]
 
-    def _filter_post_export_domain(self, records):
+    def _filter_post_export_domain(self, records, feedback=False):
         """ Filter the records that satisfy the postcondition of automation ``self``. """
         self_sudo = self.sudo()
         if self_sudo.filter_domain and records:
+            if feedback:
+                # this context flag enables to detect the executions of
+                # automations while evaluating their postcondition
+                records = records.with_context(__action_feedback=True)
             domain = safe_eval.safe_eval(self_sudo.filter_domain, self._get_eval_context())
             return records.sudo().filtered_domain(domain).with_env(records.env), domain
         else:
@@ -615,26 +641,36 @@ class BaseAutomation(models.Model):
             return
 
         # mark the remaining records as done (to avoid recursive processing)
-        automation_done = dict(automation_done)
-        automation_done[self] = records_done + records
-        self = self.with_context(__action_done=automation_done)
-        records = records.with_context(__action_done=automation_done)
+        if self.env.context.get('__action_feedback'):
+            # modify the context dict in place: this is useful when fields are
+            # computed during the pre/post filtering, in order to know which
+            # automations have already been run by the computation itself
+            automation_done[self] = records_done + records
+        else:
+            automation_done = dict(automation_done)
+            automation_done[self] = records_done + records
+            self = self.with_context(__action_done=automation_done)
+            records = records.with_context(__action_done=automation_done)
 
         # modify records
         if 'date_automation_last' in records._fields:
             records.date_automation_last = fields.Datetime.now()
 
+        # we process the automation on the records for which any watched field
+        # has been modified, and only mark the automation as done for those
+        records = records.filtered(self._check_trigger_fields)
+        automation_done[self] = records_done + records
+
         # prepare the contexts for server actions
-        contexts = []
-        for record in records:
-            # we process the automation if any watched field has been modified
-            if self._check_trigger_fields(record):
-                contexts.append({
-                    'active_model': record._name,
-                    'active_ids': record.ids,
-                    'active_id': record.id,
-                    'domain_post': domain_post,
-                })
+        contexts = [
+            {
+                'active_model': record._name,
+                'active_ids': record.ids,
+                'active_id': record.id,
+                'domain_post': domain_post,
+            }
+            for record in records
+        ]
 
         # execute server actions
         for action in self.sudo().action_server_ids:
@@ -652,20 +688,16 @@ class BaseAutomation(models.Model):
             # all fields are implicit triggers
             return True
 
-        if not self._context.get('old_values'):
+        if self._context.get('old_values') is None:
             # this is a create: all fields are considered modified
             return True
 
-        # Note: old_vals are in the format of read()
+        # note: old_vals are in the record format
         old_vals = self._context['old_values'].get(record.id, {})
 
         def differ(name):
-            field = record._fields[name]
-            return (
-                name in old_vals and
-                field.convert_to_cache(record[name], record, validate=False) !=
-                field.convert_to_cache(old_vals[name], record, validate=False)
-            )
+            return name in old_vals and record[name] != old_vals[name]
+
         return any(differ(field.name) for field in self_sudo.trigger_field_ids)
 
     def _register_hook(self):
@@ -693,7 +725,7 @@ class BaseAutomation(models.Model):
                 records = create.origin(self.with_env(automations.env), vals_list, **kw)
                 # check postconditions, and execute actions on the records that satisfy them
                 for automation in automations.with_context(old_values=None):
-                    automation._process(automation._filter_post(records))
+                    automation._process(automation._filter_post(records, feedback=True))
                 return records.with_env(self.env)
 
             return create
@@ -710,14 +742,14 @@ class BaseAutomation(models.Model):
                 pre = {a: a._filter_pre(records) for a in automations}
                 # read old values before the update
                 old_values = {
-                    old_vals.pop('id'): old_vals
-                    for old_vals in (records.read(list(vals)) if vals else [])
+                    record.id: {field_name: record[field_name] for field_name in vals if field_name in record._fields}
+                    for record in records
                 }
                 # call original method
                 write.origin(self.with_env(automations.env), vals, **kw)
                 # check postconditions, and execute actions on the records that satisfy them
                 for automation in automations.with_context(old_values=old_values):
-                    records, domain_post = automation._filter_post_export_domain(pre[automation])
+                    records, domain_post = automation._filter_post_export_domain(pre[automation], feedback=True)
                     automation._process(records, domain_post=domain_post)
                 return True
 
@@ -730,8 +762,8 @@ class BaseAutomation(models.Model):
             #
             def _compute_field_value(self, field):
                 # determine fields that may trigger an automation
-                stored_fields = [f for f in self.pool.field_computed[field] if f.store]
-                if not any(stored_fields):
+                stored_fnames = [f.name for f in self.pool.field_computed[field] if f.store]
+                if not stored_fnames:
                     return _compute_field_value.origin(self, field)
                 # retrieve the action rules to possibly execute
                 automations = self.env['base.automation']._get_actions(self, WRITE_TRIGGERS)
@@ -743,14 +775,14 @@ class BaseAutomation(models.Model):
                 pre = {a: a._filter_pre(records) for a in automations}
                 # read old values before the update
                 old_values = {
-                    old_vals.pop('id'): old_vals
-                    for old_vals in (records.read([f.name for f in stored_fields]))
+                    record.id: {fname: record[fname] for fname in stored_fnames}
+                    for record in records
                 }
                 # call original method
                 _compute_field_value.origin(self, field)
                 # check postconditions, and execute automations on the records that satisfy them
                 for automation in automations.with_context(old_values=old_values):
-                    records, domain_post = automation._filter_post_export_domain(pre[automation])
+                    records, domain_post = automation._filter_post_export_domain(pre[automation], feedback=True)
                     automation._process(records, domain_post=domain_post)
                 return True
 
@@ -764,7 +796,7 @@ class BaseAutomation(models.Model):
                 records = self.with_env(automations.env)
                 # check conditions, and execute actions on the records that satisfy them
                 for automation in automations:
-                    automation._process(automation._filter_post(records))
+                    automation._process(automation._filter_post(records, feedback=True))
                 # call original method
                 return unlink.origin(self, **kwargs)
 
@@ -795,10 +827,33 @@ class BaseAutomation(models.Model):
                         if 'domain' in res:
                             result.setdefault('domain', {}).update(res['domain'])
                         if 'warning' in res:
-                            result['warning'] += res["warning"]
+                            result['warning'] = res["warning"]
                 return result
 
             return base_automation_onchange
+
+        def make_message_post():
+            def _message_post(self, *args, **kwargs):
+                message = _message_post.origin(self, *args, **kwargs)
+                # Don't execute automations for a message emitted during
+                # the run of automations for a real message
+                # Don't execute if we know already that a message is only internal
+                message_sudo = message.sudo().with_context(active_test=False)
+                if "__action_done"  in self.env.context or message_sudo.is_internal or message_sudo.subtype_id.internal:
+                    return message
+                if message_sudo.message_type in ('notification', 'auto_comment', 'user_notification'):
+                    return message
+
+                # always execute actions when the author is a customer
+                # if author is not set, it means the message is coming from outside
+                mail_trigger = "on_message_received" if not message_sudo.author_id or message_sudo.author_id.partner_share else "on_message_sent"
+                automations = self.env['base.automation']._get_actions(self, [mail_trigger])
+                for automation in automations.with_context(old_values=None):
+                    records = automation._filter_pre(self, feedback=True)
+                    automation._process(records)
+
+                return message
+            return _message_post
 
         patched_models = defaultdict(set)
 
@@ -806,7 +861,7 @@ class BaseAutomation(models.Model):
             """ Patch method `name` on `model`, unless it has been patched already. """
             if model not in patched_models[name]:
                 patched_models[name].add(model)
-                ModelClass = type(model)
+                ModelClass = model.env.registry[model._name]
                 method.origin = getattr(ModelClass, name)
                 setattr(ModelClass, name, method)
 
@@ -818,8 +873,8 @@ class BaseAutomation(models.Model):
             if Model is None:
                 _logger.warning(
                     "Automation rule with name '%s' (ID %d) depends on model %s (ID: %d)",
-                    automation_rule.id,
                     automation_rule.name,
+                    automation_rule.id,
                     automation_rule.model_name,
                     automation_rule.model_id.id)
                 continue
@@ -839,29 +894,11 @@ class BaseAutomation(models.Model):
                 method = make_onchange(automation_rule.id)
                 for field in automation_rule.on_change_field_ids:
                     Model._onchange_methods[field.name].append(method)
+                if automation_rule.on_change_field_ids:
+                    self.env.registry.clear_cache('templates')
 
             if automation_rule.model_id.is_mail_thread and automation_rule.trigger in MAIL_TRIGGERS:
-                def _message_post(self, *args, **kwargs):
-                    message = _message_post.origin(self, *args, **kwargs)
-                    # Don't execute automations for a message emitted during
-                    # the run of automations for a real message
-                    # Don't execute if we know already that a message is only internal
-                    message_sudo = message.sudo().with_context(active_test=False)
-                    if "__action_done"  in self.env.context or message_sudo.is_internal or message_sudo.subtype_id.internal:
-                        return message
-                    if message_sudo.message_type in ('notification', 'auto_comment', 'user_notification'):
-                        return message
-
-                    # always execute actions when the author is a customer
-                    mail_trigger = "on_message_received" if message_sudo.author_id.partner_share else "on_message_sent"
-                    automations = self.env['base.automation']._get_actions(self, [mail_trigger])
-                    for automation in automations.with_context(old_values=None):
-                        records = automation._filter_pre(self)
-                        automation._process(records)
-
-                    return message
-
-                patch(Model, "message_post", _message_post)
+                patch(Model, "message_post", make_message_post())
 
     def _unregister_hook(self):
         """ Remove the patches installed by _register_hook() """
@@ -875,8 +912,8 @@ class BaseAutomation(models.Model):
 
     @api.model
     def _check_delay(self, automation, record, record_dt):
-        if automation.trg_date_calendar_id and automation.trg_date_range_type == 'day':
-            return automation.trg_date_calendar_id.plan_days(
+        if self._get_calendar(automation, record) and automation.trg_date_range_type == 'day':
+            return self._get_calendar(automation, record).plan_days(
                 automation.trg_date_range,
                 fields.Datetime.from_string(record_dt),
                 compute_leaves=True,
@@ -884,6 +921,10 @@ class BaseAutomation(models.Model):
         else:
             delay = DATE_RANGE_FUNCTION[automation.trg_date_range_type](automation.trg_date_range)
             return fields.Datetime.from_string(record_dt) + delay
+
+    @api.model
+    def _get_calendar(self, automation, record):
+        return automation.trg_date_calendar_id
 
     @api.model
     def _check(self, automatic=False, use_new_cursor=False):
@@ -894,7 +935,7 @@ class BaseAutomation(models.Model):
         # retrieve all the automation rules to run based on a timed condition
         for automation in self.with_context(active_test=True).search([('trigger', 'in', TIME_TRIGGERS)]):
             _logger.info("Starting time-based automation rule `%s`.", automation.name)
-            last_run = fields.Datetime.from_string(automation.last_run) or datetime.datetime.utcfromtimestamp(0)
+            last_run = fields.Datetime.from_string(automation.last_run) or datetime.datetime.fromtimestamp(0, tz=None)
             eval_context = automation._get_eval_context()
 
             # retrieve all the records that satisfy the automation's condition
@@ -913,12 +954,29 @@ class BaseAutomation(models.Model):
 
             # process action on the records that should be executed
             now = datetime.datetime.now()
+            past_now = {}
+            past_last_run = {}
             for record in records:
                 record_dt = get_record_dt(record)
                 if not record_dt:
                     continue
-                action_dt = self._check_delay(automation, record, record_dt)
-                if last_run <= action_dt < now:
+                if automation.trg_date_calendar_id and automation.trg_date_range_type == 'day':
+                    calendar = self._get_calendar(automation, record)
+                    if calendar.id not in past_now:
+                        past_now[calendar.id] = calendar.plan_days(
+                            - automation.trg_date_range,
+                            now,
+                            compute_leaves=True,
+                        )
+                        past_last_run[calendar.id] = calendar.plan_days(
+                            - automation.trg_date_range,
+                            last_run,
+                            compute_leaves=True,
+                        )
+                    is_process_to_run = past_last_run[calendar.id] <= fields.Datetime.to_datetime(record_dt) < past_now[calendar.id]
+                else:
+                    is_process_to_run = last_run <= self._check_delay(automation, record, record_dt) < now
+                if is_process_to_run:
                     try:
                         automation._process(record)
                     except Exception:

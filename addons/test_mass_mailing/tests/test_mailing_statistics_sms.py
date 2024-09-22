@@ -67,9 +67,24 @@ class TestMailingStatistics(TestMassSMSCommon):
         kpi_values = body_html.xpath('//table[@data-field="sms"]//*[hasclass("kpi_value")]/text()')
         self.assertEqual(
             [t.strip().strip('%') for t in kpi_values],
-            ['40.0', str(float(mailing.opened_ratio)), str(float(mailing.replied_ratio))]
+            ['40.0', str(float(mailing.clicks_ratio)), str(float(mailing.bounced_ratio))]
         )
         # test body content: clicks (a bit hackish but hey we are in stable)
         kpi_click_values = body_html.xpath('//table//tr[contains(@style,"color: #888888")]/td[contains(@style,"width: 30%")]/text()')
         first_link_value = int(kpi_click_values[0].strip().split()[1].strip('()'))
         self.assertEqual(first_link_value, mailing.clicked)
+
+    @users('user_marketing')
+    @mute_logger('odoo.addons.mass_mailing_sms.models.mailing_mailing', 'odoo.addons.mail.models.mail_mail', 'odoo.addons.mail.models.mail_thread')
+    def test_sent_delivered_sms(self):
+        """ Test that if we get delivered trace status first instead of sent from
+            providers for some reasons, the statistics for sent SMS will be correct. """
+        mailing = self.env['mailing.mailing'].browse(self.mailing_sms.ids)
+        target_records = self.env['mail.test.sms'].browse(self.records.ids)
+        mailing.write({'mailing_domain': [('id', 'in', target_records.ids)], 'user_id': self.user_marketing_2.id})
+        mailing.action_put_in_queue()
+        with self.mockSMSGateway(force_delivered=True):
+            mailing.action_send_sms()
+
+        self.assertEqual(mailing.delivered, 10)
+        self.assertEqual(mailing.sent, 10)

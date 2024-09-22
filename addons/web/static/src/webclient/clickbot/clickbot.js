@@ -6,8 +6,6 @@
  */
 
 import { App } from "@odoo/owl";
-import { patch } from "@web/core/utils/patch";
-import { ORM } from "@web/core/orm_service";
 import { browser } from "@web/core/browser/browser";
 
 const MOUSE_EVENTS = ["mouseover", "mouseenter", "mousedown", "mouseup", "click"];
@@ -16,7 +14,9 @@ const BLACKLISTED_MENUS = [
     "base.menu_third_party", // Open a new tab
     "event.menu_event_registration_desk", // there's no way to come back from this menu (tablet mode)
     "hr_attendance.menu_hr_attendance_kiosk_no_user_mode", // same here (tablet mode)
+    "mrp_workorder.menu_mrp_workorder_root", // same here (tablet mode)
     "account.menu_action_account_bank_journal_form", // Modal in an iFrame
+    "pos_preparation_display.menu_point_kitchen_display_root", // conditional menu that may leads to frontend
 ];
 // If you change this selector, adapt Studio test "Studio icon matches the clickbot selector"
 const STUDIO_SYSTRAY_ICON_SELECTOR = ".o_web_studio_navbar_item:not(.o_disabled) i";
@@ -24,6 +24,7 @@ const STUDIO_SYSTRAY_ICON_SELECTOR = ".o_web_studio_navbar_item:not(.o_disabled)
 let isEnterprise;
 let appsMenusOnly = false;
 let calledRPC;
+let errorRPC;
 let actionCount;
 let env;
 let studioCount;
@@ -36,27 +37,18 @@ let testedMenus;
 let testedFilters;
 let testedModals;
 
-let unPatchORM;
-
 /**
  * Hook on specific activities of the webclient to detect when to move forward.
  * This should be done only once.
  */
 function setup() {
-    unPatchORM = patch(ORM.prototype, {
-        async call(model, method, args = [], kwargs = {}) {
-            calledRPC.push(`${model}.${method}`);
-            try {
-                return await super.call(...arguments);
-            } finally {
-                calledRPC.splice(calledRPC.indexOf(`${model}.${method}`), 1);
-            }
-        },
-    });
     env = odoo.__WOWL_DEBUG__.root.env;
     env.bus.addEventListener("ACTION_MANAGER:UI-UPDATED", uiUpdate);
+    env.bus.addEventListener("RPC:REQUEST", onRPCRequest);
+    env.bus.addEventListener("RPC:RESPONSE", onRPCResponse);
     actionCount = 0;
-    calledRPC = [];
+    calledRPC = {};
+    errorRPC = undefined;
     studioCount = 0;
     testedApps = [];
     testedMenus = [];
@@ -68,13 +60,25 @@ function setup() {
     isEnterprise = odoo.info && odoo.info.isEnterprise;
 }
 
+function onRPCRequest({ detail }) {
+    calledRPC[detail.data.id] = detail.url;
+}
+
+function onRPCResponse({ detail }) {
+    delete calledRPC[detail.data.id];
+    if (detail.error) {
+        errorRPC = { ...detail };
+    }
+}
+
 function uiUpdate() {
     actionCount++;
 }
 
 function cleanup() {
-    unPatchORM();
     env.bus.removeEventListener("ACTION_MANAGER:UI-UPDATED", uiUpdate);
+    env.bus.removeEventListener("RPC:REQUEST", onRPCRequest);
+    env.bus.removeEventListener("RPC:RESPONSE", onRPCResponse);
 }
 
 /**
@@ -121,7 +125,7 @@ async function waitForCondition(stopCondition) {
     let timeLimit = initialTime;
 
     function hasPendingRPC() {
-        return calledRPC.length > 0;
+        return Object.keys(calledRPC).length > 0;
     }
     function hasScheduledTask() {
         let size = 0;
@@ -130,15 +134,43 @@ async function waitForCondition(stopCondition) {
         }
         return size > 0;
     }
-
-    while (!stopCondition() || hasPendingRPC() || hasScheduledTask()) {
+    function errorDialog() {
         if (document.querySelector(".o_error_dialog")) {
-            throw new Error("Error dialog detected");
-        }
-        if (timeLimit <= 0) {
+            if (errorRPC) {
+                browser.console.error(
+                    "A RPC in error was detected, maybe it's related to the error dialog : " +
+                        JSON.stringify(errorRPC)
+                );
+            }
             throw new Error(
-                `Timeout, the clicked element took more than ${initialTime / 1000} seconds to load`
+                "Error dialog detected" + document.querySelector(".o_error_dialog").innerHTML
             );
+        }
+        return false;
+    }
+
+    while (errorDialog() || !stopCondition() || hasPendingRPC() || hasScheduledTask()) {
+        if (timeLimit <= 0) {
+            let msg = `Timeout, the clicked element took more than ${
+                initialTime / 1000
+            } seconds to load\n`;
+            msg += `Waiting for:\n`;
+            if (Object.keys(calledRPC).length > 0) {
+                msg += ` * ${Object.values(calledRPC).join(", ")} RPC\n`;
+            }
+            let scheduleTasks = "";
+            for (const app of App.apps) {
+                for (const task of app.scheduler.tasks) {
+                    scheduleTasks += task.node.name + ",";
+                }
+            }
+            if (scheduleTasks.length > 0) {
+                msg += ` * ${scheduleTasks} scheduled tasks\n`;
+            }
+            if (!stopCondition()) {
+                msg += ` * stopCondition: ${stopCondition.toString()}`;
+            }
+            throw new Error(msg);
         }
         await new Promise((resolve) => setTimeout(resolve, interval));
         timeLimit -= interval;
@@ -149,7 +181,7 @@ async function waitForCondition(stopCondition) {
  * Make sure the home menu is open (enterprise only)
  */
 async function ensureHomeMenu() {
-    const homeMenu = document.querySelector(".o_home_menu");
+    const homeMenu = document.querySelector("div.o_home_menu");
     if (!homeMenu) {
         let menuToggle = document.querySelector("nav.o_main_navbar > a.o_menu_toggle");
         if (!menuToggle) {
@@ -159,7 +191,7 @@ async function ensureHomeMenu() {
             menuToggle = document.querySelector(".o_stock_barcode_menu");
         }
         await triggerClick(menuToggle, "home menu toggle button");
-        await waitForCondition(() => document.querySelector(".o_home_menu"));
+        await waitForCondition(() => document.querySelector("div.o_home_menu"));
     }
 }
 
@@ -359,7 +391,7 @@ async function testMenuItem(element) {
     const menu = element.dataset.menuXmlid;
     const menuDescription = element.innerText.trim() + " " + menu;
     if (BLACKLISTED_MENUS.includes(menu)) {
-        browser.console.log(`Skipping blacklisted menu ${menuDescription}`);        
+        browser.console.log(`Skipping blacklisted menu ${menuDescription}`);
         return Promise.resolve(); // Skip black listed menus
     }
     browser.console.log(`Testing menu ${menuDescription}`);

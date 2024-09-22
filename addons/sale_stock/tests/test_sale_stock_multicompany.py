@@ -45,7 +45,6 @@ class TestSaleStockMultiCompany(TestSaleCommon, ValuationReconciliationTestCommo
                 'product_uom_qty': 10,
                 'product_uom': product.uom_id.id,
                 'price_unit': product.list_price})],
-            'pricelist_id': self.company_data['default_pricelist'].id,
         }
         sale_order = self.env['sale.order']
 
@@ -64,7 +63,6 @@ class TestSaleStockMultiCompany(TestSaleCommon, ValuationReconciliationTestCommo
                 'product_uom_qty': 10,
                 'product_uom': product.uom_id.id,
                 'price_unit': product.list_price})],
-            'pricelist_id': self.company_data['default_pricelist'].id,
         }
         so_company_A = sale_order.with_company(self.env.company).create(sale_order_vals2)
         self.assertEqual(so_company_A.warehouse_id.id, self.warehouse_A.id)
@@ -80,7 +78,32 @@ class TestSaleStockMultiCompany(TestSaleCommon, ValuationReconciliationTestCommo
                 'product_uom_qty': 10,
                 'product_uom': product.uom_id.id,
                 'price_unit': product.list_price})],
-            'pricelist_id': self.company_data['default_pricelist'].id,
         }
         so_company_B = sale_order.with_company(self.company_data_2['company']).create(sale_order_vals3)
         self.assertEqual(so_company_B.warehouse_id.id, self.warehouse_B.id)
+
+    def test_sale_product_from_parent_company(self):
+        """
+        Check that a product from a company can be sold by a branch
+        and that the resulting move can be created.
+        """
+        parent_company = self.env.company
+        branch_company = self.env['res.company'].create({
+            'name': 'Branch Company',
+            'parent_id': parent_company.id,
+        })
+
+        self.product_a.company_id = parent_company
+
+        sale_order = self.env['sale.order'].with_company(branch_company).create({
+            'partner_id': self.partner_a.id,
+            'order_line': [(0, 0, {
+                'name': self.product_a.name,
+                'product_id': self.product_a.id,
+                'product_uom_qty': 1,
+            })],
+        })
+
+        sale_order.action_confirm()
+
+        self.assertTrue(sale_order.picking_ids.move_ids)

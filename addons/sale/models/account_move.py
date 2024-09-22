@@ -59,20 +59,23 @@ class AccountMove(models.Model):
         return super()._reverse_moves(default_values_list=default_values_list, cancel=cancel)
 
     def action_post(self):
-        #inherit of the function from account.move to validate a new tax and the priceunit of a downpayment
+        # inherit of the function from account.move to validate a new tax and the priceunit of a downpayment
         res = super(AccountMove, self).action_post()
-        down_payment_lines = self.line_ids.filtered('is_downpayment')
-        for line in down_payment_lines:
-            if any(order.locked for order in line.sale_line_ids.order_id):
-                # We cannot change lines content on locked SO, changes on invoices are not
-                # forwarded to the SO if the SO is locked.
-                continue
 
-            if not line.sale_line_ids.display_type:
-                line.sale_line_ids._compute_name()
+        # We cannot change lines content on locked SO, changes on invoices are not forwarded to the SO if the SO is locked
+        dp_lines = self.line_ids.sale_line_ids.filtered(lambda l: l.is_downpayment and not l.display_type)
+        dp_lines._compute_name()  # Update the description of DP lines (Draft -> Posted)
+        downpayment_lines = dp_lines.filtered(lambda sol: not sol.order_id.locked)
+        other_so_lines = downpayment_lines.order_id.order_line - downpayment_lines
+        real_invoices = set(other_so_lines.invoice_lines.move_id)
+        for so_dpl in downpayment_lines:
+            so_dpl.price_unit = sum(
+                l.price_unit if l.move_id.move_type == 'out_invoice' else -l.price_unit
+                for l in so_dpl.invoice_lines
+                if l.move_id.state == 'posted' and l.move_id not in real_invoices  # don't recompute with the final invoice
+            )
+            so_dpl.tax_id = so_dpl.invoice_lines.tax_ids
 
-            line.sale_line_ids.tax_id = line.tax_ids
-            line.sale_line_ids.price_unit = line.price_unit
         return res
 
     def button_draft(self):
@@ -144,6 +147,43 @@ class AccountMove(models.Model):
         # OVERRIDE
         self.ensure_one()
         return self.line_ids.sale_line_ids and all(sale_line.is_downpayment for sale_line in self.line_ids.sale_line_ids) or False
+
+    def _get_sale_order_invoiced_amount(self, order):
+        """
+        Consider all lines on any invoice in self that stem from the sales order `order`. (All those invoices belong to order.company_id)
+        This function returns the sum of the totals of all those lines.
+        Note that this amount may be bigger than `order.amount_total`.
+        """
+        order_amount = 0
+        for invoice in self:
+            prices = sum(invoice.line_ids.filtered(lambda x: order in x.sale_line_ids.order_id).mapped('price_total'))
+            order_amount += invoice.currency_id._convert(
+                prices * -invoice.direction_sign,
+                order.currency_id,
+                invoice.company_id,
+                invoice.date,
+            )
+        return order_amount
+
+    def _get_partner_credit_warning_exclude_amount(self):
+        # EXTENDS module 'account'
+        # Consider the warning on a draft invoice created from a sales order.
+        # After confirming the invoice the (partial) amount (on the invoice)
+        # stemming from sales orders will be substracted from the credit_to_invoice.
+        # This will reduce the total credit of the partner.
+        # The computation should reflect the change of credit_to_invoice from 'res.partner'.
+        # (see _compute_credit_to_invoice and _compute_amount_to_invoice from 'sale.order' )
+        exclude_amount = super()._get_partner_credit_warning_exclude_amount()
+        for order in self.line_ids.sale_line_ids.order_id:
+            order_amount = min(self._get_sale_order_invoiced_amount(order), order.amount_to_invoice)
+            order_amount_company = order.currency_id._convert(
+                max(order_amount, 0),
+                self.company_id.currency_id,
+                self.company_id,
+                fields.Date.context_today(self)
+            )
+            exclude_amount += order_amount_company
+        return exclude_amount
 
     @api.depends('line_ids.sale_line_ids.order_id', 'currency_id', 'tax_totals', 'date')
     def _compute_partner_credit(self):

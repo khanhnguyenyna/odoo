@@ -9,15 +9,13 @@ from freezegun import freeze_time
 from threading import Event
 from unittest.mock import patch
 from weakref import WeakSet
-try:
-    from websocket._exceptions import WebSocketBadStatusException
-except ImportError:
-    pass
 
 from odoo.api import Environment
 from odoo.tests import common, new_test_user
 from .common import WebsocketCase
+from .. import websocket as websocket_module
 from ..models.bus import dispatch
+from ..models.ir_websocket import IrWebsocket
 from ..websocket import (
     CloseCode,
     Frame,
@@ -32,7 +30,7 @@ from ..websocket import (
 class TestWebsocketCaryall(WebsocketCase):
     def test_lifecycle_hooks(self):
         events = []
-        with patch.object(Websocket, '_event_callbacks', defaultdict(set)):
+        with patch.object(Websocket, '_Websocket__event_callbacks', defaultdict(set)):
             @Websocket.onopen
             def onopen(env, websocket):  # pylint: disable=unused-variable
                 self.assertIsInstance(env, Environment)
@@ -51,10 +49,10 @@ class TestWebsocketCaryall(WebsocketCase):
             self.assertEqual(events, ['open', 'close'])
 
     def test_instances_weak_set(self):
-        with patch.object(Websocket, "_instances", WeakSet()):
+        with patch.object(websocket_module, "_websocket_instances", WeakSet()):
             first_ws = self.websocket_connect()
             second_ws = self.websocket_connect()
-            self.assertEqual(len(Websocket._instances), 2)
+            self.assertEqual(len(websocket_module._websocket_instances), 2)
             first_ws.close(CloseCode.CLEAN)
             second_ws.close(CloseCode.CLEAN)
             self.wait_remaining_websocket_connections()
@@ -62,7 +60,7 @@ class TestWebsocketCaryall(WebsocketCase):
             # collected. Stop it now.
             self._serve_forever_patch.stop()
             gc.collect()
-            self.assertEqual(len(Websocket._instances), 0)
+            self.assertEqual(len(websocket_module._websocket_instances), 0)
 
     def test_timeout_manager_no_response_timeout(self):
         with freeze_time('2022-08-19') as frozen_time:
@@ -183,17 +181,6 @@ class TestWebsocketCaryall(WebsocketCase):
         self.assertEqual(notifications[0]['message']['type'], 'notif_type')
         self.assertEqual(notifications[0]['message']['payload'], 'another_message')
 
-    def test_opening_websocket_connection_during_tests(self):
-        # During tests, browsers can't open websocket connections.
-        headers = ['User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36']
-        with self.assertRaises(WebSocketBadStatusException) as error_catcher:
-            self.websocket_connect(header=headers)
-        self.assertEqual(error_catcher.exception.status_code, 503)
-
-        # But ChromeHeadless still can.
-        headers = ['User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/102.0.0.0 Safari/537.36']
-        self.websocket_connect()
-
     def test_subscribe_higher_last_notification_id(self):
         server_last_notification_id = self.env['bus.bus'].sudo().search([], limit=1, order='id desc').id or 0
         client_last_notification_id = server_last_notification_id + 1
@@ -212,8 +199,35 @@ class TestWebsocketCaryall(WebsocketCase):
             self.subscribe(websocket, ['my_channel'], client_last_notification_id)
             self.assertEqual(mock.call_args[0][2], client_last_notification_id)
 
+    def test_subscribe_to_custom_channel(self):
+        channel = self.env["res.partner"].create({"name": "John"})
+        websocket = self.websocket_connect()
+        with patch.object(IrWebsocket, "_build_bus_channel_list", return_value=[channel]):
+            self.subscribe(websocket, [], self.env['bus.bus']._bus_last_id())
+            self.env["bus.bus"]._sendmany([
+                (channel, "notif_on_global_channel", "message"),
+                ((channel, "PRIVATE"), "notif_on_private_channel", "message"),
+            ])
+            self.trigger_notification_dispatching([channel, (channel, "PRIVATE")])
+            notifications = json.loads(websocket.recv())
+            self.assertEqual(len(notifications), 1)
+            self.assertEqual(notifications[0]['message']['type'], 'notif_on_global_channel')
+            self.assertEqual(notifications[0]['message']['payload'], 'message')
+
+        with patch.object(IrWebsocket, "_build_bus_channel_list", return_value=[(channel, "PRIVATE")]):
+            self.subscribe(websocket, [], self.env['bus.bus']._bus_last_id())
+            self.env["bus.bus"]._sendmany([
+                (channel, "notif_on_global_channel", "message"),
+                ((channel, "PRIVATE"), "notif_on_private_channel", "message"),
+            ])
+            self.trigger_notification_dispatching([channel, (channel, "PRIVATE")])
+            notifications = json.loads(websocket.recv())
+            self.assertEqual(len(notifications), 1)
+            self.assertEqual(notifications[0]['message']['type'], 'notif_on_private_channel')
+            self.assertEqual(notifications[0]['message']['payload'], 'message')
+
     def test_no_cursor_when_no_callback_for_lifecycle_event(self):
-        with patch.object(Websocket, '_event_callbacks', defaultdict(set)):
+        with patch.object(Websocket, '_Websocket__event_callbacks', defaultdict(set)):
             with patch('odoo.addons.bus.websocket.acquire_cursor') as mock:
                 self.websocket_connect()
                 self.assertFalse(mock.called)
@@ -223,16 +237,56 @@ class TestWebsocketCaryall(WebsocketCase):
         new_test_user(self.env, login='test_user', password='Password!1')
         user_session = self.authenticate('test_user', 'Password!1')
         serve_forever_called_event = Event()
+        original_serve_forever = WebsocketConnectionHandler._serve_forever
 
         def serve_forever(websocket, *args):
+            original_serve_forever(websocket, *args)
             self.assertNotEqual(websocket._session.sid, user_session.sid)
             self.assertNotEqual(websocket._session.uid, user_session.uid)
             serve_forever_called_event.set()
 
         with patch.object(WebsocketConnectionHandler, '_serve_forever', side_effect=serve_forever) as mock:
-            self.websocket_connect(
+            ws = self.websocket_connect(
                 cookie=f'session_id={user_session.sid};',
                 origin="http://example.com"
             )
+            self.assertTrue(
+                ws.getheaders().get('set-cookie').startswith(f'session_id={user_session.sid}'),
+                'The set-cookie response header must be the origin request session rather than the websocket session'
+            )
             serve_forever_called_event.wait(timeout=5)
+            self.assertTrue(mock.called)
+
+    def test_disconnect_when_version_outdated(self):
+        # Outdated version, connection should be closed immediately
+        with patch.object(WebsocketConnectionHandler, "_VERSION", "17.0-1"), patch.object(
+            self, "_WEBSOCKET_URL", f"{self._BASE_WEBSOCKET_URL}?version=17.0-0"
+        ):
+            websocket = self.websocket_connect(
+                ping_after_connect=False, header={"User-Agent": "Chrome/126.0.0.0"}
+            )
+            self.assert_close_with_code(websocket, CloseCode.CLEAN, "OUTDATED_VERSION")
+
+        # Version not passed, User-Agent present, should be considered as outdated
+        with patch.object(WebsocketConnectionHandler, "_VERSION", "17.0-1"), patch.object(
+            self, "_WEBSOCKET_URL", self._BASE_WEBSOCKET_URL
+        ):
+            websocket = self.websocket_connect(
+                ping_after_connect=False, header={"User-Agent": "Chrome/126.0.0.0"}
+            )
+            self.assert_close_with_code(websocket, CloseCode.CLEAN, "OUTDATED_VERSION")
+        # Version not passed, User-Agent not present, should not be considered
+        # as outdated
+        with patch.object(WebsocketConnectionHandler, "_VERSION", None), patch.object(
+            self, "_WEBSOCKET_URL", self._BASE_WEBSOCKET_URL
+        ):
+            websocket = self.websocket_connect()
+            websocket.ping()
+            websocket.recv_data_frame(control_frame=True)  # pong
+
+    def test_trigger_on_websocket_closed(self):
+        with patch('odoo.addons.bus.models.ir_websocket.IrWebsocket._on_websocket_closed') as mock:
+            ws = self.websocket_connect()
+            ws.close(CloseCode.CLEAN)
+            self.wait_remaining_websocket_connections()
             self.assertTrue(mock.called)

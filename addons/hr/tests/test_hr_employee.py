@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo.tests import Form
+from odoo.tests import Form, users
 from odoo.addons.hr.tests.common import TestHrCommon
 
 
@@ -20,6 +20,28 @@ class TestHrEmployee(TestHrCommon):
             'user_id': self.user_without_image.id,
             'image_1920': False
         })
+
+    def test_employee_smart_button_multi_company(self):
+        partner = self.env['res.partner'].create({'name': 'Partner Test'})
+        company_A = self.env['res.company'].create({'name': 'company_A'})
+        company_B = self.env['res.company'].create({'name': 'company_B'})
+        self.env['hr.employee'].create({
+            'name': 'employee_A',
+            'work_contact_id': partner.id,
+            'company_id': company_A.id,
+        })
+        self.env['hr.employee'].create({
+            'name': 'employee_B',
+            'work_contact_id': partner.id,
+            'company_id': company_B.id
+        })
+
+        partner.with_company(company_A)._compute_employees_count()
+        self.assertEqual(partner.employees_count, 1)
+        partner.with_company(company_B)._compute_employees_count()
+        self.assertEqual(partner.employees_count, 1)
+        partner.with_company(company_A).with_company(company_B)._compute_employees_count()
+        self.assertEqual(partner.employees_count, 2)
 
     def test_employee_linked_partner(self):
         user_partner = self.user_without_image.partner_id
@@ -209,3 +231,56 @@ class TestHrEmployee(TestHrCommon):
         employee_B.work_email = 'new_email@example.com'
         self.assertEqual(employee_A.work_email, 'employee_A@example.com')
         self.assertEqual(employee_B.work_email, 'new_email@example.com')
+
+    @users('admin')
+    def test_change_user_on_employee(self):
+        test_other_user = self.env['res.users'].create({
+            'name': 'Test Other User',
+            'login': 'test_other_user',
+        })
+        test_other_user.partner_id.company_id = self.env.company
+        test_company = self.env['res.company'].create({
+            'name' : 'Test User Company',
+        })
+        self.env.user.write({'company_ids': test_company.ids, 'company_id': test_company.id})
+        test_user = self.env['res.users'].create({
+            'name': 'Test User',
+            'login': 'test_user',
+        })
+        test_user.partner_id.company_id = test_company
+        bank_account = self.env['res.partner.bank'].create({
+            'acc_number' : '1234567',
+            'partner_id' : test_user.partner_id.id,
+        })
+        test_employee = self.env['hr.employee'].create({
+            'name': 'Test User - employee',
+            'user_id': test_user.id,
+            'company_id': test_company.id,
+            'bank_account_id': bank_account.id,
+        })
+        # change user -> bank account change company
+        with Form(test_employee) as employee_form:
+            employee_form.user_id = test_other_user
+        # change user back -> check that there is no company error
+        with Form(test_employee) as employee_form:
+            employee_form.user_id = test_user
+
+    def test_avatar(self):
+        # Check simple employee has a generated image (initials)
+        employee_georgette = self.env['hr.employee'].create({'name': 'Georgette Pudubec'})
+        self.assertTrue(employee_georgette.image_1920)
+        self.assertTrue(employee_georgette.avatar_1920)
+
+        self.assertTrue(employee_georgette.work_contact_id)
+        self.assertTrue(employee_georgette.work_contact_id.image_1920)
+        self.assertTrue(employee_georgette.work_contact_id.avatar_1920)
+
+        # Check user has a generate image
+        user_norbert = self.env['res.users'].create({'name': 'Norbert Comidofisse', 'login': 'Norbert6870'})
+        self.assertTrue(user_norbert.image_1920)
+        self.assertTrue(user_norbert.avatar_1920)
+
+        # Check that linked employee got user image
+        employee_norbert = self.env['hr.employee'].create({'name': 'Norbert Employee', 'user_id': user_norbert.id})
+        self.assertEqual(employee_norbert.image_1920, user_norbert.image_1920)
+        self.assertEqual(employee_norbert.avatar_1920, user_norbert.avatar_1920)

@@ -21,7 +21,7 @@ import babel.core
 import pytz
 from lxml import etree
 from lxml.builder import E
-from passlib.context import CryptContext
+from passlib.context import CryptContext as _CryptContext
 from psycopg2 import sql
 
 from odoo import api, fields, models, tools, SUPERUSER_ID, _, Command
@@ -34,9 +34,60 @@ from odoo.tools import is_html_empty, partition, collections, frozendict, lazy_p
 
 _logger = logging.getLogger(__name__)
 
+class CryptContext:
+    def __init__(self, *args, **kwargs):
+        self.__obj__ = _CryptContext(*args, **kwargs)
+
+    @property
+    def encrypt(self):
+        # deprecated alias
+        return self.hash
+
+    def copy(self):
+        """
+            The copy method must create a new instance of the
+            ``CryptContext`` wrapper with the same configuration
+            as the original (``__obj__``).
+
+            There are no need to manage the case where kwargs are
+            passed to the ``copy`` method.
+
+            It is necessary to load the original ``CryptContext`` in
+            the new instance of the original ``CryptContext`` with ``load``
+            to get the same configuration.
+        """
+        other_wrapper = CryptContext(_autoload=False)
+        other_wrapper.__obj__.load(self.__obj__)
+        return other_wrapper
+
+    @property
+    def hash(self):
+        return self.__obj__.hash
+
+    @property
+    def identify(self):
+        return self.__obj__.identify
+
+    @property
+    def verify(self):
+        return self.__obj__.verify
+
+    @property
+    def verify_and_update(self):
+        return self.__obj__.verify_and_update
+
+    def schemes(self):
+        return self.__obj__.schemes()
+
+    def update(self, **kwargs):
+        if kwargs.get("schemes"):
+            assert isinstance(kwargs["schemes"], str) or all(isinstance(s, str) for s in kwargs["schemes"])
+        return self.__obj__.update(**kwargs)
+
+
 # Only users who can modify the user (incl. the user herself) see the real contents of these fields
 USER_PRIVATE_FIELDS = []
-MIN_ROUNDS = 350000
+MIN_ROUNDS = 600_000
 concat = chain.from_iterable
 
 #
@@ -131,6 +182,7 @@ class Groups(models.Model):
     _description = "Access Groups"
     _rec_name = 'full_name'
     _order = 'name'
+    _allow_sudo_commands = False
 
     name = fields.Char(required=True, translate=True)
     users = fields.Many2many('res.users', 'res_groups_users_rel', 'gid', 'uid')
@@ -172,7 +224,7 @@ class Groups(models.Model):
     def _search_full_name(self, operator, operand):
         lst = True
         if isinstance(operand, bool):
-            return [[('name', operator, operand)]]
+            return [('name', operator, operand)]
         if isinstance(operand, str):
             lst = False
             operand = [operand]
@@ -230,7 +282,7 @@ class Groups(models.Model):
         result = self.get_external_id()
         missings = {group_id: f'__custom__.group_{group_id}' for group_id, ext_id in result.items() if not ext_id}
         if missings:
-            self.env['ir.model.data'].create(
+            self.env['ir.model.data'].sudo().create(
                 [
                     {
                         'name': name.split('.')[1],
@@ -277,9 +329,12 @@ class Users(models.Model):
     _description = 'User'
     _inherits = {'res.partner': 'partner_id'}
     _order = 'name, login'
+    _allow_sudo_commands = False
 
-    def _check_company_domain(self, companies=None):
-        return [('company_ids', 'in', models.to_company_ids(companies))] if companies else []
+    def _check_company_domain(self, companies):
+        if not companies:
+            return []
+        return [('company_ids', 'in', models.to_company_ids(companies))]
 
     @property
     def SELF_READABLE_FIELDS(self):
@@ -302,8 +357,12 @@ class Users(models.Model):
         return ['signature', 'action_id', 'company_id', 'email', 'name', 'image_1920', 'lang', 'tz']
 
     def _default_groups(self):
-        default_user_id = self.env['ir.model.data']._xmlid_to_res_id('base.default_user', raise_if_not_found=False)
-        return self.env['res.users'].browse(default_user_id).sudo().groups_id if default_user_id else []
+        """Default groups for employees
+
+        All the groups of the Template User
+        """
+        default_user = self.env.ref('base.default_user', raise_if_not_found=False)
+        return default_user.sudo().groups_id if default_user else []
 
     partner_id = fields.Many2one('res.partner', required=True, ondelete='restrict', auto_join=True, index=True,
         string='Related Partner', help='Partner-related data of the user')
@@ -321,7 +380,7 @@ class Users(models.Model):
     active_partner = fields.Boolean(related='partner_id.active', readonly=True, string="Partner is Active")
     action_id = fields.Many2one('ir.actions.actions', string='Home Action',
         help="If specified, this action will be opened at log on for this user, in addition to the standard menu.")
-    groups_id = fields.Many2many('res.groups', 'res_groups_users_rel', 'uid', 'gid', string='Groups', default=_default_groups)
+    groups_id = fields.Many2many('res.groups', 'res_groups_users_rel', 'uid', 'gid', string='Groups', default=lambda s: s._default_groups())
     log_ids = fields.One2many('res.users.log', 'create_uid', string='User log entries')
     login_date = fields.Datetime(related='log_ids.create_date', string='Latest authentication', readonly=False)
     share = fields.Boolean(compute='_compute_share', compute_sudo=True, string='Share User', store=True,
@@ -363,7 +422,7 @@ class Users(models.Model):
         # automatically encrypted at startup: look for passwords which don't
         # match the "extended" MCF and pass those through passlib.
         # Alternative: iterate on *all* passwords and use CryptContext.identify
-        cr.execute("""
+        cr.execute(r"""
         SELECT id, password FROM res_users
         WHERE password IS NOT NULL
           AND password !~ '^\$[^$]+\$[^$]+\$.'
@@ -560,6 +619,13 @@ class Users(models.Model):
                 user.partner_id.toggle_active()
         super(Users, self).toggle_active()
 
+    def onchange(self, values, field_names, fields_spec):
+        # Hacky fix to access fields in `SELF_READABLE_FIELDS` in the onchange logic.
+        # Put field values in the cache.
+        if self == self.env.user:
+            [self.sudo()[field_name] for field_name in self.SELF_READABLE_FIELDS]
+        return super().onchange(values, field_names, fields_spec)
+
     def read(self, fields=None, load='_classic_read'):
         readable = self.SELF_READABLE_FIELDS
         if fields and self == self.env.user and all(key in readable or key.startswith('context_') for key in fields):
@@ -597,7 +663,20 @@ class Users(models.Model):
             if user.partner_id.company_id:
                 user.partner_id.company_id = user.company_id
             user.partner_id.active = user.active
+            # Generate employee initals as avatar for internal users without image
+            if not user.image_1920 and not user.share and user.name:
+                user.image_1920 = user.partner_id._avatar_generate_svg()
+
         return users
+
+    def _apply_groups_to_existing_employees(self):
+        """ Should new groups be added to existing employees?
+
+        If the template user is being modified, the groups should be applied to
+        every other base_user users
+        """
+        default_user = self.env.ref('base.default_user', raise_if_not_found=False)
+        return default_user and default_user in self
 
     def write(self, values):
         if values.get('active') and SUPERUSER_ID in self._ids:
@@ -621,18 +700,20 @@ class Users(models.Model):
                 # safe fields only, so we write as super-user to bypass access rights
                 self = self.sudo()
 
-        if 'groups_id' in values:
-            default_user = self.env.ref('base.default_user', raise_if_not_found=False)
-            if default_user and default_user in self:
-                old_groups = default_user.groups_id
+        old_groups = []
+        if 'groups_id' in values and self._apply_groups_to_existing_employees():
+            # if modify groups_id content, compute the delta of groups to apply
+            # the new ones to other existing users
+            old_groups = self._default_groups()
 
         res = super(Users, self).write(values)
 
-        if 'groups_id' in values and default_user and default_user in self:
-            # Sync added groups on default user template to existing users
-            added_groups = default_user.groups_id - old_groups
+        if old_groups:
+            # new elements in _default_groups() means new groups for default users
+            # that needs to be added to existing ones as well for consistency
+            added_groups = self._default_groups() - old_groups
             if added_groups:
-                internal_users = self.env.ref('base.group_user').users - default_user
+                internal_users = self.env.ref('base.group_user').users - self
                 internal_users.write({'groups_id': [Command.link(gid) for gid in added_groups.ids]})
 
         if 'company_id' in values:
@@ -642,13 +723,15 @@ class Users(models.Model):
                     user.partner_id.write({'company_id': user.company_id.id})
 
         if 'company_id' in values or 'company_ids' in values:
-            # Reset lazy properties `company` & `companies` on all envs
+            # Reset lazy properties `company` & `companies` on all envs,
+            # and also their _cache_key, which may depend on them.
             # This is unlikely in a business code to change the company of a user and then do business stuff
             # but in case it happens this is handled.
             # e.g. `account_test_savepoint.py` `setup_company_data`, triggered by `test_account_invoice_report.py`
             for env in list(self.env.transaction.envs):
                 if env.user in self:
                     lazy_property.reset_all(env)
+                    env._cache_key.clear()
 
         # clear caches linked to the users
         if self.ids and 'groups_id' in values:
@@ -671,6 +754,9 @@ class Users(models.Model):
         default_user_template = self.env.ref('base.default_user', False)
         if SUPERUSER_ID in self.ids:
             raise UserError(_('You can not remove the admin user as it is used internally for resources created by Odoo (updates, module installation, ...)'))
+        user_admin = self.env.ref('base.user_admin', raise_if_not_found=False)
+        if user_admin and user_admin in self:
+            raise UserError(_('You cannot delete the admin user because it is utilized in various places (such as security configurations,...). Instead, archive it.'))
         self.env.registry.clear_cache()
         if (portal_user_template and portal_user_template in self) or (default_user_template and default_user_template in self):
             raise UserError(_('Deleting the template users is not allowed. Deleting this profile will compromise critical functionalities.'))
@@ -935,8 +1021,8 @@ class Users(models.Model):
             user.write({
                 'login': f'__deleted_user_{user.id}_{time.time()}',
                 'password': '',
-                'api_key_ids': Command.clear(),
             })
+            user.api_key_ids._remove()
 
             res_users_deletion_values.append({
                 'user_id': user.id,
@@ -1333,7 +1419,7 @@ class UsersImplied(models.Model):
                 user = self.new(values)
                 gs = user.groups_id._origin
                 gs = gs | gs.trans_implied_ids
-                values['groups_id'] = type(self).groups_id.convert_to_write(gs, user)
+                values['groups_id'] = self._fields['groups_id'].convert_to_write(gs, user)
         return super(UsersImplied, self).create(vals_list)
 
     def write(self, values):
@@ -1898,11 +1984,12 @@ class CheckIdentity(models.TransientModel):
             self.create_uid._check_credentials(self.password, {'interactive': True})
         except AccessDenied:
             raise UserError(_("Incorrect Password, try again or click on Forgot Password to reset your password."))
+        finally:
+            self.password = False
 
     def run_check(self):
         assert request, "This method can only be accessed over HTTP"
         self._check_identity()
-        self.password = False
 
         request.session['identity-check-last'] = time.time()
         ctx, model, ids, method = json.loads(self.sudo().request)
@@ -1911,8 +1998,9 @@ class CheckIdentity(models.TransientModel):
         return method()
 
     def revoke_all_devices(self):
+        current_password = self.password
         self._check_identity()
-        self.env.user._change_password(self.password)
+        self.env.user._change_password(current_password)
         self.sudo().unlink()
         return {'type': 'ir.actions.client', 'tag': 'reload'}
 
@@ -2044,6 +2132,7 @@ class APIKeys(models.Model):
     _name = 'res.users.apikeys'
     _description = 'Users API Keys'
     _auto = False # so we can have a secret column
+    _allow_sudo_commands = False
 
     name = fields.Char("Description", required=True, readonly=True)
     user_id = fields.Many2one('res.users', index=True, required=True, readonly=True, ondelete="cascade")

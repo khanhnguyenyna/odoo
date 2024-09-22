@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo.tests import tagged
-from odoo.tests.common import TransactionCase
+from odoo.tests.common import Form, TransactionCase
 from odoo import Command
 
 
@@ -32,10 +32,11 @@ class TestAnalyticAccount(TransactionCase):
         cls.company_data = cls.env['res.company'].create({
             'name': 'company_data',
         })
-        cls.env.user.company_ids |= cls.company_data
+        cls.company_b_branch = cls.env['res.company'].create({'name': "B Branch", 'parent_id': cls.company_data.id})
+        cls.env.user.company_ids |= cls.company_data + cls.company_b_branch
 
         user.write({
-            'company_ids': [(6, 0, cls.company_data.ids)],
+            'company_ids': [(6, 0, [cls.company_data.id, cls.company_b_branch.id])],
             'company_id': cls.company_data.id,
         })
         cls.analytic_plan_offset = len(cls.env['account.analytic.plan'].get_relevant_plans())
@@ -186,3 +187,45 @@ class TestAnalyticAccount(TransactionCase):
         plans_json = self.env['account.analytic.plan'].get_relevant_plans()
         self.assertEqual(2, len(plans_json) - self.analytic_plan_offset,
                          "The parent plan should be available even if the analytic account is set on child of third generation")
+
+    def test_all_account_count_with_subplans(self):
+        self.analytic_plan = self.env['account.analytic.plan'].create({
+            'name': 'Parent Plan',
+        })
+        self.analytic_sub_plan = self.env['account.analytic.plan'].create({
+            'name': 'Sub Plan',
+            'parent_id': self.analytic_plan.id,
+        })
+        self.analytic_sub_sub_plan = self.env['account.analytic.plan'].create({
+            'name': 'Sub Sub Plan',
+            'parent_id': self.analytic_sub_plan.id,
+        })
+
+        self.env['account.analytic.account'].create([
+            {'name': 'Account', 'plan_id': self.analytic_plan.id},
+            {'name': 'Child Account', 'plan_id': self.analytic_sub_plan.id},
+            {'name': 'Grand Child Account', 'plan_id': self.analytic_sub_sub_plan.id}
+        ])
+
+        expected_values = {self.analytic_plan: 3, self.analytic_sub_plan: 2, self.analytic_sub_sub_plan: 1}
+        for plan, expected_value in expected_values.items():
+            with self.subTest(plan=plan.name, expected_count=expected_value):
+                with Form(plan) as plan_form:
+                    self.assertEqual(plan_form.record.all_account_count, expected_value)
+
+    def test_analytic_account_branches(self):
+        """
+        Test that an analytic account defined in a parent company is accessible in its branches (children)
+        """
+        # timesheet adds a rule to forcer a project_id; account overrides it
+        timesheet_group = self.env.ref('hr_timesheet.group_hr_timesheet_user', raise_if_not_found=False)
+        if timesheet_group:
+            self.env.user.groups_id -= timesheet_group
+
+        self.analytic_account_1.company_id = self.company_data
+        self.env['account.analytic.line'].create({
+            'name': 'company specific account',
+            'account_id': self.analytic_account_1.id,
+            'amount': 100,
+            'company_id': self.company_b_branch.id,
+        })

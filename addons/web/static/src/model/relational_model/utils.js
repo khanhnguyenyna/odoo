@@ -9,6 +9,7 @@ import {
     serializeDateTime,
 } from "@web/core/l10n/dates";
 import { x2ManyCommands } from "@web/core/orm_service";
+import { evaluateExpr } from "@web/core/py_js/py";
 import { Deferred } from "@web/core/utils/concurrency";
 import { omit } from "@web/core/utils/objects";
 import { effect } from "@web/core/utils/reactive";
@@ -65,13 +66,17 @@ export function addFieldDependencies(activeFields, fields, fieldDependencies = [
             activeFields[field.name] = makeActiveField(field);
         }
         if (!fields[field.name]) {
-            fields[field.name] = omit(field, [
+            const newField = omit(field, [
                 "context",
                 "invisible",
                 "required",
                 "readonly",
                 "onChange",
             ]);
+            fields[field.name] = newField;
+            if (newField.type === "selection" && !Array.isArray(newField.selection)) {
+                newField.selection = [];
+            }
         }
     }
 }
@@ -181,7 +186,7 @@ export function patchActiveFields(activeField, patch) {
     if ("limit" in patch) {
         activeField.limit = patch.limit;
     }
-    if ("defaultOrderBy" in patch) {
+    if (patch.defaultOrderBy) {
         activeField.defaultOrderBy = patch.defaultOrderBy;
     }
 }
@@ -471,7 +476,7 @@ export function extractInfoFromGroupData(groupData, groupBy, fields) {
     info.rawValue = groupData[groupBy[0]];
     info.value = getValueFromGroupData(groupByField, info.rawValue, info.range);
     info.displayName = getDisplayNameFromGroupData(groupByField, info.rawValue);
-    info.serverValue = getServerValueFromGroupData(groupByField, info.value);
+    info.serverValue = getGroupServerValue(groupByField, info.value);
     info.aggregates = getAggregatesFromGroupData(groupData, fields);
     return info;
 }
@@ -510,7 +515,7 @@ function getDisplayNameFromGroupData(field, rawValue) {
  * @param {any} value
  * @returns {any}
  */
-function getServerValueFromGroupData(field, value) {
+export function getGroupServerValue(field, value) {
     switch (field.type) {
         case "many2many": {
             return value ? [value] : false;
@@ -560,19 +565,43 @@ function getValueFromGroupData(field, rawValue, range) {
  * expected by the server for a write.
  * For instance, for a many2one: { id: 3, display_name: "Marc" } => 3.
  */
-export function fromUnityToServerValues(values, fields, activeFields) {
+export function fromUnityToServerValues(
+    values,
+    fields,
+    activeFields,
+    { withReadonly, context } = {}
+) {
     const { CREATE, UPDATE } = x2ManyCommands;
     const serverValues = {};
     for (const fieldName in values) {
         let value = values[fieldName];
+        const field = fields[fieldName];
+        const activeField = activeFields[fieldName];
+        if (!withReadonly) {
+            if (field.readonly) {
+                continue;
+            }
+            try {
+                if (evaluateExpr(activeField.readonly, context)) {
+                    continue;
+                }
+            } catch {
+                // if the readonly expression depends on other fields, we can't evaluate it as we
+                // didn't read the record, so we simply ignore it
+            }
+        }
         switch (fields[fieldName].type) {
             case "one2many":
             case "many2many":
                 value = value.map((c) => {
                     if (c[0] === CREATE || c[0] === UPDATE) {
-                        const _fields = activeFields[fieldName].related.fields;
-                        const _activeFields = activeFields[fieldName].related.activeFields;
-                        return [c[0], c[1], fromUnityToServerValues(c[2], _fields, _activeFields)];
+                        const _fields = activeField.related.fields;
+                        const _activeFields = activeField.related.activeFields;
+                        return [
+                            c[0],
+                            c[1],
+                            fromUnityToServerValues(c[2], _fields, _activeFields, { withReadonly }),
+                        ];
                     }
                     return [c[0], c[1]];
                 });
@@ -607,25 +636,28 @@ export function isRelational(field) {
 export function useRecordObserver(callback) {
     const component = useComponent();
     let alive = true;
-    const fct = (props) => {
+    let props = component.props;
+    const fct = () => {
         const def = new Deferred();
         let firstCall = true;
         effect(
-            async (record) => {
+            (record) => {
                 if (firstCall) {
                     firstCall = false;
-                    await callback(record, props);
-                    def.resolve();
+                    return Promise.resolve(callback(record, props))
+                        .then(def.resolve)
+                        .catch(def.reject);
                 } else {
                     return batched(
-                        async (record) => {
+                        (record) => {
                             if (!alive) {
                                 // effect doesn't clean up when the component is unmounted.
                                 // We must do it manually.
                                 return;
                             }
-                            await callback(record, props);
-                            def.resolve();
+                            return Promise.resolve(callback(record, props))
+                                .then(def.resolve)
+                                .catch(def.reject);
                         },
                         () => new Promise((resolve) => window.requestAnimationFrame(resolve))
                     )(record);
@@ -638,10 +670,12 @@ export function useRecordObserver(callback) {
     onWillDestroy(() => {
         alive = false;
     });
-    onWillStart(() => fct(component.props));
-    onWillUpdateProps((props) => {
-        if (props.record.id !== component.props.record.id) {
-            return fct(props);
+    onWillStart(() => fct());
+    onWillUpdateProps((nextProps) => {
+        const currentRecordId = props.record.id;
+        props = nextProps;
+        if (props.record.id !== currentRecordId) {
+            return fct();
         }
     });
 }

@@ -6,7 +6,6 @@
 # Maidu Targama <m.targama@gmail.com>, 2023
 # Helen Sulaoja <helen@avalah.ee>, 2023
 # Egon Raamat <egon@avalah.ee>, 2023
-# Martin Talts <martin.t@avalah.ee>, 2023
 # Patrick-Jordan Kiudorv, 2023
 # Piia Paurson <piia@avalah.ee>, 2023
 # Martin Trigaux, 2023
@@ -17,22 +16,29 @@
 # JanaAvalah, 2023
 # Marten, 2023
 # Eneli Õigus <enelioigus@gmail.com>, 2023
-# Anna, 2023
 # Triine Aavik <triine@avalah.ee>, 2023
+# Mihkel avalah, 2023
+# Anna, 2023
+# Martin Talts <martin.t@avalah.ee>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Triine Aavik <triine@avalah.ee>, 2023\n"
+"Last-Translator: Martin Talts <martin.t@avalah.ee>, 2024\n"
 "Language-Team: Estonian (https://app.transifex.com/odoo/teams/41243/et/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Language: et\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.date_selector
+msgid "#{year}"
+msgstr ""
 
 #. module: website_blog
 #. odoo-python
@@ -249,7 +255,7 @@ msgstr "<i class=\"fa fa-rss-square\" aria-label=\"RSS\" title=\"RSS\"/>"
 #. module: website_blog
 #: model_terms:ir.ui.view,arch_db:website_blog.opt_sidebar_blog_index_follow_us
 msgid "<i class=\"fa fa-tiktok text-tiktok\" aria-label=\"TikTok\" title=\"TikTok\"/>"
-msgstr ""
+msgstr "<i class=\"fa fa-tiktok text-tiktok\" aria-label=\"TikTok\" title=\"TikTok\"/>"
 
 #. module: website_blog
 #: model_terms:ir.ui.view,arch_db:website_blog.opt_blog_post_share_links_display
@@ -382,6 +388,7 @@ msgid "All"
 msgstr "Kõik"
 
 #. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.blogs_nav
 #: model_terms:ir.ui.view,arch_db:website_blog.post_breadcrumbs
 msgid "All Blogs"
 msgstr "Kõik blogid"
@@ -685,6 +692,7 @@ msgstr "Blogi tiitel"
 #: model:ir.actions.act_window,name:website_blog.action_blog_blog
 #: model:ir.ui.menu,name:website_blog.menu_blog_global
 #: model_terms:ir.ui.view,arch_db:website_blog.blog_searchbar_input_snippet_options
+#: model_terms:ir.ui.view,arch_db:website_blog.blogs_nav
 #: model_terms:ir.ui.view,arch_db:website_blog.view_blog_blog_list
 msgid "Blogs"
 msgstr "Blogid"
@@ -786,6 +794,7 @@ msgstr ""
 "blogipostitus."
 
 #. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.blogs_nav
 #: model_terms:ir.ui.view,arch_db:website_blog.posts_loop
 msgid "Close"
 msgstr "Sulge"
@@ -1592,7 +1601,7 @@ msgstr "Vigade arv"
 #: model:ir.model.fields,help:website_blog.field_blog_blog__message_needaction_counter
 #: model:ir.model.fields,help:website_blog.field_blog_post__message_needaction_counter
 msgid "Number of messages requiring action"
-msgstr ""
+msgstr "Tegevust nõudvate sõnumite arv"
 
 #. module: website_blog
 #: model:ir.model.fields,help:website_blog.field_blog_blog__message_has_error_counter
@@ -1616,6 +1625,15 @@ msgstr ""
 "the depth and scope of what you will be able to see will improve "
 "geometrically. For many amateur astronomers, we sometimes cannot get enough "
 "of what we can see on this our closest space object."
+
+#. module: website_blog
+#. odoo-python
+#: code:addons/website_blog/models/ir_qweb_fields.py:0
+#, python-format
+msgid ""
+"On your default language, empty the blog post description and save to get an"
+" automated (translated) summary."
+msgstr ""
 
 #. module: website_blog
 #. odoo-javascript
@@ -1741,6 +1759,13 @@ msgid "Publishing date"
 msgstr "Avalikustamise kuupäev"
 
 #. module: website_blog
+#: model:ir.model,name:website_blog.model_ir_qweb_field
+msgid "Qweb Field"
+msgstr ""
+"2689\n"
+"Qweb Väli"
+
+#. module: website_blog
 #: model:ir.model.fields,field_description:website_blog.field_blog_blog__rating_ids
 #: model:ir.model.fields,field_description:website_blog.field_blog_post__rating_ids
 msgid "Ratings"
@@ -1754,7 +1779,7 @@ msgstr "Loe rohkem"
 #. module: website_blog
 #: model_terms:ir.ui.view,arch_db:website_blog.posts_loop
 msgid "Read more <i class=\"oi oi-chevron-right ms-2\"/>"
-msgstr ""
+msgstr "Loe rohkem <i class=\"oi oi-chevron-right ms-2\"/>"
 
 #. module: website_blog
 #: model_terms:blog.post,content:website_blog.blog_post_3
@@ -2070,7 +2095,7 @@ msgstr "Sildi nimekiri"
 #. module: website_blog
 #: model:ir.model.constraint,message:website_blog.constraint_blog_tag_category_name_uniq
 msgid "Tag category already exists!"
-msgstr ""
+msgstr "Sildi kategooria juba eksisteerib!"
 
 #. module: website_blog
 #: model:ir.model.constraint,message:website_blog.constraint_blog_tag_name_uniq
@@ -2505,6 +2530,11 @@ msgstr "Nähtav kõikidel blogilehekülgedel"
 #: model:ir.model.fields,field_description:website_blog.field_blog_post__website_published
 msgid "Visible on current website"
 msgstr "Nähtav praegusel veebilehel"
+
+#. module: website_blog
+#: model_terms:ir.ui.view,arch_db:website_blog.blog_post_content
+msgid "WRITE HERE OR DRAG BUILDING BLOCKS"
+msgstr ""
 
 #. module: website_blog
 #: model:ir.model,name:website_blog.model_website

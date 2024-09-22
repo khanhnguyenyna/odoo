@@ -7,6 +7,7 @@ from io import BytesIO
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError
 from odoo.tools.misc import split_every
+from odoo.osv.expression import AND
 from werkzeug.urls import url_unquote
 
 
@@ -14,15 +15,15 @@ class ResConfigSettings(models.TransientModel):
     _inherit = "res.config.settings"
 
     pos_self_ordering_takeaway = fields.Boolean(related="pos_config_id.self_ordering_takeaway", readonly=False)
-    pos_self_ordering_service_mode = fields.Selection(related="pos_config_id.self_ordering_service_mode", readonly=False)
-    pos_self_ordering_mode = fields.Selection(related="pos_config_id.self_ordering_mode", readonly=False)
+    pos_self_ordering_service_mode = fields.Selection(related="pos_config_id.self_ordering_service_mode", readonly=False, required=True)
+    pos_self_ordering_mode = fields.Selection(related="pos_config_id.self_ordering_mode", readonly=False, required=True)
     pos_self_ordering_alternative_fp_id = fields.Many2one(related="pos_config_id.self_ordering_alternative_fp_id", readonly=False)
     pos_self_ordering_default_language_id = fields.Many2one(related="pos_config_id.self_ordering_default_language_id", readonly=False)
     pos_self_ordering_available_language_ids = fields.Many2many(related="pos_config_id.self_ordering_available_language_ids", readonly=False)
     pos_self_ordering_image_home_ids = fields.Many2many(related="pos_config_id.self_ordering_image_home_ids", readonly=False)
     pos_self_ordering_image_brand = fields.Image(related="pos_config_id.self_ordering_image_brand", readonly=False)
     pos_self_ordering_image_brand_name = fields.Char(related="pos_config_id.self_ordering_image_brand_name", readonly=False)
-    pos_self_ordering_pay_after = fields.Selection(related="pos_config_id.self_ordering_pay_after", readonly=False)
+    pos_self_ordering_pay_after = fields.Selection(related="pos_config_id.self_ordering_pay_after", readonly=False, required=True)
     pos_self_ordering_default_user_id = fields.Many2one(related="pos_config_id.self_ordering_default_user_id", readonly=False)
 
     @api.onchange("pos_self_ordering_default_user_id")
@@ -183,3 +184,12 @@ class ResConfigSettings(models.TransientModel):
     def update_access_tokens(self):
         self.ensure_one()
         self.pos_config_id._update_access_token()
+
+    @api.depends('pos_self_ordering_mode')
+    def _compute_pos_pricelist_id(self):
+        super()._compute_pos_pricelist_id()
+        for res_config in self:
+            if res_config.pos_self_ordering_mode == 'kiosk':
+                currency_id = res_config.pos_journal_id.currency_id.id if res_config.pos_journal_id.currency_id else res_config.pos_config_id.company_id.currency_id.id
+                domain = AND([self.env['product.pricelist']._check_company_domain(res_config.pos_config_id.company_id), [('currency_id', '=', currency_id)]])
+                res_config.pos_available_pricelist_ids = self.env['product.pricelist'].search(domain)

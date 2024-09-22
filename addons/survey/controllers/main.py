@@ -110,8 +110,8 @@ class Survey(http.Controller):
             survey_sudo, answer_sudo = self._fetch_from_access_token(survey_token, answer_token)
             try:
                 survey_user = survey_sudo.with_user(request.env.user)
-                survey_user.check_access_rights(self, 'read', raise_exception=True)
-                survey_user.check_access_rule(self, 'read')
+                survey_user.check_access_rights('read', raise_exception=True)
+                survey_user.check_access_rule('read')
             except:
                 pass
             else:
@@ -318,6 +318,9 @@ class Survey(http.Controller):
                     next_page_or_question = survey_sudo._get_next_page_or_question(
                         answer_sudo,
                         answer_sudo.last_displayed_page_id.id if answer_sudo.last_displayed_page_id else 0)
+                    # fallback to skipped page so that there is a next_page_or_question otherwise this should be a submit
+                    if not next_page_or_question:
+                        next_page_or_question = answer_sudo._get_next_skipped_page_or_question()
 
                 if next_page_or_question:
                     if answer_sudo.survey_first_submitted:
@@ -533,7 +536,7 @@ class Survey(http.Controller):
             answer, comment = self._extract_comment_from_answers(question, post.get(str(question.id)))
             errors.update(question.validate_question(answer, comment))
             if not errors.get(question.id):
-                answer_sudo._save_lines(question, answer, comment, overwrite_existing=survey_sudo.users_can_go_back)
+                answer_sudo._save_lines(question, answer, comment, overwrite_existing=survey_sudo.users_can_go_back or question.save_as_nickname or question.save_as_email)
 
         if errors and not (answer_sudo.survey_time_limit_reached or answer_sudo.question_time_limit_reached):
             return {}, {'error': 'validation', 'fields': errors}
@@ -635,7 +638,7 @@ class Survey(http.Controller):
         access_data = self._get_access_data(survey_token, answer_token, ensure_token=False, check_partner=False)
         if access_data['validity_code'] is not True and (
                 access_data['has_survey_access'] or
-                access_data['validity_code'] not in ['token_required', 'survey_closed', 'survey_void']):
+                access_data['validity_code'] not in ['token_required', 'survey_closed', 'survey_void', 'answer_deadline']):
             return self._redirect_with_error(access_data, access_data['validity_code'])
 
         survey_sudo, answer_sudo = access_data['survey_sudo'], access_data['answer_sudo']

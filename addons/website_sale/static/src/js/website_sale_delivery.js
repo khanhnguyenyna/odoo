@@ -36,6 +36,7 @@ publicWidget.registry.websiteSaleDelivery = publicWidget.Widget.extend({
             if (carrierChecked.length === 0) {
                 this._disablePayButton();
             } else {
+                this.forceClickCarrier = true;
                 carrierChecked[0].click();
             }
             await this._getCurrentLocation();
@@ -155,6 +156,14 @@ publicWidget.registry.websiteSaleDelivery = publicWidget.Widget.extend({
             // we need to check if it's the carrier that is selected
             if (result.new_amount_total_raw !== undefined) {
                 this._updateShippingCost(result.new_amount_total_raw);
+                // reload page only when amount_total switches between zero and not zero
+                const hasPaymentMethod = document.querySelector(
+                    "div[name='o_website_sale_free_cart']"
+                ) === null;
+                const shouldDisplayPaymentMethod = result.new_amount_total_raw !== 0;
+                if (hasPaymentMethod !==  shouldDisplayPaymentMethod) {
+                    location.reload(false);
+                }
             }
             this._updateShippingCost(result.new_amount_delivery);
         }
@@ -205,11 +214,12 @@ publicWidget.registry.websiteSaleDelivery = publicWidget.Widget.extend({
     _disablePayButtonNoPickupPoint : function (ev){
         const selectedCarrierEl = ev.currentTarget.closest('.o_delivery_carrier_select');
         const address = selectedCarrierEl.querySelector('.o_order_location_address').innerText
-        const isPickUp = selectedCarrierEl.lastChild.previousSibling.children;
+        const orderLocationContainer = selectedCarrierEl.querySelector('.o_order_location').parentNode;
+        const hasPickUpLocations = selectedCarrierEl.querySelector('.o_list_pickup_locations');
 
         document.querySelectorAll('.error_no_pick_up_point').forEach(el => el.remove());
 
-        if (isPickUp.length > 1 && (address == "" || isPickUp[0].classList.contains("d-none"))) {
+        if (hasPickUpLocations && (address == "" || orderLocationContainer.classList.contains("d-none"))) {
             this._disablePayButton();
             const errorNode = document.createElement("i");
             errorNode.classList.add("small", "error_no_pick_up_point","ms-2");
@@ -248,6 +258,7 @@ publicWidget.registry.websiteSaleDelivery = publicWidget.Widget.extend({
         const carrier_id = carrierChecked?.querySelector('input')?.value;
         const result = await this.rpc('/shop/update_carrier', {
             'carrier_id': carrier_id,
+            'no_reset_access_point_address': true,
         })
         this._enableButton(result.status);
     },
@@ -261,6 +272,9 @@ publicWidget.registry.websiteSaleDelivery = publicWidget.Widget.extend({
     _enableButton(status){
         if (status) {
             Component.env.bus.trigger('enablePaymentButton');
+        }
+        else {
+            this._disablePayButton();
         }
     },
 
@@ -348,9 +362,10 @@ publicWidget.registry.websiteSaleDelivery = publicWidget.Widget.extend({
         const radio = ev.currentTarget.closest('.o_delivery_carrier_select').querySelector(
             'input[type="radio"]'
         );
-        if (radio.checked) {
+        if (radio.checked && !this._shouldDisplayPickupLocations(ev) && !this.forceClickCarrier) {
             return;
         }
+        this.forceClickCarrier = false;
 
         this._disablePayButton();
         this._showLoading(radio);

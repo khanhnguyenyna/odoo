@@ -480,6 +480,27 @@ QUnit.module("ViewDialogs", (hooks) => {
         }
     );
 
+    QUnit.test("SelectCreateDialog: multiple clicks on record", async function (assert) {
+        serverData.views = {
+            "partner,false,list": `<tree><field name="display_name"/></tree>`,
+            "partner,false,search": `<search><field name="foo"/></search>`,
+        };
+        const webClient = await createWebClient({ serverData });
+        webClient.env.services.dialog.add(SelectCreateDialog, {
+            resModel: "partner",
+            onSelected: async function (records) {
+                assert.step(`select record ${records[0]}`);
+            },
+        });
+
+        await nextTick();
+        click(target.querySelector(".modal .o_data_row .o_data_cell"));
+        click(target.querySelector(".modal .o_data_row .o_data_cell"));
+        click(target.querySelector(".modal .o_data_row .o_data_cell"));
+        await nextTick();
+        assert.verifySteps(["select record 1"], "should have called onSelected only once");
+    });
+
     QUnit.test("SelectCreateDialog: default props, create a record", async function (assert) {
         serverData.views = {
             "partner,false,list": `<tree><field name="display_name"/></tree>`,
@@ -504,6 +525,7 @@ QUnit.module("ViewDialogs", (hooks) => {
         assert.containsOnce(target, ".o_dialog footer button.o_select_button");
         assert.containsOnce(target, ".o_dialog footer button.o_create_button");
         assert.containsOnce(target, ".o_dialog footer button.o_form_button_cancel");
+        assert.containsNone(target, ".o_dialog .o_control_panel_main_buttons .o_list_button_add");
 
         await click(target.querySelector(".o_dialog footer button.o_create_button"));
 

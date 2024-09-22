@@ -4,16 +4,23 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 16.1alpha1+e\n"
+"Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-01-04 12:09+0000\n"
-"PO-Revision-Date: 2023-01-04 12:09+0000\n"
+"POT-Creation-Date: 2024-02-22 14:43+0000\n"
+"PO-Revision-Date: 2024-02-22 14:43+0000\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Plural-Forms: \n"
+
+#. module: l10n_de
+#. odoo-python
+#: code:addons/l10n_de/models/ir_attachment.py:0
+#, python-format
+msgid "%(attachment_name)s (detached by %(user)s on %(date)s)"
+msgstr ""
 
 #. module: l10n_de
 #: model:account.report.line,name:l10n_de.tax_report_de_tag_21
@@ -276,13 +283,8 @@ msgid "98. at other tax rates (line 27)"
 msgstr ""
 
 #. module: l10n_de
-#. odoo-python
-#: code:addons/l10n_de/models/datev.py:0
-#, python-format
-msgid ""
-"Account %s does not authorize to have tax %s specified on the line."
-"                                 Change the tax used in this invoice or "
-"remove all taxes from the account"
+#: model:ir.model,name:l10n_de.model_account_account
+msgid "Account"
 msgstr ""
 
 #. module: l10n_de
@@ -293,6 +295,11 @@ msgstr ""
 #. module: l10n_de
 #: model:account.report.line,name:l10n_de.tax_report_de_tag_01
 msgid "Assessment basis"
+msgstr ""
+
+#. module: l10n_de
+#: model:ir.model,name:l10n_de.model_ir_attachment
+msgid "Attachment"
 msgstr ""
 
 #. module: l10n_de
@@ -498,11 +505,6 @@ msgid "Balance sheet passive: A V net profit/loss for the year"
 msgstr ""
 
 #. module: l10n_de
-#: model:account.account.tag,name:l10n_de.tag_de_liabilities_bs_B
-msgid "Balance sheet passive: B Special items with an equity portion"
-msgstr ""
-
-#. module: l10n_de
 #: model:account.account.tag,name:l10n_de.tag_de_liabilities_bs_B_1
 msgid ""
 "Balance sheet passive: B 1-Provisions for pensions and similar obligations"
@@ -565,13 +567,13 @@ msgid ""
 msgstr ""
 
 #. module: l10n_de
-#: model:account.account.tag,name:l10n_de.tag_de_liabilities_bs_E
-msgid "Balance sheet passive: E-Deferred tax passive"
+#: model:account.account.tag,name:l10n_de.tag_de_liabilities_bs_D
+msgid "Balance sheet passive: D-accruals and deferrals"
 msgstr ""
 
 #. module: l10n_de
-#: model:account.account.tag,name:l10n_de.tag_de_liabilities_bs_D
-msgid "Balance sheet passive: D-accruals and deferrals"
+#: model:account.account.tag,name:l10n_de.tag_de_liabilities_bs_E
+msgid "Balance sheet passive: E-Deferred tax passive"
 msgstr ""
 
 #. module: l10n_de
@@ -723,13 +725,17 @@ msgid "Intra-Community supply"
 msgstr ""
 
 #. module: l10n_de
+#: model:ir.model,name:l10n_de.model_account_journal
+msgid "Journal"
+msgstr ""
+
+#. module: l10n_de
 #: model:ir.model,name:l10n_de.model_account_move
 msgid "Journal Entry"
 msgstr ""
 
 #. module: l10n_de
 #: model:ir.model.fields,field_description:l10n_de.field_account_tax__l10n_de_datev_code
-#: model:ir.model.fields,field_description:l10n_de.field_account_tax_template__l10n_de_datev_code
 msgid "L10N De Datev Code"
 msgstr ""
 
@@ -803,11 +809,6 @@ msgid "Taxable turnover"
 msgstr ""
 
 #. module: l10n_de
-#: model:ir.model,name:l10n_de.model_account_tax_template
-msgid "Templates for Taxes"
-msgstr ""
-
-#. module: l10n_de
 #: model:account.report.line,name:l10n_de.tax_report_de_tag_46
 msgid "The recipient of the service as the person liable to pay tax"
 msgstr ""
@@ -820,4 +821,32 @@ msgstr ""
 #. module: l10n_de
 #: model:ir.model.fields,field_description:l10n_de.field_res_company__l10n_de_widnr
 msgid "W-IdNr."
+msgstr ""
+
+#. module: l10n_de
+#. odoo-python
+#: code:addons/l10n_de/models/account_account.py:0
+#, python-format
+msgid "You can not change the code of an account."
+msgstr ""
+
+#. module: l10n_de
+#. odoo-python
+#: code:addons/l10n_de/models/ir_attachment.py:0
+#, python-format
+msgid "You cannot remove parts of the audit trail."
+msgstr ""
+
+#. module: l10n_de
+#. odoo-python
+#: code:addons/l10n_de/models/res_company.py:0
+#, python-format
+msgid "Your company's SteuerNummer is not compatible with your state"
+msgstr ""
+
+#. module: l10n_de
+#. odoo-python
+#: code:addons/l10n_de/models/res_company.py:0
+#, python-format
+msgid "Your company's SteuerNummer is not valid"
 msgstr ""

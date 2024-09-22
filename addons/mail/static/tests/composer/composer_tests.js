@@ -388,6 +388,35 @@ QUnit.test("pending mentions are kept when toggling composer", async () => {
     await contains(".o-mail-Message-body a.o_mail_redirect", { text: "@Mitchell Admin" });
 });
 
+QUnit.test("composer suggestion should match with input selection", async () => {
+    const pyEnv = await startServer();
+    const partnerId = pyEnv["res.partner"].create({
+        email: "testpartner@odoo.com",
+        name: "Luigi",
+    });
+    const channelId = pyEnv["discuss.channel"].create({
+        name: "Mario Party",
+        channel_member_ids: [
+            Command.create({ partner_id: pyEnv.currentPartnerId }),
+            Command.create({ partner_id: partnerId }),
+        ],
+    });
+    const { openDiscuss } = await start();
+    openDiscuss(channelId);
+    await contains(".o-mail-Composer-input", { value: "" });
+    await insertText(".o-mail-Composer-input", "#");
+    await contains(".o-mail-Composer-suggestion", { text: "#Mario Party" });
+    await click(".o-mail-Composer-suggestion");
+    await contains(".o-mail-Composer-input", { value: "#Mario Party " });
+    await insertText(".o-mail-Composer-input", "@");
+    await contains(".o-mail-Composer-suggestion", { text: "Luigi" });
+    $(".o-mail-Composer-input")[0].setSelectionRange(3, 3);
+    await contains(".o-mail-Composer-suggestion", { text: "#Mario Party" });
+    const textarea = $(".o-mail-Composer-input")[0];
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    await contains(".o-mail-Composer-suggestion", { text: "Luigi" });
+});
+
 QUnit.test('do not post message on channel with "SHIFT-Enter" keyboard shortcut', async () => {
     const pyEnv = await startServer();
     const channelId = pyEnv["discuss.channel"].create({ name: "general" });
@@ -782,6 +811,15 @@ QUnit.test("Show recipient list when there is more than 5 followers.", async () 
     await contains("li", { text: "test5@odoo.com" });
     await contains("li", { text: "test6@odoo.com" });
     await contains(".o-mail-Chatter", { text: "To: test1, test2, test3, test4, test5, …" });
+});
+
+QUnit.test("Show 'No recipient found.' with 0 followers.", async () => {
+    const pyEnv = await startServer();
+    const partnerId = pyEnv["res.partner"].create({ name: "test name 1", email: "test1@odoo.com" });
+    const { openFormView } = await start();
+    await openFormView("res.partner", partnerId);
+    await click("button", { text: "Send message" });
+    await contains(".o-mail-Chatter-top", { text: "To: No recipient" });
 });
 
 QUnit.test(

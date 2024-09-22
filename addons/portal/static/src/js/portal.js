@@ -105,12 +105,7 @@ export const PortalHomeCounters = publicWidget.Widget.extend({
             return documentsCountersData;
         });
         return Promise.all(proms).then((results) => {
-            const counters = results.reduce((prev, current) => Object.assign({...prev, ...current}), {});
             this.el.querySelector('.o_portal_doc_spinner').remove();
-            // Display a message when there are no documents available if there are no counters > 0 and no counters always shown
-            if (!countersAlwaysDisplayed.length && !Object.values(counters).filter((val) => val > 0).length) {
-                this.el.querySelector('.o_portal_no_doc_message').classList.remove('d-none');
-            }
         });
     },
 });
@@ -150,7 +145,7 @@ publicWidget.registry.portalSearchPanel = publicWidget.Widget.extend({
      */
     _search: function () {
         var search = new URL(window.location).searchParams;
-        search.set("search_in", this.$('.dropdown-item.active').attr('href').replace('#', ''));
+        search.set("search_in", this.$('.dropdown-item.active').attr('href')?.replace('#', '') || "");
         search.set("search", this.$('input[name="search"]').val());
         window.location.search = search.toString();
     },

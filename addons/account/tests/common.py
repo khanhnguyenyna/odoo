@@ -47,6 +47,7 @@ class AccountTestInvoicingCommon(TransactionCase):
     @classmethod
     def setUpClass(cls, chart_template_ref=None):
         super().setUpClass()
+        cls.env.ref('base.main_company').currency_id = cls.env.ref('base.USD')
         instantiate_accountman(cls)
 
         assert 'post_install' in cls.test_tags, 'This test requires a CoA to be installed, it should be tagged "post_install"'
@@ -78,6 +79,7 @@ class AccountTestInvoicingCommon(TransactionCase):
         cls.product_a = cls.env['product.product'].create({
             'name': 'product_a',
             'uom_id': cls.env.ref('uom.product_uom_unit').id,
+            'uom_po_id': cls.env.ref('uom.product_uom_unit').id,
             'lst_price': 1000.0,
             'standard_price': 800.0,
             'property_account_income_id': cls.company_data['default_account_revenue'].id,
@@ -88,6 +90,7 @@ class AccountTestInvoicingCommon(TransactionCase):
         cls.product_b = cls.env['product.product'].create({
             'name': 'product_b',
             'uom_id': cls.env.ref('uom.product_uom_dozen').id,
+            'uom_po_id': cls.env.ref('uom.product_uom_dozen').id,
             'lst_price': 200.0,
             'standard_price': 160.0,
             'property_account_income_id': cls.copy_account(cls.company_data['default_account_revenue']).id,
@@ -177,6 +180,16 @@ class AccountTestInvoicingCommon(TransactionCase):
         bank_journal = cls.company_data['default_journal_bank']
         cls.inbound_payment_method_line = bank_journal.inbound_payment_method_line_ids[0]
         cls.outbound_payment_method_line = bank_journal.outbound_payment_method_line_ids[0]
+
+    @classmethod
+    def change_company_country(cls, company, country):
+        company.country_id = country
+        company.account_fiscal_country_id = country
+        for model in ('account.tax', 'account.tax.group'):
+            cls.env.add_to_compute(
+                cls.env[model]._fields['country_id'],
+                cls.env[model].search([('company_id', '=', company.id)]),
+            )
 
     @classmethod
     def setup_company_data(cls, company_name, chart_template=None, **kwargs):
@@ -383,7 +396,7 @@ class AccountTestInvoicingCommon(TransactionCase):
         })
 
     @classmethod
-    def init_invoice(cls, move_type, partner=None, invoice_date=None, post=False, products=None, amounts=None, taxes=None, company=False, currency=None):
+    def init_invoice(cls, move_type, partner=None, invoice_date=None, post=False, products=None, amounts=None, taxes=None, company=False, currency=None, journal=None):
         products = [] if products is None else products
         amounts = [] if amounts is None else amounts
         move_form = Form(cls.env['account.move'] \
@@ -399,6 +412,8 @@ class AccountTestInvoicingCommon(TransactionCase):
         if not move_form._get_modifier('date', 'invisible'):
             move_form.date = move_form.invoice_date
         move_form.partner_id = partner or cls.partner_a
+        if journal:
+            move_form.journal_id = journal
         if currency:
             move_form.currency_id = currency
 
@@ -425,6 +440,20 @@ class AccountTestInvoicingCommon(TransactionCase):
             rslt.action_post()
 
         return rslt
+
+    @classmethod
+    def init_payment(cls, amount, post=False, date=None, partner=None, currency=None):
+        payment = cls.env['account.payment'].create({
+            'amount': abs(amount),
+            'date': date or fields.Date.from_string('2019-01-01'),
+            'payment_type': 'inbound' if amount >= 0 else 'outbound',
+            'partner_type': 'customer' if amount >= 0 else 'supplier',
+            'partner_id': (partner or cls.partner_a).id,
+            'currency_id': (currency or cls.company_data['currency']).id,
+        })
+        if post:
+            payment.action_post()
+        return payment
 
     def create_line_for_reconciliation(self, balance, amount_currency, currency, move_date, account_1=None, partner=None):
         write_off_account_to_be_reconciled = account_1 if account_1 else self.receivable_account

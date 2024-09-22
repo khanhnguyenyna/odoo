@@ -96,7 +96,7 @@ export class ChannelSelector extends Component {
                 choices.push({
                     channelId: "__create__",
                     classList: "o-discuss-ChannelSelector-suggestion",
-                    label: cleanedTerm,
+                    label: this.state.value,
                 });
                 this.state.navigableListProps.options = choices;
                 return;
@@ -158,7 +158,6 @@ export class ChannelSelector extends Component {
                     ])
                     .then((data) => {
                         const channel = this.discussCoreCommonService.createChannelThread(data);
-                        this.threadService.sortChannels();
                         this.threadService.open(channel);
                     });
             } else {

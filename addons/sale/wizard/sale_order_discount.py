@@ -30,9 +30,9 @@ class SaleOrderDiscount(models.TransientModel):
     @api.constrains('discount_type', 'discount_percentage')
     def _check_discount_amount(self):
         for wizard in self:
-            if wizard.discount_type in ('sol_discount', 'so_discount') and (
-                wizard.discount_percentage <= 0.0
-                or wizard.discount_percentage > 1.0
+            if (
+                wizard.discount_type in ('sol_discount', 'so_discount')
+                and wizard.discount_percentage > 1.0
             ):
                 raise ValidationError(_("Invalid discount amount"))
 
@@ -63,16 +63,33 @@ class SaleOrderDiscount(models.TransientModel):
 
         return vals
 
+    def _get_discount_product(self):
+        """Return product.product used for discount line"""
+        self.ensure_one()
+        discount_product = self.company_id.sale_discount_product_id
+        if not discount_product:
+            if (
+                self.env['product.product'].check_access_rights('create', raise_exception=False)
+                and self.company_id.check_access_rights('write', raise_exception=False)
+                and self.company_id._filter_access_rules_python('write')
+                and self.company_id.check_field_access_rights('write', ['sale_discount_product_id'])
+            ):
+                self.company_id.sale_discount_product_id = self.env['product.product'].create(
+                    self._prepare_discount_product_values()
+                )
+            else:
+                raise ValidationError(_(
+                    "There does not seem to be any discount product configured for this company yet."
+                    " You can either use a per-line discount, or ask an administrator to grant the"
+                    " discount the first time."
+                ))
+            discount_product = self.company_id.sale_discount_product_id
+        return discount_product
+
     def _create_discount_lines(self):
         """Create SOline(s) according to wizard configuration"""
         self.ensure_one()
-
-        discount_product = self.company_id.sale_discount_product_id
-        if not discount_product:
-            self.company_id.sale_discount_product_id = self.env['product.product'].create(
-                self._prepare_discount_product_values()
-            )
-            discount_product = self.company_id.sale_discount_product_id
+        discount_product = self._get_discount_product()
 
         if self.discount_type == 'amount':
             vals_list = [
@@ -88,7 +105,7 @@ class SaleOrderDiscount(models.TransientModel):
                 if not line.product_uom_qty or not line.price_unit:
                     continue
 
-                total_price_per_tax_groups[line.tax_id] += line.price_subtotal
+                total_price_per_tax_groups[line.tax_id] += (line.price_unit * line.product_uom_qty)
 
             if not total_price_per_tax_groups:
                 # No valid lines on which the discount can be applied

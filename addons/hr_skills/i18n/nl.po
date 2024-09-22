@@ -4,16 +4,17 @@
 # 
 # Translators:
 # Yenthe Van Ginneken <yenthespam@gmail.com>, 2023
-# Wil Odoo, 2023
 # Jolien De Paepe, 2023
+# Wil Odoo, 2024
+# Erwin van der Ploeg <erwin@odooexperts.nl>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Jolien De Paepe, 2023\n"
+"Last-Translator: Erwin van der Ploeg <erwin@odooexperts.nl>, 2024\n"
 "Language-Team: Dutch (https://app.transifex.com/odoo/teams/41243/nl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -222,6 +223,13 @@ msgstr "Craigmore South Junior Primary School"
 #, python-format
 msgid "Create a new entry"
 msgstr "Een nieuwe regel maken"
+
+#. module: hr_skills
+#. odoo-javascript
+#: code:addons/hr_skills/static/src/fields/resume_one2many/resume_one2many.js:0
+#, python-format
+msgid "Create a resume line"
+msgstr "Maak een CV-regel"
 
 #. module: hr_skills
 #. odoo-javascript
@@ -683,11 +691,10 @@ msgid ""
 "- Configured and released business critical alpha and risk models using MATLAB and SQL with inputs from Portfolio Managers.\n"
 "        "
 msgstr ""
-"Job position: Development team leader\n"
-"- Supported technical operations with investigating and correcting varied production support issues (Java, Perl, Shell scripts, SQL).\n"
-"- Led quality assurance planning for multiple concurrent projects relative to overall system architecture or trading system changes/new developments.\n"
-"- Configured and released business critical alpha and risk models using MATLAB and SQL with inputs from Portfolio Managers.\n"
-"        "
+"Functie: Leider van het ontwikkelingsteam\n"
+"- Ondersteunde technische operaties bij het onderzoeken en corrigeren van uiteenlopende productieondersteuningsproblemen (Java, Perl, Shell-scripts, SQL).\n"
+"- Leidde de planning van kwaliteitsborging voor meerdere gelijktijdige projecten met betrekking tot de algehele systeemarchitectuur of wijzigingen/nieuwe ontwikkelingen in het handelssysteem.\n"
+"- Configureerde en publiceerde bedrijfskritische alpha- en risicomodellen met behulp van MATLAB en SQL met input van portefeuillemanagers."
 
 #. module: hr_skills
 #: model:hr.resume.line,description:hr_skills.employee_resume_line_admin_3
@@ -698,11 +705,10 @@ msgid ""
 "- Developed multiple renewable energy plant architectures, both commercial installations and defense-related.\n"
 "        "
 msgstr ""
-"Job position: Product manager\n"
-"- Coordinated and managed software deployment across five system environments from development to production.\n"
-"- Developed stored procedures to assist Java level programming efforts.\n"
-"- Developed multiple renewable energy plant architectures, both commercial installations and defense-related.\n"
-"        "
+"Functie: Productmanager\n"
+"- Gecoördineerd en beheerd software-implementatie in vijf systeemomgevingen van ontwikkeling tot productie.\n"
+"- Ontwikkelde opgeslagen procedures om Java-niveau programmeerinspanningen te ondersteunen.\n"
+"- Ontwikkelde meerdere architectuurplannen voor hernieuwbare energiecentrales, zowel commerciële installaties als defensiegerelateerd."
 
 #. module: hr_skills
 #: model:hr.resume.line,name:hr_skills.employee_resume_fme_johnson_shaw_and_carroll
@@ -918,18 +924,13 @@ msgid "Norton-Silva"
 msgstr "Norton-Silva"
 
 #. module: hr_skills
-#: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
-msgid "Odoo India pvt. Ltd"
-msgstr "Odoo India pvt. Ltd"
-
-#. module: hr_skills
 #: model:hr.resume.line,name:hr_skills.employee_resume_line_admin_4
 msgid "Odoo SA"
 msgstr "Odoo SA"
 
 #. module: hr_skills
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/hr_skills/report/hr_employee_cv_report.py:0
 #: code:addons/hr_skills/static/src/views/skills_list_renderer.js:0
 #, python-format
@@ -1035,6 +1036,11 @@ msgstr "Voortgang"
 #: model_terms:ir.ui.view,arch_db:hr_skills.employee_skill_level_view_form
 msgid "Progress (%)"
 msgstr "Voortgang (%)"
+
+#. module: hr_skills
+#: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
+msgid "Progress bar"
+msgstr "Voortgangsbalk"
 
 #. module: hr_skills
 #: model:ir.model.fields,help:hr_skills.field_hr_employee_skill__level_progress
@@ -1265,7 +1271,7 @@ msgstr "Soort vaardigheid"
 #: model:ir.ui.menu,name:hr_skills.hr_skill_type_menu
 #: model_terms:ir.ui.view,arch_db:hr_skills.hr_skill_type_view_tree
 msgid "Skill Types"
-msgstr "Vaardigheidstypes"
+msgstr "Vaardigheidssoorten"
 
 #. module: hr_skills
 #: model:ir.model,name:hr_skills.model_hr_employee_skill
@@ -1286,7 +1292,6 @@ msgstr "Vaardigheidsniveau voor een werknemer"
 #: model_terms:ir.ui.view,arch_db:hr_skills.hr_employee_view_search
 #: model_terms:ir.ui.view,arch_db:hr_skills.hr_skill_view_form
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
-#: model_terms:ir.ui.view,arch_db:hr_skills.res_users_view_form
 #, python-format
 msgid "Skills"
 msgstr "Vaardigheden"
@@ -1401,6 +1406,13 @@ msgstr "Er zijn geen vaardigheden bepaald in de bibliotheek."
 #: model:hr.resume.line,name:hr_skills.employee_resume_vad_thomas_chirnside_primary_school
 msgid "Thomas Chirnside Primary School"
 msgstr "Thomas Chirnside Primary School"
+
+#. module: hr_skills
+#. odoo-javascript
+#: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
+#, python-format
+msgid "Timeline"
+msgstr "Tijdlijn"
 
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.resume_line_view_form

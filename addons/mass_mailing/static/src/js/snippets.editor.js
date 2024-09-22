@@ -55,6 +55,26 @@ export const MassMailingSnippetsMenu = snippetsEditor.SnippetsMenu.extend({
     /**
      * @override
      */
+    _onClick: function (ev) {
+        this._super(...arguments);
+        var srcElement = ev.target || (ev.originalEvent && (ev.originalEvent.target || ev.originalEvent.originalTarget)) || ev.srcElement;
+        // When we select something and move our cursor too far from the editable area, we get the
+        // entire editable area as the target, which causes the tab to shift from OPTIONS to BLOCK.
+        // To prevent unnecessary tab shifting, we provide a selection for this specific case.
+        if (srcElement.classList.contains('o_mail_wrapper') || srcElement.querySelector('.o_mail_wrapper')) {
+            const selection = this.options.wysiwyg.odooEditor.document.getSelection();
+            if (selection.anchorNode) {
+                const parent = selection.anchorNode.parentElement;
+                if (parent) {
+                    srcElement = parent;
+                }
+                this._activateSnippet($(srcElement));
+            }
+        }
+    },
+    /**
+     * @override
+     */
     _insertDropzone: function ($hook) {
         const $hookParent = $hook.parent();
         const $dropzone = this._super(...arguments);
@@ -107,6 +127,8 @@ export const MassMailingSnippetsMenu = snippetsEditor.SnippetsMenu.extend({
         if (!$oEditable.find('.oe_drop_zone.oe_insert:not(.oe_vertical):only-child').length) {
             $oEditable.attr('contenteditable', true);
         }
+        // Refocus again to save updates when calling `_onWysiwygBlur`
+        this.$editable.focus();
     },
     /**
      * @override

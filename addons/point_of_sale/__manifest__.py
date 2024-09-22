@@ -71,6 +71,7 @@
             'point_of_sale/static/src/backend/debug_manager.js',
         ],
         'web.assets_tests': [
+            'barcodes/static/tests/helpers.js',
             'point_of_sale/static/tests/tours/**/*',
         ],
 
@@ -109,7 +110,6 @@
             'web/static/lib/luxon/luxon.js',
             'web/static/lib/owl/owl.js',
             'web/static/lib/owl/odoo_module.js',
-            'web_editor/static/lib/html2canvas.js',
             'web/static/lib/zxing-library/zxing-library.js',
             # JS framework
             ('include', 'web._assets_core'),
@@ -122,9 +122,9 @@
             'barcodes_gs1_nomenclature/static/src/js/barcode_parser.js',
             'barcodes_gs1_nomenclature/static/src/js/barcode_service.js',
             'web/static/src/views/fields/parsers.js',
-            'web/static/src/webclient/barcode/barcode_scanner.js',
+            'web/static/src/webclient/barcode/barcode_scanner.*',
             'web/static/src/webclient/barcode/ZXingBarcodeDetector.js',
-            'web/static/src/webclient/barcode/crop_overlay.js',
+            'web/static/src/webclient/barcode/crop_overlay.*',
             # bus service
             'bus/static/src/services/bus_service.js',
             'bus/static/src/bus_parameters_service.js',
@@ -142,6 +142,13 @@
             'web/static/src/legacy/js/libs/jquery.js',
             'web_tour/static/src/tour_pointer/**/*',
             'web_tour/static/src/tour_service/**/*',
+            'web/static/src/model/**/*',
+            'web/static/src/views/**/*',
+            'web/static/src/search/**/*',
+            'web/static/src/webclient/actions/**/*',
+            ('remove', 'web/static/src/webclient/actions/reports/layout_assets/**/*'),
+            ('remove', 'web/static/src/webclient/actions/**/*css'),
+            'web/static/src/webclient/company_service.js',
         ],
         # Bundle that starts the pos, loaded on /pos/ui
         'point_of_sale.assets_prod': [

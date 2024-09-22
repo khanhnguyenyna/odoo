@@ -67,12 +67,8 @@
                 <!-- === Payment tokens === -->
                 <div t-if="tokens_sudo">
                     <!-- === Header === -->
-                    <h4 id="o_payment_tokens_heading"
-                        class="d-flex gap-3 align-items-center mt-4 mb-3 fs-6 small text-uppercase
-                               fw-bolder"
-                    >
-                        <span>Your payment methods</span>
-                        <hr class="flex-grow-1 m-0"/>
+                    <h4 id="o_payment_tokens_heading" class="fs-6 small text-uppercase fw-bolder">
+                        Your payment methods
                     </h4>
                     <!-- === Body === -->
                     <ul class="list-group">
@@ -96,12 +92,9 @@
                      t-att-class="'collapse' if collapse_payment_methods else ''"
                 >
                     <!-- === Header === -->
-                    <h4 class="d-flex gap-3 align-items-center mt-4 mb-3 fs-6 small text-uppercase
-                               fw-bolder"
-                    >
+                    <h4 class="fs-6 small text-uppercase fw-bolder">
                         <t t-if="not collapse_payment_methods">Choose a payment method</t>
                         <t t-else="">Other payment methods</t>
-                        <hr class="flex-grow-1 m-0"/>
                     </h4>
                     <!-- === Body === -->
                     <ul class="list-group">
@@ -214,7 +207,8 @@
                 <!-- === Provider name (only for desktop and tablet) === -->
                 <div class="col d-none d-md-block">
                     <p name="o_payment_secured_by_desktop" t-att-class="'mb-0 small text-600'
-                                    + (' ms-4 ms-md-0' if allow_token_selection else '')"
+                                    + (' ms-4 ms-md-0' if allow_token_selection else '')
+                                    + (' d-none' if provider_sudo.code == 'custom' else '')"
                     >
                         <span><i class="fa fa-lock"/> Secured by</span>
                         <span t-out="dict(provider_sudo._fields['code']._description_selection(
@@ -227,8 +221,7 @@
             </div>
             <!-- === Payment method logo === -->
             <div t-call="payment.form_logo">
-                <t t-set="logo" t-value="token_sudo.payment_method_id.image_payment_form"/>
-                <t t-set="title" t-value="token_sudo.payment_method_id.name"/>
+                <t t-set="logo_pm_sudo" t-value="token_sudo.payment_method_id"/>
             </div>
         </div>
         <!-- === Inline form === -->
@@ -240,7 +233,8 @@
         </div>
         <!-- === Provider name (only for mobile) === -->
         <p name="o_payment_secured_by_mobile"
-           class="align-self-end d-block d-md-none mb-0 small text-600"
+           t-att-class="'align-self-end d-block d-md-none mb-0 small text-600'
+                        + (' d-none' if provider_sudo.code == 'custom' else '')"
         >
             <span><i class="fa fa-lock"/> Secured by</span>
             <span t-out="dict(provider_sudo._fields['code']._description_selection(
@@ -267,13 +261,13 @@
              for="o_payment_radio"
         >
             <div class="form-check d-flex flex-grow-1 flex-wrap mb-0">
-                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap w-100">
+                <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap w-100">
                     <!-- === Radio button === -->
                     <input t-attf-id="o_payment_method_{{pm_sudo.id}}"
                            name="o_payment_radio"
                            type="radio"
                            t-att-checked="is_selected"
-                           class="form-check-input position-absolute"
+                           class="form-check-input position-absolute mt-0"
                            data-payment-option-type="payment_method"
                            t-att-data-payment-option-id="pm_sudo.id"
                            t-att-data-payment-method-code="pm_sudo.code"
@@ -307,8 +301,7 @@
                         <t t-set="pm_index" t-value="0"/>
                         <t t-foreach="pms_to_display_sudo" t-as="pm_to_display_sudo">
                             <t t-if="pm_index &lt; 4" t-call="payment.form_logo">
-                                <t t-set="logo" t-value="pm_to_display_sudo.image_payment_form"/>
-                                <t t-set="title" t-value="pm_to_display_sudo.name"/>
+                                <t t-set="logo_pm_sudo" t-value="pm_to_display_sudo"/>
                             </t>
                             <t t-set="pm_index" t-value="pm_index + 1"/>
                         </t>
@@ -350,7 +343,10 @@
                     </label>
                 </div>
                 <!-- === Provider name === -->
-                <p name="o_payment_secured_by" class="align-self-end mb-0 ms-auto small text-600">
+                <p name="o_payment_secured_by"
+                   t-att-class="'align-self-end mb-0 ms-auto small text-600'
+                    + (' d-none' if provider_sudo.code == 'custom' else '')"
+                >
                     <span><i class="fa fa-lock"/> Secured by</span>
                     <span t-out="dict(provider_sudo._fields['code']._description_selection(
                                      provider_sudo.env
@@ -378,13 +374,13 @@
 
     <template id="payment.form_logo" name="Form Logo">
         <!-- Parameters description:
-            - logo: The logo to display, as an `Image` field.
-            - title: The title to display on hover.
+            - logo_pm_sudo: The payment method whose logo to display, as a sudoed `payment.method`
+                            record.
         -->
-        <span t-out="logo"
+        <span t-field="logo_pm_sudo.image_payment_form"
               t-options="{'widget': 'image', 'alt-field': 'name'}"
               class="position-relative d-block rounded overflow-hidden z-index-1 shadow-sm"
-              t-att-title="title"
+              t-att-title="logo_pm_sudo.name"
               data-bs-toggle="tooltip"
               data-bs-placement="top"
               data-bs-delay="0"

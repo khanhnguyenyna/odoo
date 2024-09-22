@@ -5,6 +5,7 @@ import { Notebook } from "@web/core/notebook/notebook";
 import { Setting } from "./setting/setting";
 import { Field } from "@web/views/fields/field";
 import { browser } from "@web/core/browser/browser";
+import { hasTouch } from "@web/core/browser/feature_detection";
 import { useService } from "@web/core/utils/hooks";
 import { useDebounced } from "@web/core/utils/timing";
 import { ButtonBox } from "@web/views/form/button_box/button_box";
@@ -45,8 +46,8 @@ export class FormRenderer extends Component {
         onWillUnmount(() => browser.removeEventListener("resize", this.onResize));
 
         const { autofocusFieldId } = archInfo;
+        const rootRef = useRef("compiled_view_root");
         if (this.shouldAutoFocus) {
-            const rootRef = useRef("compiled_view_root");
             useEffect(
                 (isNew, rootEl) => {
                     if (!rootEl) {
@@ -74,10 +75,38 @@ export class FormRenderer extends Component {
                 () => [this.props.record.isNew, rootRef.el]
             );
         }
+
+        if (this.env.inDialog) {
+            // try to ensure ids unicity by temporarily removing similar ids that could already
+            // exist in the DOM (e.g. in a form view displayed below this dialog which contains
+            // same field names as this form view)
+            const fieldNodeIds = Object.keys(this.props.archInfo.fieldNodes);
+            const elementsByNodeIds = {};
+            onMounted(() => {
+                if (!rootRef.el) {
+                    // t-ref is sometimes set on a <t> node, resulting in a null ref (e.g. footer case)
+                    return;
+                }
+                for (const id of fieldNodeIds) {
+                    const els = [...document.querySelectorAll(`[id=${id}]`)].filter(
+                        (el) => !rootRef.el.contains(el)
+                    );
+                    if (els.length) {
+                        els[0].removeAttribute("id");
+                        elementsByNodeIds[id] = els[0];
+                    }
+                }
+            });
+            onWillUnmount(() => {
+                for (const [id, el] of Object.entries(elementsByNodeIds)) {
+                    el.setAttribute("id", id);
+                }
+            });
+        }
     }
 
     get shouldAutoFocus() {
-        return !this.props.archInfo.disableAutofocus;
+        return !hasTouch() && !this.props.archInfo.disableAutofocus;
     }
 }
 

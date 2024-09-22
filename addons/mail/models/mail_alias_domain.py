@@ -4,6 +4,7 @@
 from odoo import api, exceptions, fields, models, _
 from odoo.addons.mail.models.mail_alias import dot_atom_text
 
+
 class AliasDomain(models.Model):
     """ Model alias domains, now company-specific. Alias domains are email
     domains used to receive emails through catchall and bounce aliases, as
@@ -15,15 +16,28 @@ class AliasDomain(models.Model):
     _description = "Email Domain"
     _order = 'sequence ASC, id ASC'
 
-    name = fields.Char('Name', required=True)
+    name = fields.Char(
+        'Name', required=True,
+        help="Email domain e.g. 'example.com' in 'odoo@example.com'")
     company_ids = fields.One2many(
-        'res.company', 'alias_domain_id', string='Companies')
+        'res.company', 'alias_domain_id', string='Companies',
+        help="Companies using this domain as default for sending mails")
     sequence = fields.Integer(default=10)
-    bounce_alias = fields.Char('Bounce Alias', default='bounce', required=True)
+    bounce_alias = fields.Char(
+        'Bounce Alias', default='bounce', required=True,
+        help="Local-part of email used for Return-Path used when emails bounce e.g. "
+             "'bounce' in 'bounce@example.com'")
     bounce_email = fields.Char('Bounce Email', compute='_compute_bounce_email')
-    catchall_alias = fields.Char('Catchall Alias', default='catchall', required=True)
+    catchall_alias = fields.Char(
+        'Catchall Alias', default='catchall', required=True,
+        help="Local-part of email used for Reply-To to catch answers e.g. "
+             "'catchall' in 'catchall@example.com'")
     catchall_email = fields.Char('Catchall Email', compute='_compute_catchall_email')
-    default_from = fields.Char('Default From Alias', default='notifications')
+    default_from = fields.Char(
+        'Default From Alias', default='notifications',
+        help="Default from when it does not match outgoing server filters. Can be either "
+             "a local-part e.g. 'notifications' either a complete email address e.g. "
+             "'notifications@example.com' to override all outgoing emails.")
     default_from_email = fields.Char('Default From', compute='_compute_default_from_email')
 
     _sql_constraints = [
@@ -53,9 +67,15 @@ class AliasDomain(models.Model):
 
     @api.depends('default_from', 'name')
     def _compute_default_from_email(self):
+        """ Default from may be a valid complete email and not only a left-part
+        like bounce or catchall aliases. Adding domain name should therefore
+        be done only if necessary. """
         self.default_from_email = ''
         for domain in self.filtered('default_from'):
-            domain.default_from_email = f'{domain.default_from}@{domain.name}'
+            if "@" in domain.default_from:
+                domain.default_from_email = domain.default_from
+            else:
+                domain.default_from_email = f'{domain.default_from}@{domain.name}'
 
     @api.constrains('bounce_alias', 'catchall_alias')
     def _check_bounce_catchall_uniqueness(self):
@@ -121,14 +141,9 @@ class AliasDomain(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """ Sanitize bounce_alias / catchall_alias """
+        """ Sanitize bounce_alias / catchall_alias / default_from """
         for vals in vals_list:
-            if vals.get('bounce_alias'):
-                vals['bounce_alias'] = self.env['mail.alias']._sanitize_alias_name(vals['bounce_alias'])
-            if vals.get('catchall_alias'):
-                vals['catchall_alias'] = self.env['mail.alias']._sanitize_alias_name(vals['catchall_alias'])
-            if vals.get('default_from'):
-                vals['default_from'] = self.env['mail.alias']._sanitize_alias_name(vals['default_from'])
+            self._sanitize_configuration(vals)
 
         alias_domains = super().create(vals_list)
 
@@ -144,11 +159,42 @@ class AliasDomain(models.Model):
         return alias_domains
 
     def write(self, vals):
-        """ Sanitize bounce_alias / catchall_alias """
-        if vals.get('bounce_alias'):
-            vals['bounce_alias'] = self.env['mail.alias']._sanitize_alias_name(vals['bounce_alias'])
-        if vals.get('catchall_alias'):
-            vals['catchall_alias'] = self.env['mail.alias']._sanitize_alias_name(vals['catchall_alias'])
-        if vals.get('default_from'):
-            vals['default_from'] = self.env['mail.alias']._sanitize_alias_name(vals['default_from'])
+        """ Sanitize bounce_alias / catchall_alias / default_from """
+        self._sanitize_configuration(vals)
         return super().write(vals)
+
+    @api.model
+    def _sanitize_configuration(self, config_values):
+        """ Tool sanitizing configuration values for domains """
+        if config_values.get('bounce_alias'):
+            config_values['bounce_alias'] = self.env['mail.alias']._sanitize_alias_name(config_values['bounce_alias'])
+        if config_values.get('catchall_alias'):
+            config_values['catchall_alias'] = self.env['mail.alias']._sanitize_alias_name(config_values['catchall_alias'])
+        if config_values.get('default_from'):
+            config_values['default_from'] = self.env['mail.alias']._sanitize_alias_name(
+                config_values['default_from'], is_email=True
+            )
+        return config_values
+
+    @api.model
+    def _migrate_icp_to_domain(self):
+        """ Compatibility layer helping going from pre-v17 ICP to alias
+        domains. Mainly used when base mail configuration is done with 'base'
+        module only and 'mail' is installed afterwards: configuration should
+        not be lost (odoo.sh use case). """
+        Icp = self.env['ir.config_parameter'].sudo()
+        alias_domain = Icp.get_param('mail.catchall.domain')
+        if alias_domain:
+            existing = self.search([('name', '=', alias_domain)])
+            if existing:
+                return existing
+            bounce_alias = Icp.get_param('mail.bounce.alias')
+            catchall_alias = Icp.get_param('mail.catchall.alias')
+            default_from = Icp.get_param('mail.default.from')
+            return self.create({
+                'bounce_alias': bounce_alias or 'bounce',
+                'catchall_alias': catchall_alias or 'catchall',
+                'default_from': default_from or 'notifications',
+                'name': alias_domain,
+            })
+        return self.browse()

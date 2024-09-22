@@ -724,6 +724,27 @@ class TestMessagePost(TestMessagePostCommon, CronMixinCase):
         self.assertFalse(self.test_record.message_follower_ids)
         self.assertFalse(self.test_record.message_partner_ids)
 
+    @mute_logger('odoo.addons.mail.models.mail_mail')
+    def test_manual_send_user_notification_email_from_queue(self):
+        """ Test sending a mail from the queue that is not related to the admin user sending it.
+        Will throw a security error not having access to the mail."""
+
+        with self.mock_mail_gateway():
+            new_notification = self.test_record.message_notify(
+                subject='This should be a subject',
+                body='<p>You have received a notification</p>',
+                partner_ids=[self.partner_1.id],
+                subtype_xmlid='mail.mt_note',
+                force_send=False
+            )
+
+        self.assertNotIn(self.user_admin.partner_id, new_notification.mail_ids.partner_ids, "Our admin user should not be within the partner_ids")
+
+        with self.mock_mail_gateway():
+            new_notification.mail_ids.with_user(self.user_admin).send()
+
+        self.assertEqual(new_notification.mail_ids.state, 'exception', 'Email will be sent but with exception state - write access denied')
+
     @mute_logger('odoo.addons.mail.models.mail_mail', 'odoo.models.unlink')
     @users('employee')
     def test_message_post(self):
@@ -1056,7 +1077,7 @@ class TestMessagePost(TestMessagePostCommon, CronMixinCase):
         test_record = self.test_record.with_env(self.env)
         test_record.message_subscribe((self.partner_1 | self.partner_admin).ids)
 
-        with freeze_time(now), \
+        with self.mock_datetime_and_now(now), \
              self.assertMsgWithoutNotifications(), \
              self.capture_triggers(cron_id) as capt:
             msg = test_record.message_post(
@@ -1076,12 +1097,12 @@ class TestMessagePost(TestMessagePostCommon, CronMixinCase):
         self.assertEqual(schedules.scheduled_datetime, scheduled_datetime)
 
         # trigger cron now -> should not sent as in future
-        with freeze_time(now):
+        with self.mock_datetime_and_now(now):
             self.env['mail.message.schedule'].sudo()._send_notifications_cron()
         self.assertTrue(schedules.exists(), msg='Should not have sent the message')
 
         # Send the scheduled message from the cron at right date
-        with freeze_time(now + timedelta(days=5)), self.mock_mail_gateway(mail_unlink_sent=True):
+        with self.mock_datetime_and_now(now + timedelta(days=5)), self.mock_mail_gateway(mail_unlink_sent=True):
             self.env['mail.message.schedule'].sudo()._send_notifications_cron()
         self.assertFalse(schedules.exists(), msg='Should have sent the message')
         # check notifications have been sent
@@ -1099,11 +1120,11 @@ class TestMessagePost(TestMessagePostCommon, CronMixinCase):
         })
 
         # Send the scheduled message from the CRON
-        with freeze_time(now + timedelta(days=5)), self.assertNoNotifications():
+        with self.mock_datetime_and_now(now + timedelta(days=5)), self.assertNoNotifications():
             self.env['mail.message.schedule'].sudo()._send_notifications_cron()
 
         # schedule in the past = send when posting
-        with freeze_time(now), \
+        with self.mock_datetime_and_now(now), \
              self.mock_mail_gateway(mail_unlink_sent=False), \
              self.capture_triggers(cron_id) as capt:
             msg = test_record.message_post(

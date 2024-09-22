@@ -134,7 +134,7 @@
               </t>
           </t>
 
-          <div class="row mt16 o_portal_purchase_sidebar">
+          <div class="row o_portal_purchase_sidebar">
               <!-- Sidebar -->
               <t t-call="portal.portal_record_sidebar">
                   <t t-set="classes" t-value="'col-lg-3 col-xl-4 d-print-none'"/>
@@ -250,6 +250,7 @@
                                       <div class="small d-lg-inline-block">Date: <span class="text-muted" t-field="i.invoice_date"/></div>
                                   </div>
                                   <span t-if="i.payment_state in ('paid', 'in_payment')" class="badge text-bg-success small"><i class="fa fa-fw fa-check"/>Paid</span>
+                                  <span t-elif="i.payment_state == 'reversed'" class="badge text-bg-success small"><i class="fa fa-fw fa-check"/>Reversed</span>
                                   <span t-else="" class="small badge text-bg-primary"><i class="fa fa-fw fa-clock-o"/>Waiting Payment</span>
                               </div>
                           </t>

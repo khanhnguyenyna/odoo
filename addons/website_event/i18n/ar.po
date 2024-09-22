@@ -3,16 +3,16 @@
 # 	* website_event
 # 
 # Translators:
-# Wil Odoo, 2023
-# Malaz Abuidris <msea@odoo.com>, 2023
+# Wil Odoo, 2024
+# Malaz Abuidris <msea@odoo.com>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Malaz Abuidris <msea@odoo.com>, 2023\n"
+"Last-Translator: Malaz Abuidris <msea@odoo.com>, 2024\n"
 "Language-Team: Arabic (https://app.transifex.com/odoo/teams/41243/ar/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -396,8 +396,8 @@ msgstr "إلغاء"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
-msgid "Cards"
-msgstr "البطاقات"
+msgid "Card design"
+msgstr "تصميم البطاقة "
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.display_timer_alert_widget
@@ -464,6 +464,7 @@ msgid "Consumers"
 msgstr "المستهلكين "
 
 #. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_location
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
 msgid "Countries"
 msgstr "الدول"
@@ -490,7 +491,7 @@ msgid "Created on"
 msgstr "أنشئ في"
 
 #. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.index_topbar
+#: model_terms:ir.ui.view,arch_db:website_event.event_time
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
 msgid "Date"
 msgstr "التاريخ"
@@ -715,6 +716,16 @@ msgid "Extra Register Button"
 msgstr "زر تسجيل إضافي "
 
 #. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_location
+msgid "Filter by Country"
+msgstr "الفلترة حسب الدولة "
+
+#. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_time
+msgid "Filter by Date"
+msgstr "الفلترة حسب التاريخ "
+
+#. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.index_topbar
 msgid "Filters"
 msgstr "عوامل التصفية "
@@ -725,11 +736,6 @@ msgid ""
 "Find out what people see and say about this event, and join the "
 "conversation."
 msgstr "تعرف على آراء الجمهور عن هذه الفعالية، ثم انضم إلى المحادثة.  "
-
-#. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.snippet_options
-msgid "Fold Tickets Details"
-msgstr "طي تفاصيل التذاكر "
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.index_sidebar_follow_us
@@ -1010,6 +1016,11 @@ msgid "Once per Order"
 msgstr "مرة واحدة لكل طلب "
 
 #. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_location
+msgid "Online Events"
+msgstr "الفعاليات عبر الإنترنت "
+
+#. module: website_event
 #. odoo-python
 #: code:addons/website_event/models/website_snippet_filter.py:0
 #, python-format
@@ -1081,8 +1092,8 @@ msgstr "نوع السؤال"
 #. odoo-python
 #: code:addons/website_event/models/event_question.py:0
 #, python-format
-msgid "Question cannot belong to both the event category and itself."
-msgstr "لا يمكن أن ينتمي السؤال إلى فئة الفعالية وإلى نفسه في الوقت ذاته. "
+msgid "Question cannot be linked to both an Event and an Event Type."
+msgstr "لا يمكن ربط السؤال بكل من الفعالية ونوع الفعالية. "
 
 #. module: website_event
 #: model:ir.model.fields,field_description:website_event.field_event_event__question_ids
@@ -1111,8 +1122,8 @@ msgid "Ref:"
 msgstr "المرجع: "
 
 #. module: website_event
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/website_event/models/event_event.py:0
 #: code:addons/website_event/static/src/js/register_toaster_widget.js:0
 #: model:ir.model.fields.selection,name:website_event.selection__website_event_menu__menu_type__register
@@ -1159,6 +1170,7 @@ msgstr "تم تأكيد التسجيل! "
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.modal_ticket_registration
+#: model_terms:ir.ui.view,arch_db:website_event.registration_template
 msgid "Registration failed! These tickets are not available anymore."
 msgstr "فشلت عملية التسجيل! لم تعد تلك التذاكر متاحة بعد الآن. "
 
@@ -1218,11 +1230,6 @@ msgid "SEO optimized"
 msgstr "تم تحسين محركات البحث"
 
 #. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.event_description_full
-msgid "SHARE"
-msgstr "مشاركة "
-
-#. module: website_event
 #: model:event.question.answer,name:website_event.event_7_question_0_answer_1
 msgid "Sales"
 msgstr "المبيعات"
@@ -1274,6 +1281,11 @@ msgstr "اسم محسنات محرك البحث "
 #: model:ir.model.fields,field_description:website_event.field_event_question_answer__sequence
 msgid "Sequence"
 msgstr "تسلسل "
+
+#. module: website_event
+#: model_terms:ir.ui.view,arch_db:website_event.event_description_full
+msgid "Share"
+msgstr "مشاركة"
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.event_tag_category_view_form
@@ -1347,8 +1359,8 @@ msgstr "الإجابة المقترحة "
 
 #. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.snippet_options
-msgid "Templates"
-msgstr "القوالب "
+msgid "Template badge"
+msgstr "شارة القالب "
 
 #. module: website_event
 #: model:ir.model.fields.selection,name:website_event.selection__event_question__question_type__text_box
@@ -1648,11 +1660,6 @@ msgid ""
 msgstr "لا يمكنك حذف إجابة تم تحديدها بالفعل من قِبَل الحاضرين. "
 
 #. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.registration_template
-msgid "alert-link my-3"
-msgstr "alert-link my-3"
-
-#. module: website_event
 #: model_terms:ir.ui.view,arch_db:website_event.modal_ticket_registration
 msgid "available)"
 msgstr "متاح) "
@@ -1672,8 +1679,3 @@ msgstr "مثال: \"ألديك أي ضوابط فيما يتعلق بحميتك 
 #: model_terms:ir.ui.view,arch_db:website_event.event_description_full
 msgid "iCal/Outlook"
 msgstr "iCal/Outlook"
-
-#. module: website_event
-#: model_terms:ir.ui.view,arch_db:website_event.registration_template
-msgid "ms-2"
-msgstr "ms-2"

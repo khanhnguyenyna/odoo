@@ -299,7 +299,7 @@ img, .media_iframe_video, .o_image {
     @if ($o-portal-mobile-toolbar) {
         #o_portal_navbar_content {
             @include media-breakpoint-down(lg) {
-                margin: $navbar-padding-y (-$navbar-padding-x) 0;
+                margin: $navbar-padding-y 0 0;
                 padding: $navbar-padding-y $navbar-padding-x ;
                 border-top: $border-width solid $o-portal-mobile-toolbar-border;
                 background-color: $o-portal-mobile-toolbar-bg;
@@ -356,6 +356,13 @@ img, .media_iframe_video, .o_image {
             position: relative;
         }
     }
+
+    .o_portal_sidebar_content {
+        @include media-breakpoint-up(lg) {
+            @include o-position-sticky($top: $spacer * 5);
+            z-index: 1;
+        }
+    }
 }
 
 // ------------------------------------------------------------
@@ -376,6 +383,15 @@ img, .media_iframe_video, .o_image {
 
     .o_portal_chatter_composer {
         margin-bottom: 15px;
+    }
+
+    .o_portal_chatter_composer_body  {
+        textarea {
+            border: 0;
+        }
+        > div {
+            border: 1px solid var(--o-border-color);
+        }
     }
 
     .o_portal_chatter_messages {
@@ -410,7 +426,7 @@ img, .media_iframe_video, .o_image {
 .o_portal_chatter_composer {
     .o_portal_chatter_attachment {
         .o_portal_chatter_attachment_name {
-            word-wrap: break-word;
+            max-width: 200px;
         }
 
         .o_portal_chatter_attachment_delete {

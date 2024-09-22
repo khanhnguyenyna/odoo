@@ -14,16 +14,21 @@ patch(MockServer.prototype, {
      */
     mockWrite(model, args) {
         const notifications = [];
+        const old_info = {};
         if (model == "discuss.channel") {
-            const vals = args[1];
+            Object.assign(old_info, this._mockDiscussChannelBasicInfo(args[0][0]));
+        }
+        const mockWriteResult = super.mockWrite(...arguments);
+        if (model == "discuss.channel") {
             const [channel] = this.getRecords(model, [["id", "=", args[0][0]]]);
-            if (channel) {
-                const diff = {};
-                for (const key in vals) {
-                    if (channel[key] != vals[key] && key !== "image_128") {
-                        diff[key] = vals[key];
-                    }
+            const info = this._mockDiscussChannelBasicInfo(channel.id);
+            const diff = {};
+            for (const key of Object.keys(info)) {
+                if (info[key] !== old_info[key]) {
+                    diff[key] = info[key];
                 }
+            }
+            if (Object.keys(diff).length) {
                 notifications.push([
                     channel,
                     "mail.record/insert",
@@ -37,7 +42,6 @@ patch(MockServer.prototype, {
                 ]);
             }
         }
-        const mockWriteResult = super.mockWrite(...arguments);
         if (notifications.length) {
             this.pyEnv["bus.bus"]._sendmany(notifications);
         }
@@ -204,18 +208,13 @@ patch(MockServer.prototype, {
     _mockDiscussChannelMessagePost(id, kwargs, context) {
         const message_type = kwargs.message_type || "notification";
         const channel = this.getRecords("discuss.channel", [["id", "=", id]])[0];
-        if (channel.channel_type !== "channel") {
-            const memberOfCurrentUser = this._mockDiscussChannelMember__getAsSudoFromContext(
-                channel.id
-            );
-            if (memberOfCurrentUser) {
-                this.pyEnv["discuss.channel.member"].write([memberOfCurrentUser.id], {
-                    last_interest_dt: serializeDateTime(today()),
-
-                    is_pinned: true,
-                });
-            }
-        }
+        const members = this.pyEnv["discuss.channel.member"].search([
+            ["channel_id", "=", channel.id],
+        ]);
+        this.pyEnv["discuss.channel.member"].write(members, {
+            last_interest_dt: serializeDateTime(today()),
+            is_pinned: true,
+        });
         const messageData = this._mockMailThreadMessagePost(
             "discuss.channel",
             [id],
@@ -273,19 +272,11 @@ patch(MockServer.prototype, {
                 model: "discuss.channel",
             },
         });
-
-        /**
-         * Leave message not posted here because it would send the new message
-         * notification on a separate bus notification list from the unsubscribe
-         * itself which would lead to the channel being pinned again (handler
-         * for unsubscribe is weak and is relying on both of them to be sent
-         * together on the bus).
-         */
-        // this._mockDiscussChannelMessagePost(channel.id, {
-        //     author_id: this.pyEnv.currentPartnerId,
-        //     body: '<div class="o_mail_notification">left the channel</div>',
-        //     subtype_xmlid: "mail.mt_comment",
-        // });
+        this._mockDiscussChannelMessagePost(channel.id, {
+            author_id: this.pyEnv.currentPartnerId,
+            body: '<div class="o_mail_notification">left the channel</div>',
+            subtype_xmlid: "mail.mt_comment",
+        });
         return true;
     },
     /**
@@ -436,6 +427,9 @@ patch(MockServer.prototype, {
     _mockDiscussChannelChannelFetched(ids) {
         const channels = this.getRecords("discuss.channel", [["id", "in", ids]]);
         for (const channel of channels) {
+            if (!["chat", "whatsapp"].includes(channel.channel_type)) {
+                continue;
+            }
             const channelMessages = this.getRecords("mail.message", [
                 ["model", "=", "discuss.channel"],
                 ["res_id", "=", channel.id],
@@ -606,6 +600,39 @@ patch(MockServer.prototype, {
         return this._mockDiscussChannelChannelInfo([id])[0];
     },
     /**
+     * Simulates `_channel_basic_info` on `discuss.channel`.
+     *
+     * @private
+     * @param {integer} id
+     * @returns {Object[]}
+     */
+    _mockDiscussChannelBasicInfo(id) {
+        const [channel] = this.getRecords("discuss.channel", [["id", "=", id]]);
+        const [group_public_id] = this.getRecords("res.groups", [
+            ["id", "=", channel.group_public_id],
+        ]);
+        const res = assignDefined({}, channel, [
+            "allow_public_upload",
+            "avatarCacheKey",
+            "channel_type",
+            "create_uid",
+            "defaultDisplayMode",
+            "description",
+            "group_based_subscription",
+            "id",
+            "name",
+            "uuid",
+        ]);
+        Object.assign(res, {
+            memberCount: this.pyEnv["discuss.channel.member"].searchCount([
+                ["channel_id", "=", channel.id],
+            ]),
+            authorizedGroupFullName: group_public_id ? group_public_id.name : false,
+            model: "discuss.channel",
+        });
+        return res;
+    },
+    /**
      * Simulates `channel_info` on `discuss.channel`.
      *
      * @private
@@ -613,42 +640,23 @@ patch(MockServer.prototype, {
      * @returns {Object[]}
      */
     _mockDiscussChannelChannelInfo(ids) {
+        const bus_last_id = this.lastBusNotificationId;
         const channels = this.getRecords("discuss.channel", [["id", "in", ids]]);
         return channels.map((channel) => {
             const members = this.getRecords("discuss.channel.member", [
                 ["id", "in", channel.channel_member_ids],
             ]);
+            const res = this._mockDiscussChannelBasicInfo(channel.id);
             const messages = this.getRecords("mail.message", [
                 ["model", "=", "discuss.channel"],
                 ["res_id", "=", channel.id],
-            ]);
-            const [group_public_id] = this.getRecords("res.groups", [
-                ["id", "=", channel.group_public_id],
             ]);
             const messageNeedactionCounter = this.getRecords("mail.notification", [
                 ["res_partner_id", "=", this.pyEnv.currentPartnerId],
                 ["is_read", "=", false],
                 ["mail_message_id", "in", messages.map((message) => message.id)],
             ]).length;
-            const res = assignDefined({}, channel, [
-                "id",
-                "name",
-                "defaultDisplayMode",
-                "description",
-                "uuid",
-                "create_uid",
-                "group_based_subscription",
-                "avatarCacheKey",
-            ]);
-            Object.assign(res, {
-                channel_type: channel.channel_type,
-                memberCount: this.pyEnv["discuss.channel.member"].searchCount([
-                    ["channel_id", "=", channel.id],
-                ]),
-                message_needaction_counter: messageNeedactionCounter,
-                authorizedGroupFullName: group_public_id ? group_public_id.name : false,
-                model: "discuss.channel",
-            });
+            res.message_needaction_counter = messageNeedactionCounter;
             const memberOfCurrentUser = this._mockDiscussChannelMember__getAsSudoFromContext(
                 channel.id
             );
@@ -666,6 +674,7 @@ patch(MockServer.prototype, {
                 Object.assign(res, {
                     custom_channel_name: memberOfCurrentUser.custom_channel_name,
                     message_unread_counter: memberOfCurrentUser.message_unread_counter,
+                    message_unread_counter_bus_id: bus_last_id,
                 });
                 if (memberOfCurrentUser.rtc_inviting_session_id) {
                     res["rtc_inviting_session"] = {
@@ -682,15 +691,15 @@ patch(MockServer.prototype, {
                 ];
             }
             if (channel.channel_type !== "channel") {
-                res["seen_partners_info"] = members
-                    .filter((member) => member.partner_id)
-                    .map((member) => {
-                        return {
-                            partner_id: member.partner_id,
-                            seen_message_id: member.seen_message_id,
-                            fetched_message_id: member.fetched_message_id,
-                        };
-                    });
+                res["seen_partners_info"] = members.map((member) => {
+                    return {
+                        id: member.id,
+                        [member.partner_id ? "partner_id" : "guest_id"]:
+                            member.partner_id || member.guest_id,
+                        seen_message_id: member.seen_message_id,
+                        fetched_message_id: member.fetched_message_id,
+                    };
+                });
                 res["channelMembers"] = [
                     [
                         "ADD",
@@ -724,7 +733,6 @@ patch(MockServer.prototype, {
                     ),
                 ],
             ];
-            res.allow_public_upload = channel.allow_public_upload;
             return res;
         });
     },
@@ -780,15 +788,6 @@ patch(MockServer.prototype, {
             return;
         }
         this._mockDiscussChannel_SetLastSeenMessage([channel.id], last_message_id);
-        this.pyEnv["bus.bus"]._sendone(
-            channel.channel_type === "chat" ? channel : this.pyEnv.currentPartner,
-            "discuss.channel.member/seen",
-            {
-                channel_id: channel.id,
-                last_message_id: last_message_id,
-                partner_id: this.pyEnv.currentPartnerId,
-            }
-        );
     },
     /**
      * Simulates `channel_rename` on `discuss.channel`.
@@ -1037,11 +1036,59 @@ patch(MockServer.prototype, {
      */
     _mockDiscussChannel_SetLastSeenMessage(ids, message_id) {
         const memberOfCurrentUser = this._mockDiscussChannelMember__getAsSudoFromContext(ids[0]);
+        const message_unread_counter = this.pyEnv["mail.message"].search([
+            ["res_id", "=", ids[0]],
+            ["model", "=", "discuss.channel"],
+            ["id", ">", message_id],
+        ]).length;
         if (memberOfCurrentUser) {
             this.pyEnv["discuss.channel.member"].write([memberOfCurrentUser.id], {
                 fetched_message_id: message_id,
                 seen_message_id: message_id,
+                message_unread_counter,
             });
         }
+        const [channel] = this.pyEnv["discuss.channel"].searchRead([["id", "in", ids]]);
+        const [partner, guest] = this._mockResPartner__getCurrentPersona();
+        const memberBasicInfo = {
+            id: memberOfCurrentUser?.id,
+            lastSeenMessage: message_id ? { id: message_id } : false,
+        };
+        const memberSelfInfo = {
+            ...memberBasicInfo,
+            thread: {
+                id: channel.id,
+                model: "discuss.channel",
+                message_unread_counter,
+                message_unread_counter_bus_id: this.lastBusNotificationId,
+                seen_message_id: message_id || false,
+            },
+        };
+        const notifications = [];
+        if (memberOfCurrentUser) {
+            notifications.push([
+                guest ?? partner,
+                "mail.record/insert",
+                { ChannelMember: memberSelfInfo },
+            ]);
+        }
+        if (this._mockDiscussChannel__typesAllowingSeenInfos().includes(channel.channel_type)) {
+            notifications.push([
+                channel,
+                "mail.record/insert",
+                {
+                    ChannelMember: memberBasicInfo,
+                },
+            ]);
+        }
+        this.pyEnv["bus.bus"]._sendmany(notifications);
+    },
+    /**
+     * Simulates `_types_allowing_seen_infos` on `discuss.channel`.
+     *
+     * @returns {string[]}
+     */
+    _mockDiscussChannel__typesAllowingSeenInfos() {
+        return ["chat", "group"];
     },
 });

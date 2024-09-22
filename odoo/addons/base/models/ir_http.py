@@ -172,6 +172,21 @@ class IrHttp(models.AbstractModel):
 
     @classmethod
     def _pre_dispatch(cls, rule, args):
+        ICP = request.env['ir.config_parameter'].with_user(SUPERUSER_ID)
+
+        # Change the default database-wide 128MiB upload limit on the
+        # ICP value. Do it before calling http's generic pre_dispatch
+        # so that the per-route limit @route(..., max_content_length=x)
+        # takes over.
+        try:
+            key = 'web.max_file_upload_size'
+            if (value := ICP.get_param(key, None)) is not None:
+                request.httprequest.max_content_length = int(value)
+        except ValueError:  # better not crash on ALL requests
+            _logger.error("invalid %s: %r, using %s instead",
+                key, value, request.httprequest.max_content_length,
+            )
+
         request.dispatcher.pre_dispatch(rule, args)
 
         # Replace uid placeholder by the current request.env.uid
@@ -195,7 +210,7 @@ class IrHttp(models.AbstractModel):
                 args[key].check_access_rule('read')
             except (odoo.exceptions.AccessError, odoo.exceptions.MissingError) as e:
                 # custom behavior in case a record is not accessible / has been removed
-                if handle_error := rule.endpoint.original_routing.get('handle_params_access_error'):
+                if handle_error := rule.endpoint.routing.get('handle_params_access_error'):
                     if response := handle_error(e):
                         werkzeug.exceptions.abort(response)
                 if isinstance(e, odoo.exceptions.MissingError):
@@ -225,7 +240,7 @@ class IrHttp(models.AbstractModel):
     def _serve_fallback(cls):
         model = request.env['ir.attachment']
         attach = model.sudo()._get_serve_attachment(request.httprequest.path)
-        if attach:
+        if attach and (attach.store_fname or attach.db_datas):
             return Stream.from_attachment(attach).get_response()
 
     @classmethod
@@ -259,6 +274,8 @@ class IrHttp(models.AbstractModel):
 
     @api.autovacuum
     def _gc_sessions(self):
+        if os.getenv("ODOO_SKIP_GC_SESSIONS"):
+            return
         ICP = self.env["ir.config_parameter"]
         max_lifetime = int(ICP.get_param('sessions.max_inactivity_seconds', http.SESSION_LIFETIME))
         http.root.session_store.vacuum(max_lifetime=max_lifetime)

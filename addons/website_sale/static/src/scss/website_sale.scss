@@ -3,6 +3,7 @@
 // use of an ugly overflow: hidden which would break box-shadows.
 $o-wsale-products-layout-grid-gutter-width: $grid-gutter-width / 2 !default;
 $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale-products-layout-grid-gutter-width);
+$input-border-color: $gray-400;
 
 @mixin wsale-break-table($-list: false) {
     .o_wsale_products_grid_table_wrapper {
@@ -20,6 +21,12 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
         td {
             display: if($-list, block, inline-block);
             width: if($-list, 100%, 50%);
+        }
+
+        @if ($-list == false) {
+            [data-ppr="3"] td.oe_product {
+                width: 100%;
+            }
         }
 
         .modal-dialog {
@@ -42,23 +49,6 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
     }
 }
 
-@mixin o-wsale-scrollbar-subdle($-vertical: true) {
-    scrollbar-color: currentColor $light;
-    scrollbar#{if($-vertical, -width, -height)}: 2px;
-
-    &::-webkit-scrollbar {
-        #{if($-vertical, width, height)}: 2px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-        background: currentColor;
-    }
-
-    &::-webkit-scrollbar-track {
-        background: $light;
-    }
-}
-
 .oe_website_sale {
     // ==== Products list designs
     .o_wsale_design_cards {
@@ -66,6 +56,8 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
         --o-wsale-card-border-radius: #{$card-border-radius};
         --o-wsale-card-info-padding: #{map-get($spacers, 2)};
         --o-wsale-card-bg: #{$card-bg};
+        --o-wsale-card-color: #{adjust-color-to-background($body-color, $card-bg)};
+        --o-wsale-card-text-muted: #{adjust-color-to-background($text-muted, $card-bg, mute-color($color-contrast-light), mute-color($color-contrast-dark))};
 
         $-br-top: calc(#{$card-border-radius} - 1px);
         --o-wsale-card-thumb-border-radius: #{$-br-top} #{$-br-top} 0 0;
@@ -96,18 +88,58 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
         --o-wsale-card-thumb-fill-mode: cover;
     }
 
-    .o_wsale_filmstip_wrapper {
-        scroll-snap-type: x mandatory;
-        @include o-wsale-scrollbar-subdle($-vertical: false);
+    .o_wsale_filmstip_container {
+        $-o-scrollbar-subdle-bg: rgba($dark, 0.05);
 
-        .o_wsale_filmstip {
-            transform: translateX(0);
+        transform: translateZ(0);
+
+        &.o_wsale_filmstip_fancy_disabled {
+            scrollbar-color: currentColor $-o-scrollbar-subdle-bg;
+        }
+
+        .o_wsale_filmstip_wrapper {
+            margin-bottom: map-get($spacers, 2);
+            scroll-snap-type: x mandatory;
+            cursor: grab;
+
+            &::-webkit-scrollbar {
+                height: 2px;
+            }
+
+            &::-webkit-scrollbar-thumb {
+                border-radius: $btn-border-radius-sm;
+                background: currentColor;
+            }
+
+            &::-webkit-scrollbar-track {
+                background: $-o-scrollbar-subdle-bg;
+            }
+        }
+
+        &:not(.o_wsale_filmstip_fancy_disabled):hover {
+            .o_wsale_filmstip_wrapper {
+                margin-bottom: map-get($spacers, 1);
+
+                &::-webkit-scrollbar {
+                    height: 6px;
+                }
+            }
         }
     }
 
     .activeDrag * {
         cursor: grabbing !important;
         cursor: -webkit-grabbing;
+    }
+
+    .o_wsale_products_grid_before_rail{
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .o_wsale_products_grid_before_rail::-webkit-scrollbar {
+        width: 0;
+        height: 0;
     }
 
     .o_payment_form .card {
@@ -133,6 +165,13 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
             max-width: $o-wsale-input-max-width;
         }
     }
+
+    // Extra price badge
+    .text-bg-light .variant_price_extra.text-muted {
+        // Needed to be visible on a dark <body> background.
+        color: adjust-color-to-background($text-muted, $light, mute-color($color-contrast-light), mute-color($color-contrast-dark)) !important;
+    }
+
     input.js_quantity {
         min-width: 48px;
         text-align: center;
@@ -150,10 +189,6 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
     *:not(#product_attributes_simple) > .table-sm tbody td {
         padding-top: 0.75rem;
         padding-bottom: 0.75rem;
-    }
-
-    #o_wsale_offcanvas_content {
-        @include o-wsale-scrollbar-subdle();
     }
 
     #products_grid_before {
@@ -199,6 +234,7 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
     border-radius: var(--o-wsale-card-border-radius, 0);
     padding: var(--o-wsale-card-padding, 0);
     background-color: var(--o-wsale-card-bg);
+    color: var(--o-wsale-card-color);
 
     .oe_product_image {
         min-width: var(--o-wsale-card-thumb-size);
@@ -231,6 +267,13 @@ $o-wsale-products-layout-grid-gutter-width: min($grid-gutter-width / 2, $o-wsale
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         line-height: 1.1;
+    }
+
+    // Needed to be visible on a dark <body> background. The rule is defined on
+    // the <div> child to avoid overriding the default "text-muted" color if the
+    // "--o-wsale-card-text-muted" variable is not defined.
+    .oe_subdescription.text-muted > div {
+        color: var(--o-wsale-card-text-muted) !important;
     }
 
     .o_wsale_product_btn:empty {
@@ -382,7 +425,8 @@ a.no-decoration {
     .carousel-outer {
         height: 400px;
         max-height: 90vh;
-
+        display: flex;
+        align-items: center;
         .carousel-inner {
             img {
                 object-fit: contain;
@@ -398,8 +442,8 @@ a.no-decoration {
     }
 
     .carousel-control-prev, .carousel-control-next {
-        height: 70%;
-        top: 15%;
+        top: auto;
+        bottom: auto;
         opacity: 0.5;
         cursor: pointer;
         transition: opacity 0.8s;
@@ -705,18 +749,19 @@ a.no-decoration {
     }
 
     .o_wsale_accordion {
-        .collapse:not(.show) {
-            display: block;
-
-            @include media-breakpoint-down(lg) {
-                display: none;
-            }
+        .accordion-button{
+            background-color: unset;
         }
 
         .o_wsale_scrollable_table {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            &::-webkit-scrollbar {
+              display: none;
+            }
             @include media-breakpoint-up(lg) {
                 overflow-y: scroll;
-                height: 21rem;
+                height: 15rem;
             }
         }
     }
@@ -727,7 +772,7 @@ a.no-decoration {
         line-height: $headings-line-height;
     }
 
-    div[itemprop="address"] {
+    div[itemprop="address"],  .o_address_font_sm {
         margin: map-get($spacers, 2) 0;
         font-size: $font-size-sm;
     }
@@ -779,4 +824,8 @@ a.no-decoration {
     a.disabled {
         pointer-events: none;
     }
+}
+
+.accordion-button:not(.collapsed).bg-transparent::after {
+    background-image: escape-svg($accordion-button-icon);
 }

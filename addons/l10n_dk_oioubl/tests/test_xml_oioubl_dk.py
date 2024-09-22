@@ -61,11 +61,11 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
             'company_registry': '123 568 941 00056',
             'ubl_cii_format': 'oioubl_201',
         })
-        cls.dk_local_sale_tax_1 = cls.env["account.chart.template"].ref('tax120')
-        cls.dk_local_sale_tax_2 = cls.env["account.chart.template"].ref('tax110')
-        cls.dk_foreign_sale_tax_1 = cls.env["account.chart.template"].ref('tax210')
-        cls.dk_foreign_sale_tax_2 = cls.env["account.chart.template"].ref('tax220')
-        cls.dk_local_purchase_tax_goods = cls.env["account.chart.template"].ref('tax400')
+        cls.dk_local_sale_tax_1 = cls.env["account.chart.template"].ref('tax_s1y')
+        cls.dk_local_sale_tax_2 = cls.env["account.chart.template"].ref('tax_s1')
+        cls.dk_foreign_sale_tax_1 = cls.env["account.chart.template"].ref('tax_s0')
+        cls.dk_foreign_sale_tax_2 = cls.env["account.chart.template"].ref('tax_s7')
+        cls.dk_local_purchase_tax_goods = cls.env["account.chart.template"].ref('tax_k1')
 
     def create_post_and_send_invoice(self, partner=None, move_type='out_invoice'):
         if not partner:
@@ -103,7 +103,10 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
             ],
         })
         invoice.action_post()
-        invoice._generate_pdf_and_send_invoice(self.move_template, allow_fallback_pdf=False)
+        self.env['account.move.send'] \
+            .with_context(active_model=invoice._name, active_ids=invoice.ids) \
+            .create({}) \
+            .action_send_and_print()
         return invoice
 
     #########
@@ -170,8 +173,21 @@ class TestUBLDK(TestUBLCommon, TestAccountMoveSendCommon):
     @freeze_time('2017-01-01')
     def test_export_partner_fr_without_siret_should_raise_an_error(self):
         self.partner_c.company_registry = False
+        self.partner_c.ubl_cii_format = 'oioubl_201' # default format for French partners is facturx
         with self.assertRaisesRegex(UserError, "The company registry is required for french partner:"):
             self.create_post_and_send_invoice(partner=self.partner_c)
+
+    @freeze_time('2017-01-01')
+    def test_oioubl_export_partner_without_vat_number(self):
+        """ This test verifies that we can't export an OIOUBL file for a partner
+            who doesn't have a tax ID. It verifies that we receive a UserError
+            telling to the user that this field is missing.
+        """
+        self.partner_b.vat = None
+        self.partner_b.ubl_cii_format = 'oioubl_201' # default format recomputes when vat is changed
+        with self.assertRaises(UserError) as exception:
+            self.create_post_and_send_invoice(partner=self.partner_b)
+        self.assertIn(f"The field '{self.partner_b._fields['vat'].string}' is required", exception.exception.args[0])
 
     #########
     # IMPORT

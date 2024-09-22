@@ -36,11 +36,10 @@ class ResCurrency(models.Model):
 
     def _has_accounting_entries(self):
         """ Returns True iff this currency has been used to generate (hence, round)
-        some move lines (either as their foreign currency, or as the main currency
-        of their company).
+        some move lines (either as their foreign currency, or as the main currency).
         """
         self.ensure_one()
-        return bool(self.env['account.move.line'].search_count(['|', ('currency_id', '=', self.id), ('company_currency_id', '=', self.id)]))
+        return bool(self.env['account.move.line'].sudo().search_count(['|', ('currency_id', '=', self.id), ('company_currency_id', '=', self.id)]))
 
     @api.model
     def _get_query_currency_table(self, company_ids, conversion_date):
@@ -57,6 +56,8 @@ class ResCurrency(models.Model):
         if companies == user_company:
             currency_rates = {user_company.currency_id.id: 1.0}
         else:
+            if user_company not in companies:
+                companies |= user_company
             currency_rates = companies.mapped('currency_id')._get_rates(user_company, conversion_date)
 
         conversion_rates = []

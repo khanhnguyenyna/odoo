@@ -37,7 +37,7 @@ class IrAttachment(models.Model):
         try:
             xml_tree = etree.fromstring(content)
         except Exception as e:
-            _logger.exception("Error when converting the xml content to etree: %s", e)
+            _logger.info('Error when reading the xml file "%s": %s', filename, e)
             return []
 
         to_process = []
@@ -46,7 +46,6 @@ class IrAttachment(models.Model):
                 'attachment': self,
                 'filename': filename,
                 'content': content,
-                'attachment': self,
                 'xml_tree': xml_tree,
                 'sort_weight': 10,
                 'type': 'xml',
@@ -62,14 +61,18 @@ class IrAttachment(models.Model):
             pdf_reader = OdooPdfFileReader(buffer, strict=False)
         except Exception as e:
             # Malformed pdf
-            _logger.warning("Error when reading the pdf: %s", e, exc_info=True)
+            _logger.info('Error when reading the pdf file "%s": %s', filename, e)
             return []
 
         # Process embedded files.
         to_process = []
         try:
             for xml_name, xml_content in pdf_reader.getAttachments():
-                to_process.extend(self.env['ir.attachment']._decode_edi_xml(xml_name, xml_content))
+                embedded_files = self.env['ir.attachment']._decode_edi_xml(xml_name, xml_content)
+                for file_data in embedded_files:
+                    file_data['sort_weight'] += 1
+                    file_data['originator_pdf'] = self
+                to_process.extend(embedded_files)
         except (NotImplementedError, StructError, PdfReadError) as e:
             _logger.warning("Unable to access the attachments of %s. Tried to decrypt it, but %s.", filename, e)
 
@@ -172,3 +175,10 @@ class IrAttachment(models.Model):
         # To be extended by localisations, where they can download their necessary XSD files
         # Note: they should always return super().action_download_xsd_files()
         return
+
+    def _post_add_create(self, **kwargs):
+        move_attachments = self.filtered(lambda attachment: attachment.res_model == 'account.move')
+        moves_per_id = self.env['account.move'].browse([attachment.res_id for attachment in move_attachments]).grouped('id')
+        for attachment in move_attachments:
+            moves_per_id[attachment.res_id]._check_and_decode_attachment(attachment)
+        super()._post_add_create()

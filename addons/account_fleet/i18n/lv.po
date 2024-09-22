@@ -3,16 +3,16 @@
 # 	* account_fleet
 # 
 # Translators:
-# Will Sensors, 2023
 # Martin Trigaux, 2023
+# Will Sensors, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Martin Trigaux, 2023\n"
+"Last-Translator: Will Sensors, 2024\n"
 "Language-Team: Latvian (https://app.transifex.com/odoo/teams/41243/lv/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -33,7 +33,12 @@ msgstr "Rēķini"
 #. module: account_fleet
 #: model:ir.model.fields,field_description:account_fleet.field_fleet_vehicle__bill_count
 msgid "Bills Count"
-msgstr ""
+msgstr "Rēķinu skaits"
+
+#. module: account_fleet
+#: model:ir.model,name:account_fleet.model_account_automatic_entry_wizard
+msgid "Create Automatic Entries"
+msgstr "Automātisko ierakstu izveide"
 
 #. module: account_fleet
 #: model_terms:ir.ui.view,arch_db:account_fleet.account_move_view_tree
@@ -60,7 +65,7 @@ msgstr ""
 #: code:addons/account_fleet/models/account_move.py:0
 #, python-format
 msgid "Service Vendor Bill: %s"
-msgstr ""
+msgstr "Pakalpojuma rēķins: %s"
 
 #. module: account_fleet
 #: model:ir.model,name:account_fleet.model_fleet_vehicle
@@ -71,9 +76,9 @@ msgstr "Transportlīdzeklis"
 #. module: account_fleet
 #: model:fleet.service.type,name:account_fleet.data_fleet_service_type_vendor_bill
 msgid "Vendor Bill"
-msgstr ""
+msgstr "Iepirkumu rēķins"
 
 #. module: account_fleet
 #: model_terms:ir.ui.view,arch_db:account_fleet.fleet_vehicle_view_form
 msgid "show the vendor bills for this vehicle"
-msgstr ""
+msgstr "parādīt iepirkumu rēķinus šim tranportlīdzeklim"

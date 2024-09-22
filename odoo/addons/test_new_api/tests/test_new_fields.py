@@ -2195,6 +2195,35 @@ class TestFields(TransactionCaseWithUserDemo):
         self.assertEqual(new_move.line_ids._origin, line)
         self.assertEqual(new_move.line_ids.move_id, new_move)
 
+    def test_41_new_many2many(self):
+        group = self.env['test_new_api.group'].create({})
+        user0 = self.env['test_new_api.user'].create({'group_ids': [Command.link(group.id)]})
+        new_user0 = user0.new(origin=user0)
+        new_group = group.new(origin=group)
+
+        self.env.invalidate_all()
+
+        # creating new_user1 shoud not fetch new_group.user_ids, which is the
+        # inverse of field new_user1.group_ids
+        with self.assertQueryCount(0):
+            new_user1 = self.env['test_new_api.user'].new({'group_ids': [Command.link(group.id)]})
+            self.assertEqual(new_user1.group_ids, new_group)
+
+        # accessing new_group.user_ids should fetch group.user_ids and patch
+        # new_group.user_ids
+        with self.assertQueryCount(1):
+            self.assertEqual(new_group.user_ids, new_user0 + new_user1)
+
+        # creating new_user2 should patch new_group.user_ids immediately, since
+        # it is in cache
+        with self.assertQueryCount(0):
+            new_user2 = self.env['test_new_api.user'].new({'group_ids': [Command.link(group.id)]})
+            self.assertEqual(new_user2.group_ids, new_group)
+            self.assertEqual(new_group.user_ids, new_user0 + new_user1 + new_user2)
+
+        # the patches on new_group.user_ids should not have changed group.user_ids
+        self.assertEqual(group.user_ids, user0)
+
     @mute_logger('odoo.addons.base.models.ir_model')
     def test_41_new_related(self):
         """ test the behavior of related fields starting on new records. """
@@ -2448,9 +2477,7 @@ class TestFields(TransactionCaseWithUserDemo):
     def test_85_binary_guess_zip(self):
         from odoo.addons.base.tests.test_mimetypes import ZIP
         # Regular ZIP files can be uploaded by non-admin users
-        self.env['test_new_api.binary_svg'].with_user(
-            self.env.ref('base.user_demo'),
-        ).create({
+        self.env['test_new_api.binary_svg'].with_user(self.user_demo).create({
             'name': 'Test without attachment',
             'image_wo_attachment': base64.b64decode(ZIP),
         })
@@ -2458,9 +2485,7 @@ class TestFields(TransactionCaseWithUserDemo):
     def test_86_text_base64_guess_svg(self):
         from odoo.addons.base.tests.test_mimetypes import SVG
         with self.assertRaises(UserError) as e:
-            self.env['test_new_api.binary_svg'].with_user(
-                self.env.ref('base.user_demo'),
-            ).create({
+            self.env['test_new_api.binary_svg'].with_user(self.user_demo).create({
                 'name': 'Test without attachment',
                 'image_wo_attachment': SVG.decode("utf-8"),
             })
@@ -2571,6 +2596,8 @@ class TestFields(TransactionCaseWithUserDemo):
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (512, 256))
         # test create related no store (resize, width limited)
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (256, 128))
+        # test create related store on column (resize, width limited)
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (64, 32))
 
         record.write({
             'image': image_h,
@@ -2585,6 +2612,8 @@ class TestFields(TransactionCaseWithUserDemo):
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (256, 512))
         # test write related no store (resize, height limited)
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (128, 256))
+        # test write related store on column (resize, width limited)
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (32, 64))
 
         record = self.env['test_new_api.model_image'].create({
             'name': 'image',
@@ -2600,6 +2629,8 @@ class TestFields(TransactionCaseWithUserDemo):
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (256, 512))
         # test create related no store (resize, height limited)
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (128, 256))
+        # test create related store on column (resize, width limited)
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (32, 64))
 
         record.write({
             'image': image_w,
@@ -2614,48 +2645,71 @@ class TestFields(TransactionCaseWithUserDemo):
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (512, 256))
         # test write related store (resize, width limited)
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (256, 128))
+        # test write related store on column (resize, width limited)
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (64, 32))
 
         # test create inverse store
         record = self.env['test_new_api.model_image'].create({
             'name': 'image',
             'image_512': image_w,
         })
-        record.invalidate_recordset(['image_512'])
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (512, 256))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image))).size, (4000, 2000))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (256, 128))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (64, 32))
         # test write inverse store
         record.write({
             'image_512': image_h,
         })
-        record.invalidate_recordset(['image_512'])
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (256, 512))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image))).size, (2000, 4000))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (128, 256))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (32, 64))
 
         # test create inverse no store
         record = self.env['test_new_api.model_image'].with_context(image_no_postprocess=True).create({
             'name': 'image',
             'image_256': image_w,
         })
-        record.invalidate_recordset(['image_256'])
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (512, 256))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image))).size, (4000, 2000))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (256, 128))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (64, 32))
         # test write inverse no store
         record.write({
             'image_256': image_h,
         })
-        record.invalidate_recordset(['image_256'])
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (256, 512))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image))).size, (2000, 4000))
         self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (128, 256))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (32, 64))
+
+        # test create inverse stored column
+        record = self.env['test_new_api.model_image'].with_context(image_no_postprocess=True).create({
+            'name': 'image',
+            'image_64': image_w,
+        })
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (512, 256))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image))).size, (4000, 2000))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (256, 128))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (64, 32))
+        # test write inverse stored column
+        record.write({
+            'image_64': image_h,
+        })
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_512))).size, (256, 512))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image))).size, (2000, 4000))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_256))).size, (128, 256))
+        self.assertEqual(Image.open(io.BytesIO(base64.b64decode(record.image_64))).size, (32, 64))
 
         # test bin_size
         record_bin_size = record.with_context(bin_size=True)
         self.assertEqual(record_bin_size.image, b'31.54 Kb')
         self.assertEqual(record_bin_size.image_512, b'1.02 Kb')
         self.assertEqual(record_bin_size.image_256, b'424.00 bytes')
+        # non-attachment binary fields: value returned as str in a different
+        # form, because coming from PostgreSQL instead of filestore
+        self.assertEqual(record_bin_size.image_64, '148 bytes')
 
         # ensure image_data_uri works (value must be bytes and not string)
         self.assertEqual(record.image_256[:8], b'iVBORw0K')
@@ -2678,18 +2732,16 @@ class TestFields(TransactionCaseWithUserDemo):
         with self.assertQueryCount(0):
             new_record.image = image_w
 
-    def test_95_binary_bin_size(self):
+    def test_95_binary_bin_size_create(self):
         binary_value = base64.b64encode(b'content')
         binary_size = b'7.00 bytes'
 
         def assertBinaryValue(record, value):
             for field in ('binary', 'binary_related_store', 'binary_related_no_store'):
-                self.assertEqual(record[field], value)
+                self.assertEqual(record[field], value, f'Incorrect result for {field}')
 
-        # created, flushed, and first read without context
+        # created and first read without context
         record = self.env['test_new_api.model_binary'].create({'binary': binary_value})
-        self.env.flush_all()
-        self.env.invalidate_all()
         record_no_bin_size = record.with_context(bin_size=False)
         record_bin_size = record.with_context(bin_size=True)
 
@@ -2697,10 +2749,8 @@ class TestFields(TransactionCaseWithUserDemo):
         assertBinaryValue(record_no_bin_size, binary_value)
         assertBinaryValue(record_bin_size, binary_size)
 
-        # created, flushed, and first read with bin_size=False
+        # created and first read with bin_size=False
         record_no_bin_size = self.env['test_new_api.model_binary'].with_context(bin_size=False).create({'binary': binary_value})
-        self.env.flush_all()
-        self.env.invalidate_all()
         record = self.env['test_new_api.model_binary'].browse(record.id)
         record_bin_size = record.with_context(bin_size=True)
 
@@ -2708,10 +2758,8 @@ class TestFields(TransactionCaseWithUserDemo):
         assertBinaryValue(record, binary_value)
         assertBinaryValue(record_bin_size, binary_size)
 
-        # created, flushed, and first read with bin_size=True
+        # created and first read with bin_size=True
         record_bin_size = self.env['test_new_api.model_binary'].with_context(bin_size=True).create({'binary': binary_value})
-        self.env.flush_all()
-        self.env.invalidate_all()
         record = self.env['test_new_api.model_binary'].browse(record.id)
         record_no_bin_size = record.with_context(bin_size=False)
 
@@ -2719,12 +2767,11 @@ class TestFields(TransactionCaseWithUserDemo):
         assertBinaryValue(record_no_bin_size, binary_value)
         assertBinaryValue(record, binary_value)
 
-        # created without context and flushed with bin_size
+        # created without context and flushed/invalidated with bin_size=True
         record = self.env['test_new_api.model_binary'].create({'binary': binary_value})
+        record.with_context(bin_size=True).env.invalidate_all()
         record_no_bin_size = record.with_context(bin_size=False)
         record_bin_size = record.with_context(bin_size=True)
-        self.env.flush_all()
-        self.env.invalidate_all()
 
         assertBinaryValue(record, binary_value)
         assertBinaryValue(record_no_bin_size, binary_value)
@@ -2732,8 +2779,6 @@ class TestFields(TransactionCaseWithUserDemo):
 
         # check computed binary field with arbitrary Python value
         record = self.env['test_new_api.model_binary'].create({})
-        self.env.flush_all()
-        self.env.invalidate_all()
         record_no_bin_size = record.with_context(bin_size=False)
         record_bin_size = record.with_context(bin_size=True)
 
@@ -2741,6 +2786,64 @@ class TestFields(TransactionCaseWithUserDemo):
         self.assertEqual(record.binary_computed, expected_value)
         self.assertEqual(record_no_bin_size.binary_computed, expected_value)
         self.assertEqual(record_bin_size.binary_computed, expected_value)
+
+    def test_95_binary_bin_size_write(self):
+        binary_value = base64.b64encode(b'content')
+        binary_size = b'7.00 bytes'
+
+        def assertBinaryValue(record, value):
+            for field in ('binary', 'binary_related_store', 'binary_related_no_store'):
+                self.assertEqual(record[field], value, f'Incorrect result for {field}')
+
+        # created and written without context
+        record = self.env['test_new_api.model_binary'].create({})
+        record.write({'binary': binary_value})
+        record_no_bin_size = record.with_context(bin_size=False)
+        record_bin_size = record.with_context(bin_size=True)
+
+        assertBinaryValue(record, binary_value)
+        assertBinaryValue(record_no_bin_size, binary_value)
+        assertBinaryValue(record_bin_size, binary_size)
+
+        # created without context, written with bin_size=False
+        record = self.env['test_new_api.model_binary'].create({})
+        record.with_context(bin_size=False).write({'binary': binary_value})
+        record_bin_size = record.with_context(bin_size=True)
+
+        assertBinaryValue(record_no_bin_size, binary_value)
+        assertBinaryValue(record, binary_value)
+        assertBinaryValue(record_bin_size, binary_size)
+
+        # created without context, written with bin_size=True
+        record = self.env['test_new_api.model_binary'].create({})
+        record.with_context(bin_size=True).write({'binary': binary_value})
+        record_no_bin_size = record.with_context(bin_size=False)
+
+        assertBinaryValue(record_bin_size, binary_size)
+        assertBinaryValue(record_no_bin_size, binary_value)
+        assertBinaryValue(record, binary_value)
+
+        # created without context and flushed with bin_size=True
+        record = self.env['test_new_api.model_binary'].create({})
+        record.write({'binary': binary_value})
+        record.with_context(bin_size=True).env.invalidate_all()
+        record_no_bin_size = record.with_context(bin_size=False)
+        record_bin_size = record.with_context(bin_size=True)
+
+        assertBinaryValue(record, binary_value)
+        assertBinaryValue(record_no_bin_size, binary_value)
+        assertBinaryValue(record_bin_size, binary_size)
+
+        # created and written without context, flushed without bin_size
+        record = self.env['test_new_api.model_binary'].create({})
+        record.write({'binary': binary_value})
+        record.env.invalidate_all()
+        record_no_bin_size = record.with_context(bin_size=False)
+        record_bin_size = record.with_context(bin_size=True)
+
+        assertBinaryValue(record, binary_value)
+        assertBinaryValue(record_no_bin_size, binary_value)
+        assertBinaryValue(record_bin_size, binary_size)
 
     def test_96_order_m2o(self):
         belgium, congo = self.env['test_new_api.country'].create([
@@ -2841,7 +2944,7 @@ class TestFields(TransactionCaseWithUserDemo):
         })
 
         # unlink the line, and check the recomputation of move.quantity
-        user = self.env.ref('base.user_demo')
+        user = self.user_demo
         line.with_user(user).unlink()
         self.assertEqual(move.quantity, 0)
 
@@ -2896,8 +2999,49 @@ class TestFields(TransactionCaseWithUserDemo):
             records.mapped('harry')  # fetch all fields with prefetch='Harry Potter'
             records.mapped('rare_description')  # fetch that field only
 
+    def test_cache_key_invalidation(self):
+        company0 = self.env.ref('base.main_company')
+        company1 = self.env['res.company'].create({'name': 'A'})
+
+        user0 = self.env['res.users'].create({
+            'name': 'Foo', 'login': 'foo', 'company_id': company0.id,
+            'company_ids': [Command.set([company0.id, company1.id])],
+        })
+
+        # this uses company0
+        record = self.env['test_new_api.company'].with_user(user0).create({
+            'foo': 'main',
+        })
+        self.assertEqual(record.env.company, company0)
+        self.assertEqual(record.foo, 'main')
+
+        # change the user's company, so we implicitly switch to company1
+        user0.company_id = company1
+        self.assertEqual(record.env.company, company1)
+        self.assertEqual(record.foo, False)
+
 
 class TestX2many(common.TransactionCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.user_portal = cls.env['res.users'].sudo().search([('login', '=', 'portal')])
+        cls.partner_portal = cls.user_portal.partner_id
+
+        if not cls.user_portal:
+            cls.env['ir.config_parameter'].sudo().set_param('auth_password_policy.minlength', 4)
+            cls.partner_portal = cls.env['res.partner'].create({
+                'name': 'Joel Willis',
+                'email': 'joel.willis63@example.com',
+            })
+            cls.user_portal = cls.env['res.users'].with_context(no_reset_password=True).create({
+                'login': 'portal',
+                'password': 'portal',
+                'partner_id': cls.partner_portal.id,
+                'groups_id': [Command.set([cls.env.ref('base.group_portal').id])],
+            })
+
     def test_definition_many2many(self):
         """ Test the definition of inherited many2many fields. """
         field = self.env['test_new_api.multi.line']._fields['tags']
@@ -3182,6 +3326,130 @@ class TestX2many(common.TransactionCase):
             'store': True,
         })
         self.assertTrue(field.unlink())
+
+    @mute_logger('odoo.addons.base.models.ir_model')
+    @common.users('portal')
+    def test_sudo_commands(self):
+        """Test manipulating a x2many field using Commands with `sudo` or with another user (`with_user`)
+        is not allowed when the destination model is flagged `_allow_sudo_commands = False` and the transaction user
+        does not have the required access rights.
+
+        This test asserts an AccessError is raised
+        when a user attempts to pass Commands to a One2many and Many2many field
+        targeting a model flagged with `_allow_sudo_commands = False`
+        while using an environment with `sudo()` or `with_user(admin_user)`.
+
+        The `with_user` are edge cases in some business codes, where a more-priviledged user is used temporary
+        to perform an action, such as:
+        - `Documents.with_user(share.create_uid)`
+        - `request.env['sign.request'].with_user(contract.hr_responsible_id).sudo()`
+        """
+
+        admin_user = self.env.ref('base.user_admin')
+        my_user = self.env.user.sudo(False)
+
+        # 1. one2many field `res.partner.user_ids`
+        # Sanity checks
+        # `res.partner` must be flagged as `_allow_sudo_commands = False` otherwise the test is pointless
+        self.assertEqual(self.env['res.users']._allow_sudo_commands, False)
+        # in case the type of `res.partner.user_ids` changes in a future release.
+        # if `res.partner.user_ids` is no longer a one2many, this test must be adapted.
+        self.assertEqual(self.env['res.partner']._fields['user_ids'].type, 'one2many')
+        my_partner = my_user.partner_id
+
+        for Partner, my_partner in [
+            (self.env['res.partner'].with_user(admin_user), my_partner.with_user(admin_user)),
+            (self.env['res.partner'].sudo(), my_partner.sudo()),
+        ]:
+            # 1.0 Command.CREATE
+            # Case: a public/portal user creating a new users with arbitrary values
+            with self.assertRaisesRegex(AccessError, "not allowed to create 'User'"):
+                Partner.create({
+                    'name': 'foo',
+                    'user_ids': [Command.create({
+                        'login': 'foo',
+                        'password': 'foo',
+                    })],
+                })
+            # 1.1 Command.UPDATE
+            # Case: a public/portal updating his user to add himself a group
+            with self.assertRaisesRegex(AccessError, "not allowed to modify 'User'"):
+                my_partner.write({
+                    'user_ids': [Command.update(my_partner.user_ids[0].id, {
+                        'groups_id': [self.env.ref('base.group_system').id],
+                    })],
+                })
+            # 1.2 Command.DELETE
+            # Case: a public user deleting the public user to mess with the database
+            with self.assertRaisesRegex(AccessError, "not allowed to delete 'User'"):
+                my_partner.write({
+                    'user_ids': [Command.delete(my_partner.user_ids[0].id)],
+                })
+            # 1.3 Command.UNLINK
+            # Case: a public user unlinking the public partner and the public user to mess with the database
+            with self.assertRaisesRegex(AccessError, "not allowed to modify 'User'"):
+                my_partner.write({
+                    'user_ids': [Command.unlink(my_partner.user_ids[0].id)],
+                })
+            # 1.4 Command.LINK
+            # Case: a public/portal user changing the `partner_id` of an admin,
+            # to change the email address of the user and ask for a reset password.
+            with self.assertRaisesRegex(AccessError, "not allowed to modify 'User'"):
+                my_partner.write({
+                    'user_ids': [Command.link(admin_user.id)],
+                })
+            # 1.5 Command.CLEAR
+            # Case: a public user unlinking the public partner and the public user just to mess with the database
+            with self.assertRaisesRegex(AccessError, "not allowed to modify 'User'"):
+                my_partner.write({
+                    'user_ids': [Command.clear()],
+                })
+            # 1.6 Command.SET
+            # Case: a public/portal user changing the `partner_id` of an admin,
+            # to change the email address of the user and ask for a reset password.
+            with self.assertRaisesRegex(AccessError, "not allowed to modify 'User'"):
+                my_partner.write({
+                    'user_ids': [Command.set([admin_user.id])],
+                })
+
+        # 2. many2many field `test_new_api.discussion.participants`
+        # Sanity checks
+        # `test_new_api.user` must be flagged as `_allow_sudo_commands = False` otherwise the test is pointless
+        self.assertEqual(self.env['test_new_api.group']._allow_sudo_commands, False)
+        # in case the type of `test_new_api.discussion.participants` changes in a future release.
+        # if `test_new_api.discussion.participants` is no longer a many2many, this test must be adapted.
+        self.assertEqual(self.env['test_new_api.user']._fields['group_ids'].type, 'many2many')
+        public_group = self.env['test_new_api.group'].with_user(admin_user).create({
+            'name': 'public'
+        }).with_user(self.env.user)
+        my_user = self.env['test_new_api.user'].with_user(admin_user).create({
+            'name': 'foo',
+            'group_ids': [public_group.id],
+        }).with_user(self.env.user)
+
+        for User, my_user in [
+            (self.env['test_new_api.user'].with_user(admin_user), my_user.with_user(admin_user)),
+            (self.env['test_new_api.user'].sudo(), my_user.sudo()),
+        ]:
+            # 2.0 Command.CREATE
+            # Case: a public/portal user creating a new users with arbitrary values
+            with self.assertRaisesRegex(AccessError, "not allowed to create 'test_new_api.group'"):
+                User.create({
+                    'name': 'foo',
+                    'group_ids': [Command.create({})],
+                })
+            # 2.1 Command.UPDATE
+            # Case: a public/portal updating his user to add himself a group
+            with self.assertRaisesRegex(AccessError, "not allowed to modify 'test_new_api.group'"):
+                my_user.write({
+                    'group_ids': [Command.update(my_user.group_ids[0].id, {})],
+                })
+            # 2.2 Command.DELETE
+            # Case: a public user deleting the public user to mess with the database
+            with self.assertRaisesRegex(AccessError, "not allowed to delete 'test_new_api.group'"):
+                my_user.write({
+                    'group_ids': [Command.delete(my_user.group_ids[0].id)],
+                })
 
 
 class TestHtmlField(common.TransactionCase):

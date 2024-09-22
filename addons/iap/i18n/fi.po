@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-01-05 12:31+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
 "Last-Translator: Ossi Mantylahti <ossi.mantylahti@obs-solutions.fi>, 2023\n"
 "Language-Team: Finnish (https://app.transifex.com/odoo/teams/41243/fi/)\n"
@@ -26,7 +26,7 @@ msgstr ""
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account__account_info_id
 msgid "Account Info"
-msgstr ""
+msgstr "Tilin tiedot"
 
 #. module: iap
 #: model_terms:ir.ui.view,arch_db:iap.iap_account_view_form
@@ -42,18 +42,19 @@ msgstr "Tilin tunniste"
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account_info__account_uuid_hashed
 msgid "Account UUID"
-msgstr ""
+msgstr "Tilin UUID-tunniste"
 
 #. module: iap
 #: model:ir.model.fields,help:iap.field_iap_account__account_token
 msgid ""
 "Account token is your authentication key for this service. Do not share it."
 msgstr ""
+"Tilin pääsytunniste on tunnistusavaimesi tätä palvelua varten. Älä jaa sitä."
 
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account__account_info_ids
 msgid "Accounts from IAP"
-msgstr ""
+msgstr "IAP:n tilit"
 
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account__balance
@@ -64,7 +65,7 @@ msgstr "Saldo"
 #. module: iap
 #: model_terms:ir.ui.view,arch_db:iap.iap_account_view_form
 msgid "Buy Credit"
-msgstr ""
+msgstr "Osta krediittejä"
 
 #. module: iap
 #. odoo-javascript
@@ -85,11 +86,6 @@ msgstr "Peruuta"
 #: model:ir.model.fields,field_description:iap.field_iap_account__company_ids
 msgid "Company"
 msgstr "Yritys"
-
-#. module: iap
-#: model:ir.model,name:iap.model_res_config_settings
-msgid "Config Settings"
-msgstr "Asetukset"
 
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account__create_uid
@@ -118,7 +114,7 @@ msgstr "Näyttönimi"
 #. module: iap
 #: model_terms:ir.ui.view,arch_db:iap.iap_account_view_form
 msgid "Hide Token"
-msgstr ""
+msgstr "Piilota merkki"
 
 #. module: iap
 #: model:ir.ui.menu,name:iap.iap_root_menu
@@ -136,7 +132,7 @@ msgstr "IAP Tili"
 #. module: iap
 #: model:ir.model,name:iap.model_iap_account_info
 msgid "IAP Account Info"
-msgstr ""
+msgstr "IAP-tilin tiedot"
 
 #. module: iap
 #: model:ir.ui.menu,name:iap.iap_account_menu
@@ -185,14 +181,9 @@ msgid "Odoo IAP"
 msgstr "Odoo IAP"
 
 #. module: iap
-#: model:ir.actions.server,name:iap.open_iap_account
-msgid "Open IAP Account"
-msgstr "Avaa IAP tili"
-
-#. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account_info__service_name
 msgid "Related Service"
-msgstr ""
+msgstr "Aiheeseen liittyvä palvelu"
 
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account__service_name
@@ -203,7 +194,7 @@ msgstr "Palvelun nimi"
 #: model:ir.model.fields,field_description:iap.field_iap_account__show_token
 #: model_terms:ir.ui.view,arch_db:iap.iap_account_view_form
 msgid "Show Token"
-msgstr ""
+msgstr "Näytä pääsytunniste"
 
 #. module: iap
 #. odoo-javascript
@@ -232,7 +223,7 @@ msgstr "Raja"
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account_info__unit_name
 msgid "Unit Name"
-msgstr ""
+msgstr "Yksikön nimi"
 
 #. module: iap
 #. odoo-javascript
@@ -251,15 +242,15 @@ msgstr "Tarkastele omia IAP-palveluja ja lataa krediittejä"
 #: model:ir.model.fields,field_description:iap.field_iap_account__warn_me
 #: model:ir.model.fields,field_description:iap.field_iap_account_info__warn_me
 msgid "Warn me"
-msgstr ""
+msgstr "Varoita minua"
 
 #. module: iap
 #: model:ir.model.fields,field_description:iap.field_iap_account__warning_email
 #: model:ir.model.fields,field_description:iap.field_iap_account_info__warning_email
 msgid "Warning Email"
-msgstr ""
+msgstr "Varoitussähköposti"
 
 #. module: iap
 #: model:ir.model.fields,help:iap.field_iap_account__warn_me
 msgid "We will send you an email when your balance gets below that threshold"
-msgstr ""
+msgstr "Lähetämme sinulle sähköpostia, kun saldosi laskee alle tämän rajan"

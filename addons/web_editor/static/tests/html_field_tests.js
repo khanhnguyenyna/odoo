@@ -1,15 +1,20 @@
 /** @odoo-module **/
 
-import { click, editInput, getFixture, makeDeferred, nextTick, patchWithCleanup } from "@web/../tests/helpers/utils";
+import { click, editInput, getFixture, makeDeferred, mockSendBeacon, nextTick, patchWithCleanup } from "@web/../tests/helpers/utils";
+import { createWebClient, doAction } from "@web/../tests/webclient/helpers";
 import { makeView, setupViewRegistries } from "@web/../tests/views/helpers";
+import { FileSelectorControlPanel } from "@web_editor/components/media_dialog/file_selector";
 import { FormController } from '@web/views/form/form_controller';
 import { HtmlField } from "@web_editor/js/backend/html_field";
 import { MediaDialog } from "@web_editor/components/media_dialog/media_dialog";
 import { parseHTML, setSelection } from "@web_editor/js/editor/odoo-editor/src/utils/utils";
-import { onRendered } from "@odoo/owl";
-import { wysiwygData } from "@web_editor/../tests/test_utils";
+import { onRendered, useEffect } from "@odoo/owl";
+import { registry } from "@web/core/registry";
+import { COLOR_PICKER_TEMPLATE, wysiwygData } from "@web_editor/../tests/test_utils";
 import { OdooEditor } from '@web_editor/js/editor/odoo-editor/src/OdooEditor';
+import { uploadService } from "@web_editor/components/upload_progress_toast/upload_service";
 import { Wysiwyg } from "@web_editor/js/wysiwyg/wysiwyg";
+import { insertText } from '@web_editor/js/editor/odoo-editor/test/utils';
 
 async function iframeReady(iframe) {
     const iframeLoadPromise = makeDeferred();
@@ -158,6 +163,91 @@ QUnit.module("WebEditor.HtmlField", ({ beforeEach }) => {
         })
         target.querySelector(".o_field_many2one input").dispatchEvent(customEvent);
     })
+
+    QUnit.test("discard html field changes in form", async (assert) => {
+        serverData.models.partner.records = [{ id: 1, txt: "<p>first</p>" }];
+        let wysiwyg;
+        const wysiwygPromise = makeDeferred();
+        patchWithCleanup(HtmlField.prototype, {
+            async startWysiwyg() {
+                await super.startWysiwyg(...arguments);
+                wysiwyg = this.wysiwyg;
+                wysiwygPromise.resolve();
+            },
+        });
+        await makeView({
+            type: "form",
+            resId: 1,
+            resModel: "partner",
+            serverData,
+            arch: `
+                <form>
+                    <field name="txt" widget="html" options="{'style-inline' : true}"/>
+                </form>`,
+        });
+        await wysiwygPromise;
+        const editor = wysiwyg.odooEditor;
+        const editable = editor.editable;
+        editor.testMode = true;
+        assert.strictEqual(editable.innerHTML, `<p>first</p>`);
+        const paragraph = editable.querySelector("p");
+        await setSelection(paragraph, 0);
+        await insertText(editor, "a");
+        assert.strictEqual(editable.innerHTML, `<p>afirst</p>`);
+        // For blur event here to call _onWysiwygBlur function in html_field
+        await editable.dispatchEvent(new Event("blur", { bubbles: true, cancelable: true }));
+        // Wait for the updates to be saved , if we don't wait the update of the value will
+        // be done after the call for discardChanges since it uses some async functions.
+        await new Promise((r) => setTimeout(r, 100));
+        const discardButton = target.querySelector(".o_form_button_cancel");
+        assert.ok(discardButton);
+        await click(discardButton);
+        assert.strictEqual(editable.innerHTML, `<p>first</p>`);
+    });
+
+    QUnit.test("undo after discard html field changes in form", async (assert) => {
+        serverData.models.partner.records = [{ id: 1, txt: "<p>first</p>" }];
+        let wysiwyg;
+        const wysiwygPromise = makeDeferred();
+        patchWithCleanup(HtmlField.prototype, {
+            async startWysiwyg() {
+                await super.startWysiwyg(...arguments);
+                wysiwyg = this.wysiwyg;
+                wysiwygPromise.resolve();
+            },
+        });
+        await makeView({
+            type: "form",
+            resId: 1,
+            resModel: "partner",
+            serverData,
+            arch: `
+                <form>
+                    <field name="txt" widget="html"/>
+                </form>`,
+        });
+        await wysiwygPromise;
+        const editor = wysiwyg.odooEditor;
+        const editable = editor.editable;
+        editor.testMode = true;
+        assert.strictEqual(editable.innerHTML, `<p>first</p>`);
+        const paragraph = editable.querySelector("p");
+        await setSelection(paragraph, 0);
+        await insertText(editor, "a");
+        assert.strictEqual(editable.innerHTML, `<p>afirst</p>`);
+        // For blur event here to call _onWysiwygBlur function in html_field
+        await editable.dispatchEvent(new Event("blur", { bubbles: true, cancelable: true }));
+        // Wait for the updates to be saved , if we don't wait the update of the value will
+        // be done after the call for discardChanges since it uses some async functions.
+        await new Promise((r) => setTimeout(r, 100));
+        const discardButton = target.querySelector(".o_form_button_cancel");
+        assert.ok(discardButton);
+        await click(discardButton);
+        assert.strictEqual(editable.innerHTML, `<p>first</p>`);
+        await editable.dispatchEvent(new KeyboardEvent('keydown', {key: 'z', ctrlKey: true, bubbles: true, cancelable: true}));
+        assert.strictEqual(editable.innerHTML, `<p>first</p>`);
+    });
+
 
     QUnit.module('Sandboxed Preview');
 
@@ -408,6 +498,33 @@ QUnit.module("WebEditor.HtmlField", ({ beforeEach }) => {
 
     QUnit.test("Ensure that urgentSave works even with modified image to save", async (assert) => {
         assert.expect(5);
+
+        let sendBeaconDef;
+        mockSendBeacon((route, blob) => {
+            blob.text().then((r) => {
+                const { params } = JSON.parse(r);
+                const { args, model } = params;
+                if (route === '/web/dataset/call_kw/partner/web_save' && model === 'partner') {
+                    if (writeCount === 0) {
+                        // Save normal value without image.
+                        assert.equal(args[1].txt, `<p class="test_target"><br></p>`);
+                    } else if (writeCount === 1) {
+                        // Save image with unfinished modification changes.
+                        assert.equal(args[1].txt, imageContainerHTML);
+                    } else if (writeCount === 2) {
+                        // Save the modified image.
+                        assert.equal(args[1].txt, getImageContainerHTML(newImageSrc, false));
+                    } else {
+                        // Fail the test if too many write are called.
+                        assert.ok(writeCount === 2, "Write should only be called 3 times during this test");
+                    }
+                    writeCount += 1;
+                }
+                sendBeaconDef.resolve();
+            });
+            return true;
+        });
+
         let formController;
         // Patch to get the controller instance.
         patchWithCleanup(FormController.prototype, {
@@ -473,20 +590,7 @@ QUnit.module("WebEditor.HtmlField", ({ beforeEach }) => {
                 route === '/web/dataset/call_kw/partner/web_save' &&
                 args.model === 'partner'
             ) {
-                if (writeCount === 0) {
-                    // Save normal value without image.
-                    assert.equal(args.args[1].txt, `<p class="test_target"><br></p>`);
-                } else if (writeCount === 1) {
-                    // Save image with unfinished modification changes.
-                    assert.equal(args.args[1].txt, imageContainerHTML);
-                } else if (writeCount === 2) {
-                    // Save the modified image.
-                    assert.equal(args.args[1].txt, getImageContainerHTML(newImageSrc, false));
-                } else {
-                    // Fail the test if too many write are called.
-                    assert.ok(writeCount === 2, "Write should only be called 3 times during this test");
-                }
-                writeCount += 1;
+                assert.ok(false, "write should only be called through sendBeacon");
             } else if (
                 route === `/web_editor/modify_image/${imageRecord.id}`
             ) {
@@ -518,8 +622,9 @@ QUnit.module("WebEditor.HtmlField", ({ beforeEach }) => {
         const editor = htmlField.wysiwyg.odooEditor;
 
         // Simulate an urgent save without any image in the content.
+        sendBeaconDef = makeDeferred();
         await formController.beforeUnload();
-        await nextTick();
+        await sendBeaconDef;
 
         // Replace the empty paragraph with a paragrah containing an unsaved
         // modified image
@@ -530,8 +635,9 @@ QUnit.module("WebEditor.HtmlField", ({ beforeEach }) => {
 
         // Simulate an urgent save before the end of the RPC roundtrip for the
         // image.
+        sendBeaconDef = makeDeferred();
         await formController.beforeUnload();
-        await nextTick();
+        await sendBeaconDef;
 
         // Resolve the image modification (simulate end of RPC roundtrip).
         modifyImagePromise.resolve();
@@ -539,8 +645,9 @@ QUnit.module("WebEditor.HtmlField", ({ beforeEach }) => {
         await nextTick();
 
         // Simulate the last urgent save, with the modified image.
+        sendBeaconDef = makeDeferred();
         await formController.beforeUnload();
-        await nextTick();
+        await sendBeaconDef;
     });
 
     QUnit.test("Pasted/dropped images are converted to attachments on save", async (assert) => {
@@ -841,4 +948,350 @@ QUnit.module("WebEditor.HtmlField", ({ beforeEach }) => {
         assert.equal(editor.editable.children[0].children[1].innerHTML.trim(), '<div class="oe_unremovable"><p class="oe_unremovable">a</p></div>');
         assert.equal(editor.editable.children[0].children[2].innerHTML.trim(), '<div class="oe_unremovable"><p class="oe_unremovable">a</p></div>');
     });
+
+    QUnit.module('Paste');
+
+    QUnit.test("Embed video by pasting video URL", async (assert) => {
+        assert.expect(4);
+
+        serverData.models.partner.records.push({
+            id: 1,
+            txt: "<p><br></p>",
+        });
+
+        const mockRPC = async function (route, args) {
+            if (route === '/web_editor/video_url/data') {
+                return Promise.resolve({
+                    platform: "youtube",
+                    embed_url: "//www.youtube.com/embed/qxb74CMR748?rel=0&autoplay=0",
+                });
+            }
+        };
+
+        await makeView({
+            type: "form",
+            resId: 1,
+            resModel: "partner",
+            serverData,
+            arch: `
+                <form>
+                    <field name="txt" widget="html" options="{'allowCommandVideo': true}"/>
+                </form>`,
+            mockRPC: mockRPC,
+        });
+
+        const editable = document.querySelector(".odoo-editor-editable");
+        const p = editable.firstElementChild;
+        Wysiwyg.setRange(p);
+
+        // Paste a video URL.
+        const clipboardData = new DataTransfer();
+        clipboardData.setData('text/plain', 'https://www.youtube.com/watch?v=qxb74CMR748');
+        p.dispatchEvent(new ClipboardEvent('paste', { clipboardData, bubbles: true }));
+        assert.strictEqual(p.outerHTML, '<p>https://www.youtube.com/watch?v=qxb74CMR748</p>',
+            "The URL should be inserted as text");
+        assert.isVisible($('.oe-powerbox-wrapper:contains("Embed Youtube Video")'),
+            "The powerbox should be opened");
+
+        // Press Enter to select first option in the powerbox ("Embed Youtube Video").
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+        await nextTick();
+        assert.strictEqual(p.outerHTML, '<p></p>', "URL insertion should be reverted");
+        assert.containsOnce(
+            editable,
+            'div.media_iframe_video iframe[data-src="//www.youtube.com/embed/qxb74CMR748?rel=0&autoplay=0"]',
+            "The video should be embedded as an iframe"
+        );
+    });
+
+    QUnit.module("Link");
+
+    QUnit.test("link preview in Link Dialog", async (assert) => {
+        assert.expect(6);
+
+        serverData.models.partner.records.push({
+            id: 1,
+            txt: "<p class='test_target'><a href='/test'>This website</a></p>",
+        });
+        await makeView({
+            type: "form",
+            resId: 1,
+            resModel: "partner",
+            serverData,
+            arch: `
+                <form>
+                    <field name="txt" widget="html"/>
+                </form>`,
+        });
+
+        // Test the popover option to edit the link
+        const a = document.querySelector(".test_target a");
+        // Wait for the popover to appear
+        await nextTick();
+        a.click();
+        await nextTick();
+        // Click on the edit link icon
+        document.querySelector("a.mx-1.o_we_edit_link.text-dark").click();
+        // Make sure popover is closed
+        await new Promise(resolve => $(a).on('hidden.bs.popover.link_popover', resolve));
+        let labelInputField = document.querySelector(".modal input#o_link_dialog_label_input");
+        let linkPreview = document.querySelector(".modal a#link-preview");
+        assert.strictEqual(labelInputField.value, 'This website',
+            "The label input field should match the link's content");
+        assert.strictEqual(linkPreview.innerText.replaceAll("\ufeff", ""), "This website",
+            "Link label in preview should match label input field");
+
+        // Click on discard
+        await click(document, ".modal .modal-footer button.btn-secondary");
+
+        const p = document.querySelector(".test_target");
+        // Select link label to open the floating toolbar.
+        setSelection(p, 1, p, 2);
+        await nextTick();
+        // Click on create-link button to open the Link Dialog.
+        document.querySelector("#toolbar #create-link").click();
+        await nextTick();
+
+        labelInputField = document.querySelector(".modal input#o_link_dialog_label_input");
+        linkPreview = document.querySelector(".modal a#link-preview");
+        assert.strictEqual(labelInputField.value, 'This website',
+            "The label input field should match the link's content");
+        assert.strictEqual(linkPreview.innerText, 'This website',
+            "Link label in preview should match label input field");
+
+        // Edit link label.
+        await editInput(labelInputField, null, "New label");
+        assert.strictEqual(linkPreview.innerText, "New label",
+            "Preview should be updated on label input field change");
+        // Click "Save".
+        await click(document, ".modal .modal-footer button.btn-primary");
+        assert.strictEqual(p.innerText.replaceAll('\ufeff', ''), 'New label',
+            "The link's label should be updated");
+    });
+
+    QUnit.module("isDirty");
+
+    QUnit.test("isDirty should be false when the content is being transformed by the wysiwyg", async (assert) => {
+        assert.expect(2);
+
+        serverData.models.partner.records.push({
+            id: 1,
+            txt: "<p>a<span>b</span>c</p>",
+        });
+        let htmlField;
+        const wysiwygPromise = makeDeferred();
+        patchWithCleanup(HtmlField.prototype, {
+            async startWysiwyg() {
+                await super.startWysiwyg(...arguments);
+                htmlField = this;
+                wysiwygPromise.resolve();
+            }
+        });
+        await makeView({
+            type: "form",
+            resId: 1,
+            resModel: "partner",
+            serverData,
+            arch: `
+                <form>
+                    <field name="txt" widget="html"/>
+                </form>`,
+        });
+        await wysiwygPromise;
+
+        assert.strictEqual(htmlField.wysiwyg.getValue(), '<p>abc</p>', 'the value should be sanitized by the wysiwyg');
+        assert.strictEqual(htmlField._isDirty(), false, 'should not be dirty as the content has not changed');
+
+    });
 });
+
+export const mediaDialogServices = {
+    upload: uploadService,
+};
+
+export const uploadTestModule = QUnit.module(
+    "WebEditor.HtmlField.upload",
+    {
+        beforeEach: function () {
+            this.data = wysiwygData({
+                "mail.compose.message": {
+                    fields: {
+                        display_name: {
+                            string: "Displayed name",
+                            type: "char",
+                        },
+                        body: {
+                            string: "Message Body inline (to send)",
+                            type: "html",
+                        },
+                        attachment_ids: {
+                            string: "Attachments",
+                            type: "many2many",
+                            relation: "ir.attachment",
+                        },
+                    },
+                    records: [
+                        {
+                            id: 1,
+                            display_name: "Some Composer",
+                            body: "Hello",
+                            attachment_ids: [],
+                        },
+                    ],
+                },
+            });
+        },
+    },
+    function () {
+        QUnit.test("media dialog: upload", async function (assert) {
+            assert.expect(7);
+            const onAttachmentChangeTriggered = makeDeferred();
+            patchWithCleanup(HtmlField.prototype, {
+                _onAttachmentChange(event) {
+                    super._onAttachmentChange(event);
+                    onAttachmentChangeTriggered.resolve(true);
+                },
+            });
+            const defFileSelector = makeDeferred();
+            const onChangeTriggered = makeDeferred();
+            const webSaveTriggered = makeDeferred();
+            patchWithCleanup(FileSelectorControlPanel.prototype, {
+                setup() {
+                    super.setup();
+                    useEffect(
+                        () => {
+                            defFileSelector.resolve(true);
+                        },
+                        () => [],
+                    );
+                },
+                async onChangeFileInput() {
+                    super.onChangeFileInput();
+                    onChangeTriggered.resolve(true);
+                },
+            });
+            patchWithCleanup(Wysiwyg.prototype, {
+                async _getColorpickerTemplate() {
+                    return COLOR_PICKER_TEMPLATE;
+                },
+            });
+            // create and load form view
+            const serviceRegistry = registry.category("services");
+            for (const [serviceName, serviceDefinition] of Object.entries(mediaDialogServices)) {
+                serviceRegistry.add(serviceName, serviceDefinition);
+            }
+            const serverData = {
+                models: this.data,
+            };
+            serverData.actions = {
+                1: {
+                    id: 1,
+                    name: "test",
+                    res_model: "mail.compose.message",
+                    type: "ir.actions.act_window",
+                    views: [[false, "form"]],
+                },
+            };
+            serverData.views = {
+                "mail.compose.message,false,search": "<search></search>",
+                "mail.compose.message,false,form": `
+                    <form>
+                        <field name="body" type="html"/>
+                        <field name="attachment_ids" widget="many2many_binary"/>
+                    </form>`,
+            };
+            const mockRPC = (route, args) => {
+                if (args.method === "web_save") {
+                    const createVals = args.args[1];
+                    assert.ok(createVals && createVals.attachment_ids);
+                    assert.equal(createVals.attachment_ids[0][0], 4); // link command
+                    assert.equal(createVals.attachment_ids[0][1], 5); // on attachment id "5"
+                    webSaveTriggered.resolve();
+                }
+                if (route === "/web_editor/attachment/add_data") {
+                    const attachment = {
+                        id: 5,
+                        name: "test.jpg",
+                        description: false,
+                        mimetype: "image/jpeg",
+                        checksum: "7951a43bbfb08fd742224ada280913d1897b89ab",
+                        url: false,
+                        type: "binary",
+                        res_id: 0,
+                        res_model: "mail.compose.message",
+                        public: false,
+                        access_token: false,
+                        image_src: "/web/image/1-a0e63e61/test.jpg",
+                        image_width: 1,
+                        image_height: 1,
+                        original_id: false,
+                    };
+                    serverData.models["ir.attachment"].records.push({ ...attachment });
+                    return Promise.resolve(attachment);
+                } else if (route === "/web/dataset/call_kw/ir.attachment/generate_access_token") {
+                    return Promise.resolve(["129a52e1-6bf2-470a-830e-8e368b022e13"]);
+                }
+            };
+            const webClient = await createWebClient({ serverData, mockRPC });
+            await doAction(webClient, 1);
+            //trigger wysiwyg mediadialog
+            const fixture = getFixture();
+            const formField = fixture.querySelector('.o_field_html[name="body"]');
+            const textInput = formField.querySelector(".note-editable p");
+            textInput.innerText = "test";
+            const pText = $(textInput).contents()[0];
+            Wysiwyg.setRange(pText, 1, pText, 2);
+            await new Promise((resolve) => setTimeout(resolve)); //ensure fully set up
+            const wysiwyg = $(textInput.parentElement).data("wysiwyg");
+            wysiwyg.openMediaDialog();
+            assert.ok(
+                await Promise.race([
+                    defFileSelector,
+                    new Promise((res, _) => setTimeout(() => res(false), 400)),
+                ]),
+                "File Selector did not mount",
+            );
+            // upload test
+            const fileInputs = document.querySelectorAll(
+                ".o_select_media_dialog input.d-none.o_file_input",
+            );
+            const fileB64 =
+                "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+iiigD//2Q==";
+            const fileBytes = new Uint8Array(
+                atob(fileB64)
+                    .split("")
+                    .map((char) => char.charCodeAt(0)),
+            );
+            // redefine 'files' so we can put mock data in through js
+            fileInputs.forEach((input) =>
+                Object.defineProperty(input, "files", {
+                    value: [new File(fileBytes, "test.jpg", { type: "image/jpeg" })],
+                }),
+            );
+            fileInputs.forEach((input) => {
+                input.dispatchEvent(new Event("change", {}));
+            });
+
+            assert.ok(
+                await Promise.race([
+                    onChangeTriggered,
+                    new Promise((res, _) => setTimeout(() => res(false), 400)),
+                ]),
+                "File change event was not triggered",
+            );
+            assert.ok(
+                await Promise.race([
+                    onAttachmentChangeTriggered,
+                    new Promise((res, _) => setTimeout(() => res(false), 400)),
+                ]),
+                "_onAttachmentChange was not called with the new attachment, necessary for unsused upload cleanup on backend"
+            );
+            // wait to check that dom is properly updated
+            await new Promise((res, _) => setTimeout(() => res(false), 400));
+            assert.ok(fixture.querySelector('.o_attachment[title="test.jpg"]'));
+
+            await click(fixture.querySelector(".o_form_button_save"));
+            await webSaveTriggered;
+        });
+    },
+);

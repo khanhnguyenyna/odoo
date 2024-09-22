@@ -52,7 +52,6 @@ class TestControllers(tests.HttpCase):
         self.assertEqual(set(last_modified_values), set(last_5_url_edited) - matching_pages)
 
     def test_02_client_action_iframe_url(self):
-        base_url = self.base_url()
         urls = [
             '/',  # Homepage URL (special case)
             '/contactus',  # Regular website.page URL
@@ -61,13 +60,13 @@ class TestControllers(tests.HttpCase):
         ]
         for url in urls:
             resp = self.url_open(f'/@{url}')
-            self.assertEqual(resp.url, base_url + url, "Public user should have landed in the frontend")
+            self.assertURLEqual(resp.url, url, "Public user should have landed in the frontend")
         self.authenticate("admin", "admin")
         for url in urls:
             resp = self.url_open(f'/@{url}')
             backend_params = url_encode(dict(action='website.website_preview', path=url))
-            self.assertEqual(
-                resp.url, f'{base_url}/web#{backend_params}',
+            self.assertURLEqual(
+                resp.url, f'/web#{backend_params}',
                 "Internal user should have landed in the backend")
 
     def test_03_website_image(self):
@@ -103,3 +102,13 @@ class TestControllers(tests.HttpCase):
             partner.website_published = True
             res = self.url_open(f'/website/image/res.partner/{partner.id}/avatar_128?download=1')
             self.assertEqual(res.status_code, 200, "Public user should access avatar of published partners")
+
+        with self.subTest(published=True):
+            partner.website_published = True
+            self.patch(self.env.registry[partner._name].avatar_128, 'groups', 'base.group_system')
+            res = self.url_open(f'/website/image/res.partner/{partner.id}/avatar_128?download=1')
+            self.assertEqual(
+                res.status_code,
+                404,
+                "Public user shouldn't access record fields with a `groups` even if published"
+            )

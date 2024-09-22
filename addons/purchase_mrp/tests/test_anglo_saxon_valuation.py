@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo.fields import Date
+from odoo.fields import Date, Datetime
 from odoo.tools import mute_logger
 from odoo.tests import Form, tagged
-from odoo.tests.common import TransactionCase
+from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo.addons.stock_account.tests.test_stockvaluation import _create_accounting_data
 
 
 @tagged('post_install', '-at_install')
-class TestAngloSaxonValuationPurchaseMRP(TransactionCase):
+class TestAngloSaxonValuationPurchaseMRP(AccountTestInvoicingCommon):
 
     @classmethod
-    def setUpClass(cls):
-        super(TestAngloSaxonValuationPurchaseMRP, cls).setUpClass()
+    def setUpClass(cls, chart_template_ref=None):
+        super().setUpClass(chart_template_ref=chart_template_ref)
         cls.vendor01 = cls.env['res.partner'].create({'name': "Super Vendor"})
 
         cls.stock_input_account, cls.stock_output_account, cls.stock_valuation_account, cls.expense_account, cls.stock_journal = _create_accounting_data(cls.env)
@@ -89,9 +89,14 @@ class TestAngloSaxonValuationPurchaseMRP(TransactionCase):
         Update the cost shares
         Return the delivery
         """
-        stock_location = self.env.ref('stock.stock_location_stock')
+        stock_location = self.env['stock.location'].search([
+            ('company_id', '=', self.env.company.id),
+            ('name', '=', 'Stock'),
+        ])
         customer_location = self.env.ref('stock.stock_location_customers')
-        type_out = self.env.ref('stock.picking_type_out')
+        type_out = self.env['stock.picking.type'].search([
+            ('company_id', '=', self.env.company.id),
+            ('name', '=', 'Delivery Orders')])
         uom_unit = self.env.ref('uom.product_uom_unit')
         uom_litre = self.env.ref('uom.product_uom_litre')
 
@@ -201,8 +206,14 @@ class TestAngloSaxonValuationPurchaseMRP(TransactionCase):
         # Setup Currency
         usd = self.env.ref('base.USD')
         eur = self.env.ref('base.EUR')
-        self.env['res.currency.rate'].create({'currency_id': usd.id, 'rate': 1})
-        self.env['res.currency.rate'].create({'currency_id': eur.id, 'rate': 2})
+        self.env['res.currency.rate'].create({
+            'name': Datetime.today(),
+            'currency_id': usd.id,
+            'rate': 1})
+        self.env['res.currency.rate'].create({
+            'name': Datetime.today(),
+            'currency_id': eur.id,
+            'rate': 2})
 
         # Create Purchase
         po_form = Form(self.env['purchase.order'])
@@ -222,3 +233,44 @@ class TestAngloSaxonValuationPurchaseMRP(TransactionCase):
         self.assertEqual(svl.value, 50)  # USD
         self.assertEqual(input_aml.amount_currency, 100)  # EUR
         self.assertEqual(input_aml.balance, 50)  # USD
+
+    def test_fifo_cost_adjust_mo_quantity(self):
+        """ An MO using a FIFO cost method product as a component should not zero-out the std cost
+        of the product if we unlock it once it is in a validated state and adjust the quantity of
+        component used to be smaller than originally entered.
+        """
+        self.product_a.categ_id = self.env['product.category'].create({
+            'name': 'FIFO',
+            'property_cost_method': 'fifo',
+            'property_valuation': 'real_time'
+        })
+
+        purchase_order = self.env['purchase.order'].create({
+            'partner_id': self.partner_a.id,
+            'order_line': [(0, 0, {
+                'product_id': self.product_a.id,
+                'product_qty': 10,
+                'price_unit': 100,
+            })],
+        })
+        purchase_order.button_confirm()
+        purchase_order.picking_ids[0].button_validate()
+
+        manufacturing_order = self.env['mrp.production'].create({
+            'product_id': self.product_b.id,
+            'product_qty': 1,
+            'move_raw_ids': [(0, 0, {
+                'product_id': self.product_a.id,
+                'product_uom_qty': 100,
+            })],
+        })
+        manufacturing_order.action_confirm()
+        manufacturing_order.move_raw_ids.write({
+            'quantity': 100,
+            'picked': True,
+        })
+        manufacturing_order.button_mark_done()
+        manufacturing_order.action_toggle_is_locked()
+        manufacturing_order.move_raw_ids.quantity = 1
+
+        self.assertEqual(self.product_a.standard_price, 100)

@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from datetime import datetime, timedelta
+
+from odoo.addons.base.tests.test_ir_cron import CronMixinCase
 from odoo.addons.sms.tests.common import SMSCommon
 from odoo.addons.test_mail_sms.tests.common import TestSMSRecipients
+from odoo.tests import tagged
 
 
-class TestSMSPost(SMSCommon, TestSMSRecipients):
+@tagged('sms_post')
+class TestSMSPost(SMSCommon, TestSMSRecipients, CronMixinCase):
     """ TODO
 
       * add tests for new mail.message and mail.thread fields;
@@ -29,9 +34,9 @@ class TestSMSPost(SMSCommon, TestSMSRecipients):
             test_record = self.env['mail.test.sms'].browse(self.test_record.id)
             messages = test_record._message_sms('<p>Mega SMS<br/>Top moumoutte</p>', partner_ids=self.partner_1.ids)
 
-        self.assertEqual(messages.body, '<p>Mega SMS<br>Top moumoutte</p>')
+        self.assertEqual(messages.body, '<p>&lt;p&gt;Mega SMS&lt;br/&gt;Top moumoutte&lt;/p&gt;</p>')  # html should not be interpreted
         self.assertEqual(messages.subtype_id, self.env.ref('mail.mt_note'))
-        self.assertSMSNotification([{'partner': self.partner_1}], 'Mega SMS\nTop moumoutte', messages)
+        self.assertSMSNotification([{'partner': self.partner_1}], '<p>Mega SMS<br/>Top moumoutte</p>', messages)
 
     def test_message_sms_internals_resend_existingd(self):
         with self.with_user('employee'), self.mockSMSGateway(sim_error='wrong_number_format'):
@@ -52,14 +57,32 @@ class TestSMSPost(SMSCommon, TestSMSRecipients):
 
         self.assertSMSNotification([{'partner': self.partner_1}, {'number': self.random_numbers_san[0]}, {'number': self.random_numbers_san[1]}], self._test_body, messages)
 
+    def test_message_sms_internals_sms_numbers_duplicate(self):
+        """ _message_sms ( which uses _notify_thread_by_sms) allows for specifying additional number to send sms to
+            This test checks for situation where this additional number is the same as partner telephone number.
+            In that case sms shall NOT be sent twice."""
+        with self.with_user('employee'), self.mockSMSGateway():
+            test_record = self.env['mail.test.sms'].browse(self.test_record.id)
+            additional_number_same_as_partner_number = self.partner_1.mobile
+            subtype_id = self.env['ir.model.data']._xmlid_to_res_id('mail.mt_note')
+            test_record._message_sms(
+                body=self._test_body,
+                partner_ids=self.partner_1.ids,
+                subtype_id=subtype_id,
+                sms_numbers=[additional_number_same_as_partner_number],
+                number_field='mobile'
+            )
+        self.assertEqual(len(self._new_sms.filtered(lambda s: s.number == self.partner_numbers[0])), 1,
+            "There should be one message sent if additional number is the same as partner number")
+
     def test_message_sms_internals_subtype(self):
         with self.with_user('employee'), self.mockSMSGateway():
             test_record = self.env['mail.test.sms'].browse(self.test_record.id)
             messages = test_record._message_sms('<p>Mega SMS<br/>Top moumoutte</p>', subtype_id=self.env.ref('mail.mt_comment').id, partner_ids=self.partner_1.ids)
 
-        self.assertEqual(messages.body, '<p>Mega SMS<br>Top moumoutte</p>')
+        self.assertEqual(messages.body, '<p>&lt;p&gt;Mega SMS&lt;br/&gt;Top moumoutte&lt;/p&gt;</p>')  # html should not be interpreted
         self.assertEqual(messages.subtype_id, self.env.ref('mail.mt_comment'))
-        self.assertSMSNotification([{'partner': self.partner_1}], 'Mega SMS\nTop moumoutte', messages)
+        self.assertSMSNotification([{'partner': self.partner_1}], '<p>Mega SMS<br/>Top moumoutte</p>', messages)
 
     def test_message_sms_internals_pid_to_number(self):
         pid_to_number = {
@@ -209,6 +232,44 @@ class TestSMSPost(SMSCommon, TestSMSRecipients):
 
         self.assertSMSNotification([{'partner': self.partner_1}, {'number': self.random_numbers_san[0]}], self._test_body, messages)
 
+    def test_message_sms_schedule(self):
+        """ Test delaying notifications through scheduled_date usage """
+        cron_id = self.env.ref('mail.ir_cron_send_scheduled_message').id
+        now = datetime.utcnow().replace(second=0, microsecond=0)
+        scheduled_datetime = now + timedelta(days=5)
+
+        with self.mock_datetime_and_now(now), \
+             self.with_user('employee'), \
+             self.capture_triggers(cron_id) as capt, \
+             self.mockSMSGateway():
+            test_record = self.env['mail.test.sms'].browse(self.test_record.id)
+            messages = test_record._message_sms(
+                'Testing Scheduled Notifications',
+                partner_ids=self.partner_1.ids,
+                scheduled_date=scheduled_datetime,
+            )
+
+        self.assertEqual(capt.records.call_at, scheduled_datetime,
+                         msg='Should have created a cron trigger for the scheduled sending')
+        self.assertFalse(self._new_sms)
+        self.assertFalse(self._sms)
+
+        schedules = self.env['mail.message.schedule'].sudo().search([('mail_message_id', '=', messages.id)])
+        self.assertEqual(len(schedules), 1, msg='Should have scheduled the message')
+        self.assertEqual(schedules.scheduled_datetime, scheduled_datetime)
+
+        # trigger cron now -> should not sent as in future
+        with self.mock_datetime_and_now(now):
+            self.env['mail.message.schedule'].sudo()._send_notifications_cron()
+        self.assertTrue(schedules.exists(), msg='Should not have sent the message')
+
+        # Send the scheduled message from the cron at right date
+        with self.mock_datetime_and_now(now + timedelta(days=5)), self.mockSMSGateway():
+            self.env['mail.message.schedule'].sudo()._send_notifications_cron()
+        self.assertFalse(schedules.exists(), msg='Should have sent the message')
+        # check notifications have been sent
+        self.assertSMSNotification([{'partner': self.partner_1}], 'Testing Scheduled Notifications', messages)
+
     def test_message_sms_with_template(self):
         sms_template = self.env['sms.template'].create({
             'name': 'Test Template',
@@ -252,6 +313,7 @@ class TestSMSPost(SMSCommon, TestSMSRecipients):
         self.assertSMSNotification([{'partner': self.partner_1, 'number': self.test_numbers_san[1]}], 'Dear %s this is an SMS.' % self.test_record.display_name, messages)
 
 
+@tagged('sms_post')
 class TestSMSPostException(SMSCommon, TestSMSRecipients):
 
     @classmethod

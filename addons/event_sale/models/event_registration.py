@@ -15,8 +15,8 @@ class EventRegistration(models.Model):
             ('to_pay', 'Not Sold'),
             ('sold', 'Sold'),
             ('free', 'Free'),
-        ], compute="_compute_registration_status", compute_sudo=True, store=True)
-    state = fields.Selection(default=None, compute="_compute_registration_status", store=True, readonly=False)
+        ], compute="_compute_registration_status", compute_sudo=True, store=True, precompute=True)
+    state = fields.Selection(default=None, compute="_compute_registration_status", store=True, readonly=False, precompute=True)
     utm_campaign_id = fields.Many2one(compute='_compute_utm_campaign_id', readonly=False,
         store=True, ondelete="set null")
     utm_source_id = fields.Many2one(compute='_compute_utm_source_id', readonly=False,
@@ -26,18 +26,18 @@ class EventRegistration(models.Model):
 
     @api.depends('sale_order_id.state', 'sale_order_id.currency_id', 'sale_order_line_id.price_total')
     def _compute_registration_status(self):
-        self.filtered(lambda reg: not reg.state).state = 'draft'
         for so_line, registrations in self.grouped('sale_order_line_id').items():
-            cancelled_registrations = registrations.filtered(lambda reg: reg.sale_order_id.state == 'cancel')
-            cancelled_registrations.state = 'cancel'
-            if not so_line or float_is_zero(so_line.price_total, precision_digits=so_line.currency_id.rounding):
+            cancelled_so_registrations = registrations.filtered(lambda reg: reg.sale_order_id.state == 'cancel')
+            cancelled_so_registrations.state = 'cancel'
+            cancelled_registrations = cancelled_so_registrations | registrations.filtered(lambda reg: reg.state == 'cancel')
+            if not so_line or float_is_zero(so_line.price_total, precision_rounding=so_line.currency_id.rounding):
                 registrations.sale_status = 'free'
-                registrations.filtered(lambda reg: reg.state == 'draft').write({"state": "open"})
+                registrations.filtered(lambda reg: not reg.state or reg.state == 'draft').state = "open"
             else:
-                sold_registrations = registrations.filtered(lambda reg: reg.sale_order_id.state == 'sale')
+                sold_registrations = registrations.filtered(lambda reg: reg.sale_order_id.state == 'sale') - cancelled_registrations
                 sold_registrations.sale_status = 'sold'
                 (registrations - sold_registrations).sale_status = 'to_pay'
-                sold_registrations.filtered(lambda reg: reg.state in {'draft', 'cancel'}).write({"state": "open"})
+                sold_registrations.filtered(lambda reg: not reg.state or reg.state in {'draft', 'cancel'}).state = "open"
                 (registrations - sold_registrations - cancelled_registrations).state = 'draft'
 
     @api.depends('sale_order_id')
@@ -105,7 +105,8 @@ class EventRegistration(models.Model):
     def _synchronize_so_line_values(self, so_line):
         if so_line:
             return {
-                'partner_id': False if self.env.user._is_public() else so_line.order_id.partner_id.id,
+                # Avoid registering public users but respect the portal workflows
+                'partner_id': False if self.env.user._is_public() and self.env.user.partner_id == so_line.order_id.partner_id else so_line.order_id.partner_id.id,
                 'event_id': so_line.event_id.id,
                 'event_ticket_id': so_line.event_ticket_id.id,
                 'sale_order_id': so_line.order_id.id,
@@ -132,7 +133,7 @@ class EventRegistration(models.Model):
         res = super(EventRegistration, self)._get_registration_summary()
         res.update({
             'sale_status': self.sale_status,
-            'sale_status_value': dict(self._fields['sale_status']._description_selection(self.env))[self.sale_status],
+            'sale_status_value': self.sale_status and dict(self._fields['sale_status']._description_selection(self.env))[self.sale_status],
             'has_to_pay': self.sale_status == 'to_pay',
         })
         return res

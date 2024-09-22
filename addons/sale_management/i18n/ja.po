@@ -4,15 +4,16 @@
 # 
 # Translators:
 # Wil Odoo, 2023
-# Junko Augias, 2023
+# Junko Augias, 2024
+# Ryoko Tsuda <ryoko@quartile.co>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:54+0000\n"
+"POT-Creation-Date: 2024-01-05 12:30+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Junko Augias, 2023\n"
+"Last-Translator: Ryoko Tsuda <ryoko@quartile.co>, 2024\n"
 "Language-Team: Japanese (https://app.transifex.com/odoo/teams/41243/ja/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -35,6 +36,11 @@ msgstr ""
 "company-specific.\" groups=\"base.group_multi_company\"/>"
 
 #. module: sale_management
+#: model_terms:ir.ui.view,arch_db:sale_management.sale_order_template_view_form
+msgid "<span invisible=\"not require_payment\">of</span>"
+msgstr "<span invisible=\"not require_payment\">of</span>"
+
+#. module: sale_management
 #: model_terms:ir.ui.view,arch_db:sale_management.report_saleorder_document_inherit_sale_management
 msgid "<span>Options</span>"
 msgstr "<span>オプション</span>"
@@ -53,7 +59,7 @@ msgstr "メモを追加"
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_form_quote
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_template_view_form
 msgid "Add a product"
-msgstr "製品追加"
+msgstr "プロダクト追加"
 
 #. module: sale_management
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_template_view_form
@@ -128,7 +134,7 @@ msgstr "単位間の変換は同じカテゴリに属している場合のみ可
 #. module: sale_management
 #: model_terms:ir.ui.view,arch_db:sale_management.res_config_settings_view_form
 msgid "Create standardized offers with default products"
-msgstr "デフォルト製品を設定しオファーを標準化"
+msgstr "デフォルトプロダクトを設定しオファーを標準化"
 
 #. module: sale_management
 #: model_terms:ir.actions.act_window,help:sale_management.sale_order_template_action
@@ -340,23 +346,18 @@ msgstr "オンライン署名"
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_form_quote
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_template_view_form
 msgid "Optional Products"
-msgstr "オプション製品"
+msgstr "オプションプロダクト"
 
 #. module: sale_management
 #: model:ir.model.fields,field_description:sale_management.field_sale_order__sale_order_option_ids
 #: model:ir.model.fields,field_description:sale_management.field_sale_order_line__sale_order_option_ids
 msgid "Optional Products Lines"
-msgstr "オプション製品明細"
+msgstr "オプションプロダクト明細"
 
 #. module: sale_management
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_portal_content_inherit_sale_management
 msgid "Options"
 msgstr "オプション"
-
-#. module: sale_management
-#: model_terms:ir.ui.view,arch_db:sale_management.sale_order_template_view_form
-msgid "Prepayment amount"
-msgstr "前払金額"
 
 #. module: sale_management
 #: model:ir.model.fields,field_description:sale_management.field_sale_order_template__prepayment_percent
@@ -381,7 +382,7 @@ msgstr "見積書上に表示"
 #: model:ir.model.fields,field_description:sale_management.field_sale_order_template_option__product_id
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_portal_content_inherit_sale_management
 msgid "Product"
-msgstr "製品"
+msgstr "プロダクト"
 
 #. module: sale_management
 #: model:ir.model.fields,field_description:sale_management.field_sale_order_option__quantity
@@ -441,8 +442,8 @@ msgstr "見積テンプレート"
 
 #. module: sale_management
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_template_view_form
-msgid "Quotation expires after"
-msgstr "見積有効期間"
+msgid "Quotation Validity"
+msgstr "見積書の有効性"
 
 #. module: sale_management
 #: model_terms:ir.ui.view,arch_db:sale_management.sale_order_portal_content_inherit_sale_management
@@ -459,7 +460,7 @@ msgstr "一つを削除"
 msgid ""
 "Request a online signature to the customer in order to confirm orders "
 "automatically."
-msgstr "注文を自動的に確認するために、顧客にオンライン署名を要求します。"
+msgstr "注文を自動的に確認するために、顧客にオンライン署名を依頼します。"
 
 #. module: sale_management
 #: model:ir.model.fields,help:sale_management.field_sale_order_template__require_payment
@@ -640,8 +641,8 @@ msgid ""
 "Your quotation contains products from company %(product_company)s whereas your quotation belongs to company %(quote_company)s. \n"
 " Please change the company of your quotation or remove the products from other companies (%(bad_products)s)."
 msgstr ""
-"見積もりには会社%(product_company)sの製品が含まれていますが、見積もりは会社%(quote_company)sに属しています。\n"
-"見積もりの 会社を変更するか、他の会社から製品を削除してください(%(bad_products)s)。"
+"見積もりには会社%(product_company)sのプロダクトが含まれていますが、見積もりは会社%(quote_company)sに属しています。\n"
+"見積もりの 会社を変更するか、他の会社からプロダクトを削除してください(%(bad_products)s)。"
 
 #. module: sale_management
 #. odoo-python

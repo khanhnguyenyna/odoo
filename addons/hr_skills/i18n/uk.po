@@ -3,16 +3,16 @@
 # 	* hr_skills
 # 
 # Translators:
-# Wil Odoo, 2023
-# Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2023
+# Wil Odoo, 2024
+# Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2023\n"
+"Last-Translator: Alina Lisnenko <alina.lisnenko@erp.co.ua>, 2024\n"
 "Language-Team: Ukrainian (https://app.transifex.com/odoo/teams/41243/uk/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -28,7 +28,7 @@ msgstr "'CV - %s' % (object.name)"
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_sidepanel
 msgid "+1234567890"
-msgstr ""
+msgstr "+1234567890"
 
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
@@ -224,10 +224,17 @@ msgstr "Створити новий запис"
 
 #. module: hr_skills
 #. odoo-javascript
+#: code:addons/hr_skills/static/src/fields/resume_one2many/resume_one2many.js:0
+#, python-format
+msgid "Create a resume line"
+msgstr "Створіть рядок резюме"
+
+#. module: hr_skills
+#. odoo-javascript
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
 #, python-format
 msgid "Create new Skills"
-msgstr ""
+msgstr "Створити нові навички"
 
 #. module: hr_skills
 #: model:ir.model.fields,field_description:hr_skills.field_hr_employee_cv_wizard__create_uid
@@ -315,12 +322,12 @@ msgstr "Типовий рівень"
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_company
 msgid "Demo Address"
-msgstr ""
+msgstr "Демо адреса"
 
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_company
 msgid "Demo Company Name"
-msgstr ""
+msgstr "Демо назва компанії"
 
 #. module: hr_skills
 #: model:ir.model.fields,field_description:hr_skills.field_hr_employee_skill_log__department_id
@@ -458,7 +465,7 @@ msgstr "Інженер на виробництві"
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
 msgid "English"
-msgstr ""
+msgstr "Англійська"
 
 #. module: hr_skills
 #: model:hr.resume.line,description:hr_skills.employee_resume_line_admin_6
@@ -478,7 +485,7 @@ msgstr "Еванс, Купер і Уайт"
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
 msgid "Experience"
-msgstr ""
+msgstr "Досвід"
 
 #. module: hr_skills
 #: model:hr.resume.line,description:hr_skills.employee_resume_jep_cole_ltd
@@ -498,7 +505,7 @@ msgstr "Фінлі, Роу і Адамс"
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
 msgid "Fluent"
-msgstr ""
+msgstr "Вільно"
 
 #. module: hr_skills
 #: model:hr.resume.line,name:hr_skills.employee_resume_jgo_fox_and_sons
@@ -654,7 +661,7 @@ msgstr ""
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
 #, python-format
 msgid "If skills are missing, they can be created by an HR officer."
-msgstr ""
+msgstr "Якщо навички відсутні, їх може створити співробітник кадрів."
 
 #. module: hr_skills
 #: model:hr.resume.line,description:hr_skills.employee_resume_niv_arroyo_ltd
@@ -915,18 +922,13 @@ msgid "Norton-Silva"
 msgstr "Norton-Silva"
 
 #. module: hr_skills
-#: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
-msgid "Odoo India pvt. Ltd"
-msgstr ""
-
-#. module: hr_skills
 #: model:hr.resume.line,name:hr_skills.employee_resume_line_admin_4
 msgid "Odoo SA"
 msgstr "Odoo SA"
 
 #. module: hr_skills
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/hr_skills/report/hr_employee_cv_report.py:0
 #: code:addons/hr_skills/static/src/views/skills_list_renderer.js:0
 #, python-format
@@ -983,7 +985,7 @@ msgstr "Філіпс, Джонс та Браун"
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
 #, python-format
 msgid "Pick a skill from the list"
-msgstr ""
+msgstr "Оберіть навичку зі списку"
 
 #. module: hr_skills
 #: model:hr.resume.line,description:hr_skills.employee_resume_mit_burns_lester_and_cuevas
@@ -1034,6 +1036,11 @@ msgid "Progress (%)"
 msgstr "Прогрес (%)"
 
 #. module: hr_skills
+#: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
+msgid "Progress bar"
+msgstr "Гістограма прогресу"
+
+#. module: hr_skills
 #: model:ir.model.fields,help:hr_skills.field_hr_employee_skill__level_progress
 #: model:ir.model.fields,help:hr_skills.field_hr_employee_skill_log__level_progress
 #: model:ir.model.fields,help:hr_skills.field_hr_skill_level__level_progress
@@ -1063,7 +1070,7 @@ msgstr "Менеджер прав на публікацію"
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
 msgid "Python"
-msgstr ""
+msgstr "Python"
 
 #. module: hr_skills
 #: model:hr.resume.line,name:hr_skills.employee_resume_lur_ramirez_inc
@@ -1177,21 +1184,21 @@ msgstr "Секретар, компанія"
 #: code:addons/hr_skills/static/src/fields/form_view_one2many/form_view_one2many.xml:0
 #, python-format
 msgid "Select & Close"
-msgstr ""
+msgstr "Обрати та закрити"
 
 #. module: hr_skills
 #. odoo-javascript
 #: code:addons/hr_skills/static/src/fields/form_view_one2many/form_view_one2many.xml:0
 #, python-format
 msgid "Select & New"
-msgstr ""
+msgstr "Обрати та Новий"
 
 #. module: hr_skills
 #. odoo-javascript
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.js:0
 #, python-format
 msgid "Select Skills"
-msgstr ""
+msgstr "Обрати навички"
 
 #. module: hr_skills
 #: model:ir.model.fields,field_description:hr_skills.field_hr_resume_line_type__sequence
@@ -1283,7 +1290,6 @@ msgstr "Рівень навичок для співробітника"
 #: model_terms:ir.ui.view,arch_db:hr_skills.hr_employee_view_search
 #: model_terms:ir.ui.view,arch_db:hr_skills.hr_skill_view_form
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
-#: model_terms:ir.ui.view,arch_db:hr_skills.res_users_view_form
 #, python-format
 msgid "Skills"
 msgstr "Навички"
@@ -1302,13 +1308,13 @@ msgstr "Історія навичок"
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.js:0
 #, python-format
 msgid "Skills Report"
-msgstr ""
+msgstr "Звіт навичок"
 
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_main_panel
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_sidepanel
 msgid "Software Developer"
-msgstr ""
+msgstr "Розробка програмного забезпечення"
 
 #. module: hr_skills
 #: model:hr.resume.line,description:hr_skills.employee_resume_lur_whitebell
@@ -1389,12 +1395,19 @@ msgstr "Терапевт, логопед"
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
 #, python-format
 msgid "There are no skills defined in the library."
-msgstr ""
+msgstr "В бібліотеці не визначено жодної навички."
 
 #. module: hr_skills
 #: model:hr.resume.line,name:hr_skills.employee_resume_vad_thomas_chirnside_primary_school
 msgid "Thomas Chirnside Primary School"
 msgstr "Початкова школа Томаса Чирнсайда"
+
+#. module: hr_skills
+#. odoo-javascript
+#: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
+#, python-format
+msgid "Timeline"
+msgstr "Хронологія"
 
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.resume_line_view_form
@@ -1476,7 +1489,7 @@ msgstr "Англіканська школа Whitsunday"
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
 #, python-format
 msgid "Why not try adding some ?"
-msgstr ""
+msgstr "Чому б не спробувати додати трохи?"
 
 #. module: hr_skills
 #: model:hr.resume.line,name:hr_skills.employee_resume_jth_wilkinson_plc
@@ -1518,12 +1531,12 @@ msgstr "Коледж Wycheproof P-12"
 #: code:addons/hr_skills/static/src/fields/skills_one2many/skills_one2many.xml:0
 #, python-format
 msgid "You can add skills from our library to the employee profile."
-msgstr ""
+msgstr "Ви можете додати навички з нашої бібліотеки в профіль співробітника."
 
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_sidepanel
 msgid "demo@email.com"
-msgstr ""
+msgstr "demo@email.com"
 
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.hr_employee_skill_type_view_form
@@ -1538,4 +1551,4 @@ msgstr "напр., Odoo Inc."
 #. module: hr_skills
 #: model_terms:ir.ui.view,arch_db:hr_skills.report_employee_cv_sidepanel
 msgid "www.demo.com"
-msgstr ""
+msgstr "www.demo.com"

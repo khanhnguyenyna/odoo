@@ -10,37 +10,37 @@
 # Lilach Gilliam <lilach@apprcase.com>, 2023
 # uriel ehrman <uriel@laylinetech.com>, 2023
 # Ofir Blum <ofir.blum@gmail.com>, 2023
-# Roy Sayag, 2023
 # Moshe Flam <pashute@gmail.com>, 2023
 # Sagi Ahiel, 2023
-# שהאב חוסיין <shhab89@gmail.com>, 2023
 # ExcaliberX <excaliberx@gmail.com>, 2023
 # Yihya Hugirat <hugirat@gmail.com>, 2023
 # david danilov, 2023
 # דודי מלכה <Dudimalka6@gmail.com>, 2023
 # Amit Spilman <amit@laylinetech.com>, 2023
 # Adi Sharashov <Adi@laylinetech.com>, 2023
-# hed shefer <hed@laylinetech.com>, 2023
 # Lilach Gilliam <lilach.gilliam@gmail.com>, 2023
 # Martin Trigaux, 2023
-# Ha Ketem <haketem@gmail.com>, 2023
 # NoaFarkash, 2023
 # ZVI BLONDER <ZVIBLONDER@gmail.com>, 2023
-# yael terner, 2023
+# hed shefer <hed@laylinetech.com>, 2023
+# Roy Sayag, 2024
+# שהאב חוסיין <shhab89@gmail.com>, 2024
+# yael terner, 2024
+# Ha Ketem <haketem@gmail.com>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:54+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: yael terner, 2023\n"
+"Last-Translator: Ha Ketem <haketem@gmail.com>, 2024\n"
 "Language-Team: Hebrew (https://app.transifex.com/odoo/teams/41243/he/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: \n"
 "Language: he\n"
-"Plural-Forms: nplurals=4; plural=(n == 1 && n % 1 == 0) ? 0 : (n == 2 && n % 1 == 0) ? 1: (n % 10 == 0 && n % 1 == 0 && n > 10) ? 2 : 3;\n"
+"Plural-Forms: nplurals=3; plural=(n == 1 && n % 1 == 0) ? 0 : (n == 2 && n % 1 == 0) ? 1: 2;\n"
 
 #. module: purchase
 #: model:ir.actions.report,print_report_name:purchase.action_report_purchase_order
@@ -225,6 +225,11 @@ msgstr ""
 
 #. module: purchase
 #: model_terms:ir.ui.view,arch_db:purchase.purchase_order_portal_content
+msgid "<i class=\"fa fa-fw fa-check\"/>Reversed"
+msgstr ""
+
+#. module: purchase
+#: model_terms:ir.ui.view,arch_db:purchase.purchase_order_portal_content
 msgid "<i class=\"fa fa-fw fa-clock-o\"/>Waiting Payment"
 msgstr ""
 
@@ -282,7 +287,7 @@ msgid ""
 "<span class=\"d-none d-md-inline\">Purchase Order #</span>\n"
 "                          <span class=\"d-block d-md-none\">Ref.</span>"
 msgstr ""
-"<span class=\"d-none d-md-inline\">הזמנת רכש מס'</span>\n"
+"<span class=\"d-none d-md-inline\">הזמנת רכש מס' </span>\n"
 "                          <span class=\"d-block d-md-none\">מספר אסמכתא</span>"
 
 #. module: purchase
@@ -392,7 +397,7 @@ msgstr "<strong>תאריך הזמנה:</strong>"
 #. module: purchase
 #: model_terms:ir.ui.view,arch_db:purchase.report_purchaseorder_document
 msgid "<strong>Order Deadline:</strong>"
-msgstr ""
+msgstr "<strong>תאריך משלוח:</strong>"
 
 #. module: purchase
 #: model_terms:ir.ui.view,arch_db:purchase.report_purchaseorder_document
@@ -645,7 +650,7 @@ msgstr "חיפוש תפוצה אנליטי"
 #. module: purchase
 #: model:ir.model,name:purchase.model_account_analytic_applicability
 msgid "Analytic Plan's Applicabilities"
-msgstr ""
+msgstr "יישומים לתכניות אנליטיות"
 
 #. module: purchase
 #: model:ir.model.fields,field_description:purchase.field_purchase_order_line__analytic_precision
@@ -704,7 +709,6 @@ msgid "Automatically remind the receipt date to your vendors"
 msgstr "תזכור אוטומטית את תאריך הקבלה לספקים שלך"
 
 #. module: purchase
-#: model:ir.model.fields,help:purchase.field_purchase_order__receipt_reminder_email
 #: model:ir.model.fields,help:purchase.field_res_partner__receipt_reminder_email
 #: model:ir.model.fields,help:purchase.field_res_users__receipt_reminder_email
 #: model_terms:ir.ui.view,arch_db:purchase.purchase_order_form
@@ -844,7 +848,7 @@ msgstr "יישות מסחרית"
 #. module: purchase
 #: model_terms:ir.ui.view,arch_db:purchase.portal_my_purchase_order
 msgid "Communication history"
-msgstr ""
+msgstr "היסטוריית התקשרות"
 
 #. module: purchase
 #: model:ir.model,name:purchase.model_res_company
@@ -1098,6 +1102,11 @@ msgid "Discount (%)"
 msgstr "הנחה (%)"
 
 #. module: purchase
+#: model_terms:ir.ui.view,arch_db:purchase.purchase_order_form
+msgid "Discount:"
+msgstr "הנחה"
+
+#. module: purchase
 #: model:ir.model.fields,field_description:purchase.field_purchase_bill_union__display_name
 #: model:ir.model.fields,field_description:purchase.field_purchase_order__display_name
 #: model:ir.model.fields,field_description:purchase.field_purchase_order_line__display_name
@@ -1162,7 +1171,7 @@ msgstr "שורת נוספת עם %s "
 #: model:ir.model.fields,field_description:purchase.field_purchase_order__fiscal_position_id
 #: model:ir.model.fields,field_description:purchase.field_purchase_report__fiscal_position_id
 msgid "Fiscal Position"
-msgstr "מעמד פיסקלי"
+msgstr "סוגי תנועה"
 
 #. module: purchase
 #: model_terms:ir.ui.view,arch_db:purchase.portal_my_home_purchase
@@ -1676,7 +1685,6 @@ msgid "Number of Actions"
 msgstr "מספר פעולות"
 
 #. module: purchase
-#: model:ir.model.fields,help:purchase.field_purchase_order__reminder_date_before_receipt
 #: model:ir.model.fields,help:purchase.field_res_partner__reminder_date_before_receipt
 #: model:ir.model.fields,help:purchase.field_res_users__reminder_date_before_receipt
 msgid "Number of days to send reminder email before the promised receipt date"
@@ -1690,7 +1698,7 @@ msgstr "מספר השגיאות"
 #. module: purchase
 #: model:ir.model.fields,help:purchase.field_purchase_order__message_needaction_counter
 msgid "Number of messages requiring action"
-msgstr ""
+msgstr "מספר הודעות הדורשות פעולה"
 
 #. module: purchase
 #: model:ir.model.fields,help:purchase.field_purchase_order__message_has_error_counter
@@ -2008,7 +2016,7 @@ msgstr "הזמנת רכש"
 #. module: purchase
 #: model_terms:ir.ui.view,arch_db:purchase.report_purchaseorder_document
 msgid "Purchase Order #"
-msgstr "הזמנת רכש מס'"
+msgstr "הזמנת רכש מס' "
 
 #. module: purchase
 #: model:ir.model.fields,field_description:purchase.field_res_config_settings__po_order_approval
@@ -2664,6 +2672,11 @@ msgid "Tax"
 msgstr "מס"
 
 #. module: purchase
+#: model_terms:ir.ui.view,arch_db:purchase.report_purchaseorder_document
+msgid "Tax 15%"
+msgstr ""
+
+#. module: purchase
 #: model:ir.model.fields,field_description:purchase.field_purchase_order__tax_country_id
 msgid "Tax Country"
 msgstr "מס לפי ארץ"
@@ -2715,7 +2728,7 @@ msgstr "שדה טכני למטרת חווית משתמש."
 msgid ""
 "Technical field to filter the available taxes depending on the fiscal "
 "country and fiscal position."
-msgstr "שדה טכני לסינון המסים הקיימים לפי מדינה פיסקלית ומצב פיסקלי."
+msgstr "שדה טכני לסינון המסים הקיימים לפי מדינה פיסקלית וסוג תנועה."
 
 #. module: purchase
 #: model_terms:ir.ui.view,arch_db:purchase.purchase_order_portal_content
@@ -3062,7 +3075,7 @@ msgstr "מחירוני ספקים"
 #. module: purchase
 #: model:ir.model.fields,field_description:purchase.field_purchase_order__partner_ref
 msgid "Vendor Reference"
-msgstr "מספר חשבונית ספק"
+msgstr "מספר הזמנת ספק"
 
 #. module: purchase
 #: model:ir.ui.menu,name:purchase.menu_procurement_management_supplier_name

@@ -18,11 +18,17 @@ registry.category("web_tour.tours").add("ReceiptScreenTour", {
             // press close button in receipt screen
             ProductScreen.addOrderline("Letter Tray", "10", "5"),
             ProductScreen.selectedOrderlineHas("Letter Tray", "10"),
+            ProductScreen.clickPartnerButton(),
+            ProductScreen.clickCustomer("Addison Olson"),
             ProductScreen.clickPayButton(),
             PaymentScreen.clickPaymentMethod("Bank"),
             PaymentScreen.validateButtonIsHighlighted(true),
+            PaymentScreen.clickShipLaterButton(),
+            PaymentScreen.shippingLaterHighlighted(),
             PaymentScreen.clickValidate(),
             ReceiptScreen.receiptIsThere(),
+            //receipt had expected delivery printed
+            ReceiptScreen.shippingDateExists(),
             // letter tray has 10% tax (search SRC)
             ReceiptScreen.totalAmountContains("55.0"),
             ReceiptScreen.clickNextOrder(),
@@ -70,6 +76,7 @@ registry.category("web_tour.tours").add("ReceiptScreenTour", {
             PaymentScreen.clickPaymentMethod("Bank"),
             PaymentScreen.clickValidate(),
             Order.hasLine({ customerNote: "Test customer note" }),
+            ReceiptScreen.clickNextOrder(),
         ].flat(),
 });
 
@@ -115,18 +122,18 @@ registry.category("web_tour.tours").add("OrderPaidInCash", {
         ].flat(),
 });
 
-registry
-    .category("web_tour.tours")
-    .add("ReceiptTrackingMethodTour", {
-        test: true,
-        url: "/pos/ui",
-        steps: () => [
+registry.category("web_tour.tours").add("ReceiptTrackingMethodTour", {
+    test: true,
+    url: "/pos/ui",
+    steps: () =>
+        [
+            ProductScreen.confirmOpeningPopup(),
             ProductScreen.clickHomeCategory(),
-            ProductScreen.clickDisplayedProduct('Product A'),
-            ProductScreen.enterLotNumber('123456789'),
+            ProductScreen.clickDisplayedProduct("Product A"),
+            ProductScreen.enterLotNumber("123456789"),
             ProductScreen.clickPayButton(),
-            PaymentScreen.clickPaymentMethod('Cash'),
+            PaymentScreen.clickPaymentMethod("Cash"),
             PaymentScreen.clickValidate(),
             ReceiptScreen.trackingMethodIsLot(),
         ].flat(),
-    });
+});

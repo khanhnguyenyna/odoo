@@ -24,6 +24,7 @@ addModelNamesToFetch([
     "discuss.channel.rtc.session",
     "discuss.gif.favorite",
     "discuss.voice.metadata",
+    "mail.compose.message",
     "mail.followers",
     "mail.guest",
     "mail.link.preview",
@@ -41,8 +42,9 @@ addModelNamesToFetch([
 addFakeModel("res.fake", {
     message_ids: { string: "Messages", type: "one2many", relation: "mail.message" },
     activity_ids: { string: "Activities", type: "one2many", relation: "mail.activity" },
-    message_follower_ids: { string: "Followers", type: "char" },
+    message_follower_ids: { string: "Followers", type: "one2many", relation: "mail.followers" },
     email_cc: { type: "char" },
+    phone: { type: "char" },
     partner_ids: { relation: "res.partner", string: "Related partners", type: "one2many" },
 });
 
@@ -112,6 +114,16 @@ insertModelFields("mail.message.subtype", {
 insertModelFields("res.users.settings", {
     is_discuss_sidebar_category_channel_open: { default: true },
     is_discuss_sidebar_category_chat_open: { default: true },
+});
+insertModelFields("res.partner", {
+    message_main_attachment_id: {
+        name: "message_main_attachment_id",
+        readonly: false,
+        relation: "ir.attachment",
+        required: false,
+        string: "Main attachment",
+        type: "many2one",
+    }
 });
 
 //--------------------------------------------------------------------------

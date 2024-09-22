@@ -137,7 +137,6 @@
             <field name="arch" type="xml">
                 <form string="Manufacturing Orders">
                 <header>
-                    <field name="confirm_cancel" invisible="1"/>
                     <field name="show_lock" invisible="1"/>
                     <field name="show_produce" invisible="1"/>
                     <field name="show_produce_all" invisible="1"/>
@@ -159,10 +158,8 @@
                     <field name="show_serial_mass_produce" invisible="1"/>
                     <button name="action_serial_mass_produce_wizard" invisible="not show_serial_mass_produce" string="Mass Produce" type="object"/>
                     <button name="action_cancel" type="object" string="Cancel" data-hotkey="x"
-                            invisible="not id or state in ('done', 'cancel') or confirm_cancel"/>
-                    <button name="action_cancel" type="object" string="Cancel" data-hotkey="x"
-                            invisible="not id or state in ('done', 'cancel') or not confirm_cancel"
-                            confirm="Some product moves have already been confirmed, this manufacturing order can't be completely cancelled. Are you still sure you want to process?"/>
+                            invisible="not id or state in ('done', 'cancel')"
+                            confirm="Are you sure you want to cancel this manufacturing order?"/>
                     <button name="button_unbuild" type="object" string="Unbuild" invisible="state != 'done'" data-hotkey="shift+v"/>
                     <button string="Print Labels" type="object" name="action_open_label_type"/>
                 </header>
@@ -309,7 +306,7 @@
                                 decoration-success="reservation_state == 'assigned' or components_availability_state == 'available'"
                                 decoration-warning="reservation_state != 'assigned' and components_availability_state in ('expected', 'available')"
                                 decoration-danger="reservation_state != 'assigned' and components_availability_state in ('late', 'unavailable')"/>
-                            <field name="user_id" domain="[('share', '=', False)]" widget="many2one_avatar" readonly="state in ['cancel', 'done']"/>
+                            <field name="user_id" widget="many2one_avatar" readonly="state in ['cancel', 'done']"/>
                             <field name="show_final_lots" invisible="1"/>
                             <field name="production_location_id" invisible="1" readonly="1"/>
                             <field name="move_finished_ids" invisible="1" readonly="state == 'cancel' or (state == 'done' and is_locked)">
@@ -363,10 +360,10 @@
                         <page string="Components" name="components">
                             <field name="move_raw_ids"
                                 widget="mrp_production_components_x2many"
-                                context="{'default_date': date_start, 'default_date_deadline': date_start, 'default_location_id': location_src_id, 'default_location_dest_id': production_location_id, 'default_warehouse_id': warehouse_id, 'default_state': 'draft', 'default_raw_material_production_id': id, 'default_picking_type_id': picking_type_id, 'default_company_id': company_id, 'form_view_ref': 'stock.view_stock_move_operations'}"
+                                context="{'default_date': date_start, 'default_date_deadline': date_start, 'default_location_id': location_src_id, 'default_location_dest_id': production_location_id, 'default_warehouse_id': warehouse_id, 'default_state': 'draft', 'default_raw_material_production_id': id, 'default_picking_type_id': picking_type_id, 'default_company_id': company_id, 'form_view_ref': 'stock.view_stock_move_operations', 'active_mo_id': id}"
                                 readonly="state == 'cancel' or (state == 'done' and is_locked)" options="{'delete': [('state', '=', 'draft')]}">
                                 <tree default_order="is_done, manual_consumption desc, sequence" editable="bottom">
-                                    <field name="product_id" force_save="1" context="{'default_detailed_type': 'product'}" required="1" readonly="move_lines_count &gt; 0 or state == 'cancel' or (state != 'draft' and not additional)" domain="[('id', '!=', parent.product_id)]"/>
+                                    <field name="product_id" force_save="1" context="{'default_detailed_type': 'product'}" required="1" readonly="move_lines_count &gt; 0 or state == 'cancel' or (state != 'draft' and not additional)" domain="['&amp;', ('type', 'in', ['product', 'consu']), ('id', '!=', parent.product_id)]"/>
                                     <field name="location_id" string="From" readonly="1" force_save="1" groups="stock.group_stock_multi_locations" optional="show"/>
                                     <!-- test_immediate_validate_uom_2, test_product_produce_different_uom -->
                                     <field name="product_uom" column_invisible="True"/>
@@ -408,7 +405,7 @@
                                         force_save="1" widget="mrp_consumed"/>
                                     <field name="product_uom" readonly="state != 'draft' and id" options="{'no_open': True, 'no_create': True}" groups="uom.group_uom"/>
                                     <!-- TODO put forecast back -->
-                                    <field name="picked" string="Consumed" column_invisible="parent.state == 'draft'" optional="hide"/>
+                                    <field name="picked" string="Consumed" column_invisible="parent.state == 'draft'" optional="show"/>
                                     <field name="manual_consumption" column_invisible="True" force_save="1"/>
                                     <field name="show_details_visible" column_invisible="True"/>
                                     <field name="lot_ids" widget="many2many_tags"

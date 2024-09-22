@@ -3,15 +3,16 @@
 # 	* stock_account
 # 
 # Translators:
-# Wil Odoo, 2023
+# Wil Odoo, 2024
+# Tony Ng, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Tony Ng, 2024\n"
 "Language-Team: Chinese (Taiwan) (https://app.transifex.com/odoo/teams/41243/zh_TW/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -93,7 +94,7 @@ msgstr "<span>序號/批次</span>"
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_account_chart_template
 msgid "Account Chart Template"
-msgstr "項目表範本"
+msgstr "賬目總表範本"
 
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_stock_move__account_move_ids
@@ -237,11 +238,12 @@ msgstr "選擇一個日期，以獲得當日的估值"
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_account_move_line__cogs_origin_id
 msgid "Cogs Origin"
-msgstr ""
+msgstr "銷貨成本出處"
 
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__company_id
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer_revaluation__company_id
+#: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Company"
 msgstr "公司"
 
@@ -326,6 +328,7 @@ msgstr "目前值"
 #. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_form
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
+#: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Date"
 msgstr "日期"
 
@@ -369,7 +372,7 @@ msgstr "在發票上顯示序號和批號"
 msgid ""
 "Due to a change of product category (from %s to %s), the costing method has "
 "changed for product template %s: from %s to %s."
-msgstr ""
+msgstr "由於產品類別變更（從 %s 更改為 %s），產品範本 %s 的成本計算方法已更改：從 %s 更改為 %s。"
 
 #. module: stock_account
 #: model:ir.model.fields.selection,name:stock_account.selection__product_category__property_cost_method__fifo
@@ -396,6 +399,12 @@ msgstr "識別號"
 #: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Incoming"
 msgstr "入庫"
+
+#. module: stock_account
+#: model:ir.actions.act_window,name:stock_account.inventory_aging_action
+#: model:ir.ui.menu,name:stock_account.menu_inventory_aging
+msgid "Inventory Aging"
+msgstr "計算庫存賬齡"
 
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_stock_location
@@ -433,6 +442,7 @@ msgstr "日記賬"
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_account_move
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__account_move_id
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
 msgid "Journal Entry"
 msgstr "日記賬記項"
 
@@ -516,11 +526,6 @@ msgid "New value by quantity"
 msgstr "按數量計算的新值"
 
 #. module: stock_account
-#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
-msgid "Open Valuation Layer"
-msgstr "開啟估值層"
-
-#. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_form
 msgid "Other Info"
 msgstr "其他資訊"
@@ -598,6 +603,11 @@ msgstr "原因"
 #: model:ir.model.fields,help:stock_account.field_stock_valuation_layer_revaluation__reason
 msgid "Reason of the revaluation"
 msgstr "重估原因"
+
+#. module: stock_account
+#: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__warehouse_id
+msgid "Receipt WH"
+msgstr "收貨貨倉"
 
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__reference
@@ -813,6 +823,16 @@ msgid ""
 msgstr "移動名細處於不一致的狀態:它們不屬於同一個來源或目的地之公司。"
 
 #. module: stock_account
+#. odoo-python
+#: code:addons/stock_account/wizard/stock_valuation_layer_revaluation.py:0
+#, python-format
+msgid ""
+"The value of a stock valuation layer cannot be negative. Landed cost could "
+"be use to correct a specific transfer."
+msgstr "庫存估值層的值不可以是負數。到岸成本可用於糾正特定的轉移。"
+
+#. module: stock_account
+#: model_terms:ir.actions.act_window,help:stock_account.inventory_aging_action
 #: model_terms:ir.actions.act_window,help:stock_account.stock_valuation_layer_action
 #: model_terms:ir.actions.act_window,help:stock_account.stock_valuation_layer_report_action
 msgid ""
@@ -821,12 +841,19 @@ msgid ""
 msgstr "沒有估值層。當出現影響庫存估值的產品移動時，會建立估值層。"
 
 #. module: stock_account
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
+msgid "Total Moved Quantity"
+msgstr "已移動總數"
+
+#. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_report_tree
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
 msgid "Total Remaining Quantity"
 msgstr "總計剩餘數量"
 
 #. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_report_tree
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
 msgid "Total Remaining Value"
 msgstr "總計剩餘價值"
 
@@ -1012,7 +1039,16 @@ msgstr "您無法在自動評價中更新產品成本，因為這會導致建立
 msgid ""
 "You don't have any input valuation account defined on your product category."
 " You must define one before processing this operation."
-msgstr "您沒有在產品類別上定義任何輸入估價項目。在處理此操作之前，必須定義一個。"
+msgstr "你的產品類別未設定任何輸入估值賬戶。處理此操作前，必須先定義相關賬戶。"
+
+#. module: stock_account
+#. odoo-python
+#: code:addons/stock_account/models/product.py:0
+#, python-format
+msgid ""
+"You don't have any output valuation account defined on your product "
+"category. You must define one before processing this operation."
+msgstr "你的產品類別未設定任何輸出估值賬戶。處理此操作前，必須先定義相關賬戶。"
 
 #. module: stock_account
 #. odoo-python
@@ -1042,7 +1078,7 @@ msgstr "您沒有在產品類別上定義的任何庫存日記帳, 請檢查是�
 msgid ""
 "You don't have any stock valuation account defined on your product category."
 " You must define one before processing this operation."
-msgstr "您沒有在您的產品類別中定義任何庫存評估帳戶。 處理此操作之前，您必須定義一個。"
+msgstr "你的產品類別未設定任何庫存估值賬戶。處理此操作前，必須先定義相關賬戶。"
 
 #. module: stock_account
 #. odoo-python

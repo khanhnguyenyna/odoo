@@ -40,13 +40,14 @@ export function isDragSourceExternalFile(dataTransfer) {
 export function onChange(target, key, callback) {
     let proxy;
     function _observe() {
-        void proxy[key];
-        if (proxy[key] instanceof Object) {
-            void Object.keys(proxy[key]);
+        // access proxy[key] only once to avoid triggering reactive get() many times
+        const val = proxy[key];
+        if (typeof val === "object" && val !== null) {
+            void Object.keys(val);
         }
-        if (proxy[key] instanceof Array) {
-            void proxy[key].length;
-            void proxy[key].forEach((i) => i);
+        if (Array.isArray(val)) {
+            void val.length;
+            void val.forEach((i) => i);
         }
     }
     if (Array.isArray(key)) {
@@ -68,4 +69,62 @@ export function onChange(target, key, callback) {
  */
 export function closeStream(stream) {
     stream?.getTracks?.().forEach((track) => track.stop());
+}
+
+/**
+ * Compare two Luxon datetime.
+ *
+ * @param {import("@web/core/l10n/dates").NullableDateTime} date1
+ * @param {import("@web/core/l10n/dates").NullableDateTime} date2
+ * @returns {number} Negative if date1 is less than date2, positive if date1 is
+ *  greater than date2, and 0 if they are equal.
+ */
+export function compareDatetime(date1, date2) {
+    if (date1?.ts === date2?.ts) {
+        return 0;
+    }
+    if (!date1) {
+        return -1;
+    }
+    if (!date2) {
+        return 1;
+    }
+    return date1.ts - date2.ts;
+}
+
+/**
+ * Compares two version strings.
+ *
+ * @param {string} v1 - The first version string to compare.
+ * @param {string} v2 - The second version string to compare.
+ * @return {number} -1 if v1 is less than v2, 1 if v1 is greater than v2, and 0 if they are equal.
+ */
+function compareVersion(v1, v2) {
+    const parts1 = v1.split(".");
+    const parts2 = v2.split(".");
+
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+        const num1 = parseInt(parts1[i]) || 0;
+        const num2 = parseInt(parts2[i]) || 0;
+        if (num1 < num2) {
+            return -1;
+        }
+        if (num1 > num2) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/**
+ * Return a version object that can be compared to other version strings.
+ *
+ * @param {string} v The version string to evaluate.
+ */
+export function parseVersion(v) {
+    return {
+        isLowerThan(other) {
+            return compareVersion(v, other) < 0;
+        },
+    };
 }

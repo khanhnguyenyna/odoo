@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+from datetime import date, timedelta
 from unittest.mock import patch
 
 from odoo.exceptions import AccessError
 from odoo.tests.common import TransactionCase
 from odoo.addons.crm.tests.common import TestCrmCommon
 from odoo.addons.mail.tests.common import mail_new_test_user
+from odoo.addons.website.tools import MockRequest
+from odoo.addons.website_crm_partner_assign.controllers.main import (
+    WebsiteAccount,
+    WebsiteCrmPartnerAssign,
+)
 
 
 class TestPartnerAssign(TransactionCase):
@@ -218,3 +224,70 @@ class TestPartnerLeadPortal(TestCrmCommon):
         record_action = self.lead_portal._get_access_action(access_uid=self.user_portal.id)
         self.assertEqual(record_action['url'], '/my/opportunity/%s' % self.lead_portal.id)
         self.assertEqual(record_action['type'], 'ir.actions.act_url')
+
+    def test_route_portal_my_opportunities_as_portal(self):
+        """Test that the portal user can access its own opportunities even if
+        does not have access to the 'activity_date_deadline' field (needed
+        if using filter 'Today Activities' or 'Overdue Activities')."""
+
+        lead_today = self.lead_portal
+        lead_yesterday = self.lead_portal.copy()
+
+        (lead_today | lead_yesterday).type = "opportunity"
+
+        lead_today.activity_schedule("crm.lead_test_activity_1", date.today())
+        lead_yesterday.activity_schedule(
+            "crm.lead_test_activity_1", date.today() - timedelta(days=1)
+        )
+
+        def render_function(_, values, *args, **kwargs):
+            self.assertIn(
+                lead_today,
+                values["opportunities"],
+                "Lead with today scheduled activity should be in filtered opportunities.",
+            )
+            self.assertNotIn(
+                lead_yesterday,
+                values["opportunities"],
+                "Lead with yesterday scheduled activity should not be in filtered opportunities.",
+            )
+
+        with self.with_user(self.user_portal.login), MockRequest(
+            self.env, website=self.env["website"].browse(1)
+        ) as mock_request:
+            mock_request.render = render_function
+            WebsiteAccount().portal_my_opportunities(filterby="today")
+
+    @patch('odoo.http.GeoIP')
+    def test_03_crm_partner_assign_geolocalization(self, GeoIpMock):
+        """
+            This test checks situation when "{OdooURL}/partners" is visited from foreign country without resellers.
+            It uses Mexico as an example.
+
+            Why patching of GeoIP is used?
+            Tested function (WebsiteCrmPartnerAssign.partners) uses GeoIp.country_code which is read_only, because
+            of the property decorator https://docs.python.org/3/library/functions.html#property
+            Patching is allowing to modify normally read_only value.
+        """
+        # Patch GeoIp so it acts, as if Odoo client is located in Mexico
+        GeoIpMock.return_value.country_code = 'MX'
+
+        # Create a partner outside of Mexico
+        non_mexican_partner = self.env['res.partner'].create({
+            'name': 'Non_Mexican_Partner',
+            'is_company': True,
+            'grade_id': self.env['res.partner.grade'].search([], limit=1).id,
+            'website_published': True,
+            'country_id': self.env['res.country'].search([('code', '!=', 'mx')], limit=1).id
+        })
+
+        def render_function(_, values, *args, **kwargs):
+            """ Tests values at the end of WebsiteCrmPartnerAssign.partners method."""
+            self.assertIn("partners", values, "Partner key is not present in the values, can't perform subsequent checks.")
+            self.assertIn(non_mexican_partner, values['partners'], "Non-Mexican Partner is not present when rendering partners from Mexico; fallback protection (protecting from no results) didn't work.")
+            return 'rendered'
+
+        with MockRequest(self.env, website=self.env['website'].browse(1)) as mock_request:
+            mock_request.render = render_function
+            res = WebsiteCrmPartnerAssign().partners()
+            self.assertEqual([b'rendered'], res.response, "render_function wasn't called")

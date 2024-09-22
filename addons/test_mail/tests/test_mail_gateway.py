@@ -14,10 +14,10 @@ from odoo import exceptions
 from odoo.addons.mail.models.mail_thread import MailThread
 from odoo.addons.mail.tests.common import mail_new_test_user, MailCommon
 from odoo.addons.test_mail.data import test_mail_data
-from odoo.addons.test_mail.data.test_mail_data import MAIL_TEMPLATE
+from odoo.addons.test_mail.data.test_mail_data import MAIL_TEMPLATE, THAI_EMAIL_WINDOWS_874
 from odoo.addons.test_mail.models.test_mail_models import MailTestGateway
 from odoo.sql_db import Cursor
-from odoo.tests import tagged
+from odoo.tests import tagged, RecordCapturer
 from odoo.tools import email_split_and_format, formataddr, mute_logger
 
 
@@ -82,6 +82,19 @@ class TestEmailParsing(MailCommon):
 
         res = self.env['mail.thread'].message_parse(self.from_string(test_mail_data.MAIL_MULTIPART_WEIRD_FILENAME))
         self.assertEqual(res['attachments'][0][0], '62_@;,][)=.(ÇÀÉ.txt')
+
+    def test_message_parse_attachment_pdf_nonstandard_mime(self):
+        # This test checks if aliasing content-type (mime type) of "pdf" with "application/pdf" works correctly. (i.e. Treat "pdf" as "application/pdf")
+
+        # Baseline check. Parsing mail with "application/pdf"
+        mail_with_standard_mime = self.format(test_mail_data.MAIL_PDF_MIME_TEMPLATE, pdf_mime="application/pdf")
+        res_std = self.env['mail.thread'].message_parse(self.from_string(mail_with_standard_mime))
+        self.assertEqual(res_std['attachments'][0].content, test_mail_data.PDF_PARSED, "Attachment with Content-Type: application/pdf must parse without error")
+
+        # Parsing the same email, but with content-type set to "pdf"
+        mail_with_aliased_mime = self.format(test_mail_data.MAIL_PDF_MIME_TEMPLATE, pdf_mime="pdf")
+        res_alias = self.env['mail.thread'].message_parse(self.from_string(mail_with_aliased_mime))
+        self.assertEqual(res_alias['attachments'][0].content, test_mail_data.PDF_PARSED, "Attachment with aliased Content-Type: pdf must parse without error")
 
     def test_message_parse_bugs(self):
         """ Various corner cases or message parsing """
@@ -1063,6 +1076,22 @@ class TestMailgateway(MailCommon):
         # No bounce email
         self.assertNotSentEmail()
 
+    @mute_logger('odoo.addons.mail.models.mail_thread', 'odoo.addons.mail.models.mail_mail', 'odoo.models.unlink')
+    def test_message_route_write_to_catchall_other_recipients_invalid(self):
+        """ Writing to catchall and other unroutable recipients should bounce. """
+        # Test: no group created, email bounced
+        with self.mock_mail_gateway():
+            record = self.format_and_process(
+                MAIL_TEMPLATE, self.partner_1.email_formatted,
+                f'"My Super Catchall" <{self.alias_catchall}@{self.alias_domain}>, Unroutable <unroutable@{self.alias_domain}>',
+                subject='Should Bounce')
+        self.assertFalse(record)
+        self.assertSentEmail(
+            self.mailer_daemon_email,
+            ['whatever-2a840@postmaster.twitter.com'],
+            subject='Re: Should Bounce'
+        )
+
     @mute_logger('odoo.addons.mail.models.mail_thread')
     def test_message_process_bounce_alias(self):
         """ Writing to bounce alias is considered as a bounce even if not multipart/report bounce structure """
@@ -1544,6 +1573,10 @@ class TestMailgateway(MailCommon):
     @mute_logger('odoo.addons.mail.models.mail_thread', 'odoo.models.unlink', 'odoo.addons.mail.models.mail_mail')
     def test_message_process_reply_to_new_thread(self):
         """ Test replies not being considered as replies but use destination information instead (aka, mass post + specific reply to using aliases) """
+        # shorten company name to prevent 68 character formatting from
+        # triggering and making the assert missmatch.
+        # See _notify_get_reply_to_formatted_email method
+        self.user_employee.company_id.name = "Forced"
         first_record = self.env['mail.test.simple'].with_user(self.user_employee).create({'name': 'Replies to Record'})
         record_msg = first_record.message_post(
             subject='Discussion',
@@ -1729,6 +1762,47 @@ class TestMailgateway(MailCommon):
             self.assertEqual(file_content, attachment.raw.decode(encoding or 'utf-8'))
             if encoding not in ['', 'UTF-8']:
                 self.assertNotEqual(file_content, attachment.raw.decode('utf-8'))
+
+    def test_message_hebrew_iso8859_8_i(self):
+        # This subject was found inside an email of one of our customer.
+        # The charset is iso-8859-8-i which isn't natively supported by
+        # python, check that Odoo is still capable of decoding it.
+        subject = "בוקר טוב! צריך איימק ושתי מסכים"
+        encoded_subject = "=?iso-8859-8-i?B?4eX3+CDo5eEhIPb46eog4Onp7vcg5fn66SDu8evp7Q==?="
+
+        # This content was made up using google translate. The charset
+        # is iso-8859-8 which is natively supported by python.
+        charset = "iso-8859-8"
+        content = "שלום וברוכים הבאים למקרה המבחן הנפלא הזה"
+        encoded_content = base64.b64encode(content.encode(charset)).decode()
+
+        with RecordCapturer(self.env['mail.test.gateway'], []) as capture:
+            mail = test_mail_data.MAIL_FILE_ENCODING.format(
+                msg_id="<test_message_hebrew_iso8859_8_i@iron.sky>",
+                subject=encoded_subject,
+                charset=f'; charset="{charset}"',
+                content=encoded_content,
+            )
+            self.env['mail.thread'].message_process('mail.test.gateway', mail)
+
+        capture.records.ensure_one()
+        self.assertEqual(capture.records.name, subject)
+        self.assertEqual(
+            capture.records.message_ids.attachment_ids.raw.decode(charset),
+            content
+        )
+
+    def test_message_windows_874(self):
+        # Email for Thai customers who use Microsoft email service.
+        # The charset is windows-874 which isn't natively supported by
+        # python, check that Odoo is still capable of decoding it.
+        # windows-874 is the Microsoft equivalent of cp874.
+        with self.mock_mail_gateway(), \
+             RecordCapturer(self.env['mail.test.gateway'], []) as capture:
+            self.env['mail.thread'].message_process('mail.test.gateway', THAI_EMAIL_WINDOWS_874)
+        capture.records.ensure_one()
+        self.assertEqual(capture.records.name, 'เรื่อง')
+        self.assertEqual(str(capture.records.message_ids.body), '<pre>ร่างกาย</pre>\n')
 
     # --------------------------------------------------
     # Emails loop detection

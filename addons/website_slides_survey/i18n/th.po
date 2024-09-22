@@ -4,6 +4,7 @@
 # 
 # Translators:
 # Wil Odoo, 2023
+# Rasareeyar Lappiam, 2024
 # 
 msgid ""
 msgstr ""
@@ -11,7 +12,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-10-26 21:56+0000\n"
 "PO-Revision-Date: 2023-10-26 23:10+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Rasareeyar Lappiam, 2024\n"
 "Language-Team: Thai (https://app.transifex.com/odoo/teams/41243/th/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -24,7 +25,7 @@ msgstr ""
 #: code:addons/website_slides_survey/models/survey_survey.py:0
 #, python-format
 msgid "- %s (Courses - %s)"
-msgstr ""
+msgstr "- %s (หลักสูตร - %s)"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.survey_survey_view_kanban
@@ -32,6 +33,8 @@ msgid ""
 "<br/>\n"
 "                        <span class=\"text-muted\">Courses</span>"
 msgstr ""
+"<br/>\n"
+"                        <span class=\"text-muted\">หลักสูตร</span>"
 
 #. module: website_slides_survey
 #: model:mail.template,body_html:website_slides_survey.mail_template_user_input_certification_failed
@@ -51,11 +54,25 @@ msgid ""
 "</div>\n"
 "            "
 msgstr ""
+"<div style=\"margin: 0px; padding: 0px; font-size: 13px;\">\n"
+"    <p style=\"margin: 0px; padding: 0px; font-size: 13px;\">\n"
+"        เรียน <t t-out=\"object.partner_id.name or 'participant' or ''\">ผู้เข้าร่วม</t><br><br>\n"
+"        ขออภัย คุณไม่ผ่านการรับรองและไม่ได้เป็นสมาชิกของหลักสูตร: <t t-out=\"object.slide_partner_id.channel_id.name or ''\">พื้นฐานของการทำสวน</t>อีกต่อไป<br><br>\n"
+"        อย่าลังเลที่จะลงทะเบียนอีกครั้ง!\n"
+"        <div style=\"margin: 16px 0px 16px 0px;\">\n"
+"            <a t-att-href=\"(object.slide_partner_id.channel_id.website_url)\" style=\"background-color: #875A7B; padding: 8px 16px 8px 16px; text-decoration: none; color: #fff; border-radius: 5px; font-size:13px;\">\n"
+"                ลงทะเบียนตอนนี้\n"
+"            </a>\n"
+"        </div>\n"
+"        ขอขอบคุณสำหรับการเข้าร่วมของคุณ\n"
+"    </p>\n"
+"</div>\n"
+"            "
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.display_certificate
 msgid "<i class=\"fa fa-arrow-right\"/> Get Certified"
-msgstr ""
+msgstr "<i class=\"fa fa-arrow-right\"/> ได้รับการรับรอง"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.display_certificate
@@ -92,17 +109,17 @@ msgstr "<i class=\"fa fa-share-alt\" aria-label=\"แชร์\" title=\"Share\"
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_content_detailed
 msgid "<i class=\"oi oi-arrow-right me-1\"/>Add Questions to this Survey"
-msgstr ""
+msgstr "<i class=\"oi oi-arrow-right me-1\"/>เพิ่มคำถามในแบบสอบถามนี้"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.display_certificate
 msgid "<i class=\"oi oi-arrow-right me-1\"/>All Certifications"
-msgstr ""
+msgstr "<i class=\"oi oi-arrow-right me-1\"/>ใบรับรองทั้งหมด"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.user_profile_content
 msgid "<i class=\"oi oi-arrow-right\"/> See Certifications"
-msgstr ""
+msgstr "<i class=\"oi oi-arrow-right\"/> ดูใบรับรอง"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.badge_content
@@ -112,7 +129,7 @@ msgstr "<i class=\"text-muted\">ผู้ใช้ที่ได้รับร
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.courses_home_inherit_survey
 msgid "<span class=\"ms-1\">Certifications</span>"
-msgstr ""
+msgstr "<span class=\"ms-1\">ใบรับรอง</span>"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_channel_view_form
@@ -120,11 +137,13 @@ msgid ""
 "<span class=\"o_stat_text\" invisible=\"nbr_certification &gt; 0\">Finished</span>\n"
 "                <span class=\"o_stat_text\" invisible=\"nbr_certification == 0\">Certified</span>"
 msgstr ""
+"<span class=\"o_stat_text\" invisible=\"nbr_certification &gt; 0\">เสร็จสิ้น</span>\n"
+"                <span class=\"o_stat_text\" invisible=\"nbr_certification == 0\">ได้รับการรับรอง</span>"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.all_user_card
 msgid "<span class=\"text-muted small fw-bold\">Certifications</span>"
-msgstr ""
+msgstr "<span class=\"text-muted small fw-bold\">ใบรับรอง</span>"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.top3_user_card
@@ -145,6 +164,7 @@ msgstr "<span class=\"text-muted\">เสร็จแล้ว</span>"
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.course_main
 msgid "<span>Start Now</span><i class=\"oi oi-chevron-right ms-2 align-middle\"/>"
 msgstr ""
+"<span>เริ่มตอนนี้</span><i class=\"oi oi-chevron-right ms-2 align-middle\"/>"
 
 #. module: website_slides_survey
 #: model:ir.model.constraint,message:website_slides_survey.constraint_slide_slide_check_survey_id
@@ -166,7 +186,7 @@ msgstr "เพิ่มการรับรอง"
 #: code:addons/website_slides_survey/static/src/xml/website_slides_fullscreen.xml:0
 #, python-format
 msgid "Add Questions to this Survey"
-msgstr ""
+msgstr "เพิ่มคำถามในแบบสอบถามนี้"
 
 #. module: website_slides_survey
 #: model_terms:ir.actions.act_window,help:website_slides_survey.slide_slide_action_certification
@@ -186,6 +206,8 @@ msgid ""
 "Any Survey listed below is currently used as a Course Certification and cannot be deleted:\n"
 "%s"
 msgstr ""
+"แบบสอบถามที่แสดงด้านล่างนี้ใช้เป็นใบรับรองหลักสูตรในปัจจุบันและไม่สามารถลบได้:\n"
+"%s"
 
 #. module: website_slides_survey
 #: model:survey.question.answer,value:website_slides_survey.furniture_certification_page_1_question_1_choice_3
@@ -198,16 +220,18 @@ msgid ""
 "Assess the level of understanding of your attendees\n"
 "                <br>and send them a document if they pass the test."
 msgstr ""
+"ประเมินระดับความเข้าใจของผู้ร่วมงานของคุณ\n"
+"                <br>และส่งเอกสารให้พวกเขาหากผ่านการทดสอบ"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.user_profile_content
 msgid "Attempt n°"
-msgstr ""
+msgstr "ครั้งที่ n°"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.survey_survey_view_tree_slides
 msgid "Avg Score (%)"
-msgstr ""
+msgstr "คะแนนเฉลี่ย (%)"
 
 #. module: website_slides_survey
 #: model:survey.question.answer,value:website_slides_survey.furniture_certification_page_1_question_2_choice_5
@@ -252,12 +276,12 @@ msgstr "ใบรับรอง"
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.user_profile_content
 msgid "Certification Attempts"
-msgstr ""
+msgstr "ครั้งในการรับรอง"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.badge_content
 msgid "Certification Badges"
-msgstr "ป้ายรางวัลรับรอง"
+msgstr "การรับรองเหรียญรางวัล"
 
 #. module: website_slides_survey
 #: model:ir.model.fields,field_description:website_slides_survey.field_survey_survey__slide_channel_ids
@@ -268,7 +292,7 @@ msgstr "คอร์สการรับรอง"
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_slide_partner_view_search
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_slide_partner_view_tree
 msgid "Certification Passed"
-msgstr ""
+msgstr "ผ่านการรับรองแล้ว"
 
 #. module: website_slides_survey
 #: model:ir.model.fields,field_description:website_slides_survey.field_survey_survey__slide_ids
@@ -283,12 +307,12 @@ msgstr "การรับรองสำเร็จแล้ว"
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.survey_survey_view_tree_slides
 msgid "Certification Title"
-msgstr ""
+msgstr "ชื่อการรับรอง"
 
 #. module: website_slides_survey
 #: model:ir.model.fields,field_description:website_slides_survey.field_slide_slide_partner__user_input_ids
 msgid "Certification attempts"
-msgstr "ความพยายามในการรับรอง"
+msgstr "จำนวนครั้งในการรับรอง"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.o_wss_certification_icon
@@ -300,7 +324,7 @@ msgstr "ไอคอนใบรับรอง"
 #: code:addons/website_slides_survey/controllers/slides.py:0
 #, python-format
 msgid "Certification slides are completed when the survey is succeeded."
-msgstr "สไลด์การรับรองจะเสร็จสมบูรณ์เมื่อทำแบบสำรวจเสร็จ"
+msgstr "สไลด์การรับรองจะเสร็จสมบูรณ์เมื่อทำแบบสอบถามเสร็จ"
 
 #. module: website_slides_survey
 #: model:ir.actions.act_window,name:website_slides_survey.slide_slide_action_certification
@@ -313,13 +337,13 @@ msgstr "ใบรับรอง"
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.display_certificate
 msgid "Certifications are exams that you successfully passed. <br/>"
-msgstr ""
+msgstr "การรับรองคือการสอบที่คุณผ่านเรียบร้อยแล้ว <br/>"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_content_detailed
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_sidebar_done_button
 msgid "Certifications you have passed cannot be marked as not done"
-msgstr ""
+msgstr "การรับรองที่คุณผ่านแล้วไม่สามารถทำเครื่องหมายว่ายังไม่เสร็จสิ้นได้"
 
 #. module: website_slides_survey
 #: model:survey.question.answer,value:website_slides_survey.furniture_certification_page_1_question_2_choice_1
@@ -332,7 +356,7 @@ msgstr "เก้าอี้"
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_content_detailed
 #, python-format
 msgid "Congratulations, you passed the Certification!"
-msgstr ""
+msgstr "ขอแสดงความยินดี คุณผ่านการรับรองแล้ว!"
 
 #. module: website_slides_survey
 #: model:ir.model,name:website_slides_survey.model_slide_channel
@@ -355,7 +379,7 @@ msgstr "จำนวนคอร์ส"
 #. module: website_slides_survey
 #: model_terms:ir.actions.act_window,help:website_slides_survey.survey_survey_action_slides
 msgid "Create a Certification"
-msgstr ""
+msgstr "สร้างใบรับรอง"
 
 #. module: website_slides_survey
 #: model:slide.slide,name:website_slides_survey.slide_slide_demo_6_0
@@ -412,17 +436,17 @@ msgstr "ถึงเวลาทดสอบความรู้ของคุ
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.res_config_settings_view_form
 msgid "Manage Certifications"
-msgstr ""
+msgstr "จัดการใบรับรอง"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_content_detailed
 msgid "Mark To Do"
-msgstr ""
+msgstr "ทำเครื่องหมายเป็นสิ่งที่ต้องทำ"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.user_profile_content
 msgid "No certification found for the given search term."
-msgstr ""
+msgstr "ไม่พบการรับรองสำหรับข้อความค้นหาที่ระบุ"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.display_certificate
@@ -451,7 +475,7 @@ msgstr "โอ๊ค"
 #: code:addons/website_slides_survey/static/src/xml/website_slide_upload.xml:0
 #, python-format
 msgid "Please select a certification."
-msgstr ""
+msgstr "โปรดเลือกใบรับรอง"
 
 #. module: website_slides_survey
 #: model:ir.model.fields,field_description:website_slides_survey.field_survey_user_input__slide_id
@@ -461,7 +485,7 @@ msgstr "สไลด์หลักสูตรที่เกี่ยวข้
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.display_certificate
 msgid "Score:"
-msgstr ""
+msgstr "คะแนน:"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.user_profile_content
@@ -471,7 +495,7 @@ msgstr "ค้นหา"
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.user_profile_content
 msgid "Search Attempts..."
-msgstr ""
+msgstr "ครั้งในการค้นหา..."
 
 #. module: website_slides_survey
 #: model:survey.question,title:website_slides_survey.furniture_certification_page_1_question_2
@@ -481,7 +505,7 @@ msgstr "เลือกเฟอร์นิเจอร์ทั้งหมด
 #. module: website_slides_survey
 #: model:mail.template,description:website_slides_survey.mail_template_user_input_certification_failed
 msgid "Sent to participant if they failed the certification"
-msgstr ""
+msgstr "ส่งไปยังผู้เข้าร่วมหากไม่ผ่านการรับรอง"
 
 #. module: website_slides_survey
 #: model:survey.question.answer,value:website_slides_survey.furniture_certification_page_1_question_2_choice_4
@@ -496,7 +520,7 @@ msgstr "สไลด์ / พาร์ทเนอร์ตกแต่ง m2m"
 #. module: website_slides_survey
 #: model:ir.model.fields,field_description:website_slides_survey.field_slide_slide__slide_type
 msgid "Slide Type"
-msgstr ""
+msgstr "ประเภทสไลด์"
 
 #. module: website_slides_survey
 #: model:ir.model.fields,help:website_slides_survey.field_survey_user_input__slide_partner_id
@@ -519,26 +543,28 @@ msgid ""
 "Subtype of the slide category, allows more precision on the actual file type"
 " / source type."
 msgstr ""
+"ประเภทย่อยของหมวดหมู่สไลด์ "
+"ช่วยให้ประเภทไฟล์/ประเภทแหล่งที่มามีความแม่นยำมากขึ้น"
 
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.survey_survey_view_tree_slides
 msgid "Success Ratio (%)"
-msgstr ""
+msgstr "อัตราส่วนความสำเร็จ (%)"
 
 #. module: website_slides_survey
 #: model:ir.model,name:website_slides_survey.model_survey_survey
 msgid "Survey"
-msgstr "การสำรวจ"
+msgstr "แบบสอบถาม"
 
 #. module: website_slides_survey
 #: model:ir.model,name:website_slides_survey.model_survey_user_input
 msgid "Survey User Input"
-msgstr "แบบสำรวจข้อมูลผู้ใช้"
+msgstr "แบบสอบถามข้อมูลผู้ใช้"
 
 #. module: website_slides_survey
 #: model:mail.template,name:website_slides_survey.mail_template_user_input_certification_failed
 msgid "Survey: Certification Failure"
-msgstr ""
+msgstr "แบบสอบถาม: การรับรองล้มเหลว"
 
 #. module: website_slides_survey
 #: model:survey.question.answer,value:website_slides_survey.furniture_certification_page_1_question_2_choice_2
@@ -548,7 +574,7 @@ msgstr "โต๊ะ"
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.slide_content_detailed
 msgid "Take Quiz"
-msgstr ""
+msgstr "ทำแบบทดสอบ"
 
 #. module: website_slides_survey
 #. odoo-javascript
@@ -562,7 +588,7 @@ msgstr "ใบรับรองการทดสอบ"
 #: model_terms:survey.question,description:website_slides_survey.furniture_certification_page_1
 #: model_terms:survey.survey,description:website_slides_survey.furniture_certification
 msgid "Test your furniture knowledge!"
-msgstr ""
+msgstr "ทดสอบความรู้เรื่องเฟอร์นิเจอร์ของคุณ!"
 
 #. module: website_slides_survey
 #: model:ir.model.fields,help:website_slides_survey.field_slide_slide__is_preview
@@ -609,7 +635,7 @@ msgstr "ไม้ชนิดใดเหมาะที่สุดสำหร
 #: code:addons/website_slides_survey/controllers/slides.py:0
 #, python-format
 msgid "You are not allowed to create a survey."
-msgstr "คุณไม่ได้รับอนุญาตให้สร้างแบบสำรวจ"
+msgstr "คุณไม่ได้รับอนุญาตให้สร้างแบบสอบถาม"
 
 #. module: website_slides_survey
 #. odoo-python
@@ -635,8 +661,8 @@ msgid ""
 "You can gain badges by passing certifications. Here is a list of all available certification badges.\n"
 "                            <br/>Follow the links to reach new heights and skill up!"
 msgstr ""
-"คุณสามารถรับป้ายรางวัลได้เมื่อผ่านการรับรอง นี่คือรายการของป้ายรับรองที่มีทั้งหมด\n"
-"                            <br/>ตามลิงก์นี้เพื่อไปสู่ระดับืี่สูงขึ้นและทักษะใหม่ ๆ !"
+"คุณสามารถรับเหรียญรางวัลได้เมื่อผ่านการรับรอง นี่คือรายการของเหรียญรางวัลที่มีทั้งหมด\n"
+"                            <br/>ตามลิงก์นี้เพื่อไปสู่ระดับที่สูงขึ้นพร้อมทักษะใหม่ๆ !"
 
 #. module: website_slides_survey
 #: model:mail.template,subject:website_slides_survey.mail_template_user_input_certification_failed
@@ -647,4 +673,4 @@ msgstr "คุณล้มเหลวในคอร์ส: {{ object.slide_par
 #. module: website_slides_survey
 #: model_terms:ir.ui.view,arch_db:website_slides_survey.user_profile_content
 msgid "You have not taken any certification yet."
-msgstr ""
+msgstr "คุณยังไม่ได้รับการรับรองใดๆ"

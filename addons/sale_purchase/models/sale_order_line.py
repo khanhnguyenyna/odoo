@@ -211,6 +211,7 @@ class SaleOrderLine(models.Model):
             'taxes_id': [(6, 0, taxes.ids)],
             'order_id': purchase_order.id,
             'sale_line_id': self.id,
+            'discount': supplierinfo.discount,
         }
 
     def _purchase_service_match_supplier(self, warning=True):
@@ -261,11 +262,10 @@ class SaleOrderLine(models.Model):
             purchase_order = supplier_po_map.get(partner_supplier.id)
             if not purchase_order:
                 purchase_order = line._match_or_create_purchase_order(supplierinfo)
-            else:  # if not already updated origin in this loop
-                so_name = line.order_id.name
-                origins = (purchase_order.origin or '').split(', ')
-                if so_name not in origins:
-                    purchase_order.write({'origin': ', '.join(origins + [so_name])})
+            so_name = line.order_id.name
+            origins = (purchase_order.origin or '').split(', ')
+            if so_name not in origins:
+                purchase_order.write({'origin': ', '.join(origins + [so_name])})
             supplier_po_map[partner_supplier.id] = purchase_order
 
             # add a PO line to the PO
@@ -283,6 +283,7 @@ class SaleOrderLine(models.Model):
         """
         sale_line_purchase_map = {}
         for line in self:
+            line = line.with_company(line._purchase_service_get_company())
             # Do not regenerate PO line if the SO line has already created one in the past (SO cancel/reconfirmation case)
             if line.product_id.service_to_purchase and not line.purchase_line_count:
                 result = line._purchase_service_create()

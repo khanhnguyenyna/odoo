@@ -66,7 +66,7 @@
                     name="waiting_for_me_manager"
                     groups="hr_holidays.group_hr_holidays_user"/>
                 <separator/>
-                <filter domain="[('state','in',('confirm','validate1'))]" string="First Approval" name="approve"/>
+                <filter domain="[('state','=','confirm')]" string="First Approval" name="approve"/>
                 <filter domain="[('state', '=', 'validate1')]" string="Second Approval" name="second_approval"/>
                 <filter string="Approved" domain="[('state', '=', 'validate')]" name="validated"/>
                 <separator/>
@@ -141,7 +141,7 @@
                                     <div>
                                         <span class="text-muted">from </span>
                                         <field name="date_from" widget="date" readonly="state in ['cancel', 'refuse', 'validate', 'validate1']"/>
-                                        <span class="text-muted">to </span>
+                                        <span class="text-muted"> to </span>
                                         <field name="date_to" widget="date" readonly="state in ['cancel', 'refuse', 'validate', 'validate1']"/>
                                     </div>
                                     <div class="o_leave_kanban_name p-2">
@@ -150,20 +150,27 @@
                                 </div>
                             </div>
                             <div class="d-flex justify-content-end">
-                                <div class="me-2 d-flex align-items-center" t-if="['validate', 'refuse'].includes(record.state.raw_value)">
+                                <div class="me-2 d-flex align-items-center" t-if="!['draft'].includes(record.state.raw_value)">
                                     <span t-if="record.state.raw_value === 'validate'" class="fa fa-check text-muted me-1" aria-label="validated"/>
-                                    <span t-else="" class="fa fa-ban text-muted me-1" aria-label="refused"/>
-                                    <t t-set="classname" t-value="{'validate': 'text-bg-success', 'refuse': 'text-bg-danger'}[record.state.raw_value] || 'text-bg-light'"/>
-                                    <span t-attf-class="badge rounded-pill {{ classname }}"><t t-esc="record.state.value"/></span>
+                                    <span t-if="record.state.raw_value === 'refuse'" class="fa fa-ban text-muted me-1" aria-label="refused"/>
+                                    <span t-if="['confirm', 'validate1'].includes(record.state.raw_value)" class="me-1" aria-label="to refuse"/>
+                                    <t t-set="classname"
+                                        t-value="{'validate': 'text-bg-success', 'refuse': 'text-bg-danger', 'confirm': 'text-bg-warning', 'validate1': 'text-bg-warning'}[record.state.raw_value] || 'text-bg-light'"/>
+                                    <span t-attf-class="badge rounded-pill {{ classname }}">
+                                        <t t-out="record.state.value"/>
+                                    </span>
                                 </div>
                                 <div class="me-2 align-items-center" t-if="['confirm', 'validate1'].includes(record.state.raw_value)">
-                                    <button t-if="record.state.raw_value === 'confirm'" name="action_approve" type="object" class="btn btn-link btn-sm ps-0">
+                                    <button t-if="record.state.raw_value === 'confirm'" name="action_approve" type="object" class="btn btn-link btn-sm ps-0"
+                                        groups="hr_holidays.group_hr_holidays_user">
                                         <i class="fa fa-thumbs-up"/> Approve
                                     </button>
-                                    <button t-if="record.state.raw_value === 'validate1'" name="action_validate" type="object" class="btn btn-link btn-sm ps-0" groups="hr_holidays.group_hr_holidays_manager">
+                                    <button t-if="record.state.raw_value === 'validate1'" name="action_validate" type="object" class="btn btn-link btn-sm ps-0"
+                                        groups="hr_holidays.group_hr_holidays_manager">
                                         <i class="fa fa-check"/> Validate
                                     </button>
-                                    <button t-if="['confirm', 'validate1'].includes(record.state.raw_value)" name="action_refuse" type="object" class="btn btn-link btn-sm ps-0">
+                                    <button t-if="['confirm', 'validate1'].includes(record.state.raw_value)" name="action_refuse" type="object" class="btn btn-link btn-sm ps-0"
+                                        groups="hr_holidays.group_hr_holidays_user">
                                         <i class="fa fa-times"/> Refuse
                                     </button>
                                 </div>
@@ -238,7 +245,7 @@
             <field name="can_cancel" invisible="1"/>
             <field name="has_mandatory_day" invisible="1"/>
             <header>
-                <button string="Confirm" name="action_confirm" type="object" class="oe_highlight" invisible="state != 'draft' or not active"/>
+                <button string="Confirm" name="action_confirm" type="object" class="oe_highlight" invisible="id == False or state != 'draft' or not active"/>
                 <button string="Approve" name="action_approve" type="object" class="oe_highlight" invisible="not active or not can_approve or state != 'confirm'"/>
                 <button string="Validate" name="action_validate" invisible="state != 'validate1'" type="object" groups="hr_holidays.group_hr_holidays_user" class="oe_highlight"/>
                 <button string="Refuse" name="action_refuse" type="object" invisible="not active or not can_approve or state not in ('confirm', 'validate1', 'validate')"/>
@@ -264,7 +271,7 @@
                 <field name="tz_mismatch" invisible="1"/>
                 <field name="holiday_type" invisible="1" readonly="state not in ['confirm', 'draft']"/>
                 <field name="leave_type_request_unit" invisible="1"/>
-                <div class="o_hr_leave_content row my-n4">
+                <div class="o_hr_leave_content row">
                     <div class="o_hr_leave_column col_left col-md-6 col-12">
                         <div name="title" class="o_hr_leave_title" invisible="1">
                             <field name="employee_id" readonly="1" force_save="1" invisible="1"/>
@@ -272,9 +279,6 @@
                             <field name="display_name" invisible="not holiday_status_id"/>
                         </div>
                         <field name="leave_type_increases_duration" invisible="True"/>
-                        <div name="duration_warning" invisible="not leave_type_increases_duration" class="alert alert-warning mb-0" role="alert">
-                            <span >You can only take this time off in whole days, so if your schedule has half days, it won't be used efficiently.</span>
-                        </div><br />
                         <group name="col_left">
                             <field name="employee_company_id" invisible="1"/>
                             <field name="holiday_status_id" force_save="1"
@@ -303,7 +307,7 @@
                             <label for="request_date_from" invisible="request_unit_half or request_unit_hours" string="Dates" />
                             <div class="o_row" invisible="not request_unit_half and not request_unit_hours">
                                 <field name="request_date_from" class="oe_inline" string="Date" readonly="state not in ('draft', 'confirm')" />
-                                <field name="request_date_from_period" invisible="not request_unit_half" required="request_unit_half"/>
+                                <field name="request_date_from_period" invisible="not request_unit_half" required="request_unit_half" readonly="state not in ('draft', 'confirm')"/>
                             </div>
                             <!-- full days: show date start/end with daterange -->
                             <div class="o_row" invisible="request_unit_half or request_unit_hours">
@@ -348,6 +352,9 @@
                         </group>
                     </div>
                 </div>
+                <div name="duration_warning" invisible="not leave_type_increases_duration" class="alert alert-warning mb-0" role="alert">
+                    <span >You can only take this time off in whole days, so if your schedule has half days, it won't be used efficiently.</span>
+                </div>
             </sheet>
             <div class="o_attachment_preview"/>
             <div class="oe_chatter">
@@ -381,6 +388,9 @@
         <field name="arch" type="xml">
             <xpath expr="//group[@name='col_left']" position="attributes">
                 <attribute name="colspan">5</attribute>
+            </xpath>
+            <xpath expr="//div[hasclass('o_hr_leave_content')]" position="attributes">
+                <attribute name="class" remove="row my-n4" separator=" "/>
             </xpath>
             <xpath expr="//div[hasclass('o_hr_leave_column')]" position="attributes">
                 <attribute name="class" remove="col_left col-md-6" separator=" "/>
@@ -480,7 +490,7 @@
         <field name="arch" type="xml">
             <calendar js_class="time_off_calendar"
                     string="Time Off Request"
-                    form_view_id="%(hr_holidays.hr_leave_view_form_dashboard)d"
+                    form_view_id="%(hr_holidays.hr_leave_view_form_dashboard_new_time_off)d"
                     event_open_popup="true"
                     date_start="date_from"
                     date_stop="date_to"
@@ -708,8 +718,7 @@
             'search_default_waiting_for_me': 1,
             'search_default_waiting_for_me_manager': 2,
             'hide_employee_name': 1,
-            'holiday_status_display_name': False}
-        </field>
+            'holiday_status_display_name': False}</field>
         <field name="domain">['|', ('employee_id.company_id', 'in', allowed_company_ids),
                                     '&amp;', ('multi_employee', '=', True),
                                     '&amp;', ('state', 'in', ['draft', 'confirm', 'validate1']),
@@ -808,6 +817,7 @@
         <field name="arch" type="xml">
             <graph string="Time Off Summary" sample="1">
                 <field name="employee_id"/>
+                <field name="number_of_hours" widget="float_time"/>
                 <field name="number_of_days" type="measure"/>
             </graph>
         </field>
@@ -849,8 +859,8 @@
         <field name="context">{'search_default_filter_date_from': 1, 'search_default_group_employee': 1, 'search_default_group_type': 1}</field>
         <field name="domain">[('active', '=', True), ('active_employee','=',True)]</field>
         <field name="help" type="html">
-            <p class="o_view_nocontent_smiling_face">
-                No data yet!
+            <p class="o_view_nocontent_empty_folder">
+                No data to display
             </p>
         </field>
     </record>

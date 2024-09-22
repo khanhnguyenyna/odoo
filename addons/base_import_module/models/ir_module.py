@@ -1,24 +1,26 @@
 # -*- coding: utf-8 -*-
 import ast
 import base64
+import json
 import logging
 import lxml
 import os
 import requests
 import sys
-import tempfile
 import zipfile
 from collections import defaultdict
 from io import BytesIO
 from os.path import join as opj
 
 from odoo import api, fields, models, _
-from odoo.exceptions import AccessDenied, UserError
-from odoo.modules.module import MANIFEST_NAMES
+from odoo.exceptions import AccessDenied, AccessError, UserError
+from odoo.http import request
+from odoo.modules.module import adapt_version, MANIFEST_NAMES
 from odoo.osv.expression import is_leaf
 from odoo.release import major_version
 from odoo.tools import convert_csv_import, convert_sql_import, convert_xml_import, exception_to_unicode
 from odoo.tools import file_open, file_open_temporary_directory, ormcache
+from odoo.tools.translate import get_po_paths_env, TranslationImporter
 
 _logger = logging.getLogger(__name__)
 
@@ -60,6 +62,14 @@ class IrModule(models.Model):
                 module.icon_image = attachment.datas
 
     def _import_module(self, module, path, force=False, with_demo=False):
+        # Do not create a bridge module for these neutralizations.
+        # Do not involve specific website during import by resetting
+        # information used by website's get_current_website.
+        self = self.with_context(website_id=None)  # noqa: PLW0642
+        force_website_id = None
+        if request and request.session.get('force_website_id'):
+            force_website_id = request.session.pop('force_website_id')
+
         known_mods = self.search([])
         known_mods_names = {m.name: m for m in known_mods}
         installed_mods = [m.name for m in known_mods if m.state == 'installed']
@@ -77,7 +87,9 @@ class IrModule(models.Model):
             terp['icon'] = opj('/', module_icon, icon_path)
         values = self.get_values_from_terp(terp)
         if 'version' in terp:
-            values['latest_version'] = terp['version']
+            values['latest_version'] = adapt_version(terp['version'])
+        if self.env.context.get('data_module'):
+            values['module_type'] = 'industries'
 
         unmet_dependencies = set(terp.get('depends', [])).difference(installed_mods)
 
@@ -97,7 +109,7 @@ class IrModule(models.Model):
             mode = 'update' if not force else 'init'
         else:
             assert terp.get('installable', True), "Module not installable"
-            self.create(dict(name=module, state='installed', imported=True, **values))
+            mod = self.create(dict(name=module, state='installed', imported=True, **values))
             mode = 'init'
 
         kind_of_files = ['data', 'init_xml', 'update_xml']
@@ -142,6 +154,10 @@ class IrModule(models.Model):
                         type='binary',
                         datas=data,
                     )
+                    # Do not create a bridge module for this check.
+                    if 'public' in IrAttachment._fields:
+                        # Static data is public and not website-specific.
+                        values['public'] = True
                     attachment = IrAttachment.sudo().search([('url', '=', url_path), ('type', '=', 'binary'), ('res_model', '=', 'ir.ui.view')])
                     if attachment:
                         attachment.write(values)
@@ -193,17 +209,35 @@ class IrModule(models.Model):
             'res_id': asset.id,
         } for asset in created_assets])
 
+        translation_importer = TranslationImporter(self.env.cr, verbose=False)
+        for lang_ in self.env['res.lang'].get_installed():
+            lang = lang_[0]
+            is_lang_imported = False
+            for po_path in get_po_paths_env(module, lang, env=self.env):
+                translation_importer.load_file(po_path, lang)
+                is_lang_imported = True
+            if lang != 'en_US' and not is_lang_imported:
+                _logger.info('module %s: no translation for language %s', module, lang)
+        translation_importer.save(overwrite=True)
+
+        mod._update_from_terp(terp)
+        _logger.info("Successfully imported module '%s'", module)
+
+        if force_website_id:
+            # Restore neutralized website_id.
+            request.session['force_website_id'] = force_website_id
+
         return True
 
     @api.model
     def _import_zipfile(self, module_file, force=False, with_demo=False):
+        if not self.env.is_admin():
+            raise AccessError(_("Only administrators can install data modules."))
         if not module_file:
             raise Exception(_("No file sent."))
         if not zipfile.is_zipfile(module_file):
             raise UserError(_('Only zip files are supported.'))
 
-        success = []
-        errors = dict()
         module_names = []
         with zipfile.ZipFile(module_file, "r") as z:
             for zf in z.filelist:
@@ -238,7 +272,8 @@ class IrModule(models.Model):
                     mod_name = filename.split('/')[0]
                     is_data_file = filename in module_data_files[mod_name]
                     is_static = filename.startswith('%s/static' % mod_name)
-                    if is_data_file or is_static:
+                    is_translation = filename.startswith('%s/i18n' % mod_name) and filename.endswith('.po')
+                    if is_data_file or is_static or is_translation:
                         z.extract(file, module_dir)
 
                 dirs = [d for d in os.listdir(module_dir) if os.path.isdir(opj(module_dir, d))]
@@ -247,15 +282,13 @@ class IrModule(models.Model):
                     try:
                         # assert mod_name.startswith('theme_')
                         path = opj(module_dir, mod_name)
-                        if self._import_module(mod_name, path, force=force, with_demo=with_demo):
-                            success.append(mod_name)
+                        self.sudo()._import_module(mod_name, path, force=force, with_demo=with_demo)
                     except Exception as e:
-                        _logger.exception('Error while importing module')
-                        errors[mod_name] = exception_to_unicode(e)
-        r = ["Successfully imported module '%s'" % mod for mod in success]
-        for mod, error in errors.items():
-            r.append("Error while importing module '%s'.\n\n %s \n Make sure those modules are installed and try again." % (mod, error))
-        return '\n'.join(r), module_names
+                        raise UserError(_(
+                            "Error while importing module '%(module)s'.\n\n %(error_message)s \n\n",
+                            module=mod_name, error_message=exception_to_unicode(e),
+                        ))
+        return "", module_names
 
     def module_uninstall(self):
         # Delete an ir_module_module record completely if it was an imported
@@ -312,32 +345,31 @@ class IrModule(models.Model):
             return super().web_read(specification)
 
     @api.model
-    @ormcache('fields', 'module_type', 'module_name', 'domain', 'limit', 'offset')
     def _get_modules_from_apps(self, fields, module_type, module_name, domain=None, limit=None, offset=None):
+        if 'name' not in fields:
+            fields = fields + ['name']
         payload = {
-            'series': major_version,
-            'module_fields': fields,
-            'module_type': module_type,
-            'module_name': module_name,
-            'domain': domain,
-            'limit': limit,
-            'offset': offset,
+            'params': {
+                'series': major_version,
+                'module_fields': fields,
+                'module_type': module_type,
+                'module_name': module_name,
+                'domain': domain,
+                'limit': limit,
+                'offset': offset,
+            }
         }
         try:
-            resp = requests.post(
-                f"{APPS_URL}/loempia/listdatamodules",
-                json={'params': payload},
-                timeout=5.0,
-            )
+            resp = self._call_apps(json.dumps(payload))
             resp.raise_for_status()
             modules_list = resp.json().get('result', [])
             for mod in modules_list:
-                mod['id'] = -1
-                module_name = mod.get('name', module_name)
+                module_name = mod['name']
+                existing_mod = self.search([('name', '=', module_name), ('state', '=', 'installed')])
+                mod['id'] = existing_mod.id if existing_mod else -1
                 if 'icon' in fields:
                     mod['icon'] = f"{APPS_URL}{mod['icon']}"
                 if 'state' in fields:
-                    existing_mod = self.search([('name', '=', module_name), ('state', '=', 'installed')])
                     if existing_mod:
                         mod['state'] = 'installed'
                     else:
@@ -351,6 +383,17 @@ class IrModule(models.Model):
             raise UserError(_('The list of industry applications cannot be fetched. Please try again later'))
         except requests.exceptions.ConnectionError:
             raise UserError(_('Connection to %s failed The list of industry modules cannot be fetched') % APPS_URL)
+
+    @api.model
+    @ormcache('payload')
+    def _call_apps(self, payload):
+        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        return requests.post(
+                f"{APPS_URL}/loempia/listdatamodules",
+                data=payload,
+                headers=headers,
+                timeout=5.0,
+            )
 
     @api.model
     @ormcache()
@@ -378,13 +421,16 @@ class IrModule(models.Model):
                 timeout=5.0,
             )
             resp.raise_for_status()
+            missing_dependencies_description, unavailable_modules = self._get_missing_dependencies(resp.content)
+            if unavailable_modules:
+                raise UserError(missing_dependencies_description)
             import_module = self.env['base.import.module'].create({
                 'module_file': base64.b64encode(resp.content),
                 'state': 'init',
-                'modules_dependencies': self._get_missing_dependencies(resp.content)
+                'modules_dependencies': missing_dependencies_description,
             })
             return {
-                'name': 'Install an App',
+                'name': _("Install an Industry"),
                 'view_mode': 'form',
                 'target': 'new',
                 'res_id': import_module.id,
@@ -399,18 +445,31 @@ class IrModule(models.Model):
 
     @api.model
     def _get_missing_dependencies(self, zip_data):
-        modules = self._get_missing_dependencies_modules(zip_data)
+        modules, unavailable_modules = self._get_missing_dependencies_modules(zip_data)
         description = ''
-        if modules:
-            description = _('The following modules will be also installed:\n')
+        if unavailable_modules:
+            description = _(
+                "The installation of the data module would fail as the following dependencies can't"
+                " be found in the addons-path:\n"
+            )
+            for module in unavailable_modules:
+                description += "- " + module + "\n"
+            description += _(
+                "\nYou may need the Enterprise version to install the data module. Please visit "
+                "https://www.odoo.com/pricing-plan for more information.\n"
+                "If you need Website themes, it can be downloaded from https://github.com/odoo/design-themes.\n"
+            )
+        elif modules:
+            description = _("The following modules will also be installed:\n")
             for mod in modules:
                 description += "- " + mod.shortdesc + "\n"
-        return description
+        return description, unavailable_modules
 
     def _get_missing_dependencies_modules(self, zip_data):
         dependencies_to_install = self.env['ir.module.module']
-        known_mods = self.search([])
+        known_mods = self.search([('to_buy', '=', False)])
         installed_mods = [m.name for m in known_mods if m.state == 'installed']
+        not_found_modules = set()
         with zipfile.ZipFile(BytesIO(zip_data), "r") as z:
             manifest_files = [
                 file
@@ -428,7 +487,10 @@ class IrModule(models.Model):
                     continue
                 unmet_dependencies = set(terp.get('depends', [])).difference(installed_mods)
                 dependencies_to_install |= known_mods.filtered(lambda m: m.name in unmet_dependencies)
-        return dependencies_to_install
+                not_found_modules |= set(
+                    mod for mod in unmet_dependencies if mod not in dependencies_to_install.mapped('name')
+                )
+        return dependencies_to_install, not_found_modules
 
     @api.model
     def search_panel_select_range(self, field_name, **kwargs):

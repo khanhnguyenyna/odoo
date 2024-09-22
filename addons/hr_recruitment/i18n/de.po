@@ -4,16 +4,16 @@
 # 
 # Translators:
 # Michael Hofer, 2023
-# Wil Odoo, 2023
-# Larissa Manderfeld, 2023
+# Larissa Manderfeld, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Larissa Manderfeld, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: German (https://app.transifex.com/odoo/teams/41243/de/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -1038,7 +1038,7 @@ msgstr "Abbrechen"
 #. module: hr_recruitment
 #: model_terms:ir.ui.view,arch_db:hr_recruitment.crm_case_graph_view_job
 msgid "Cases By Stage and Estimates"
-msgstr "Fälle nach Stufe und Gehalt"
+msgstr "Fälle nach Phase und Gehalt"
 
 #. module: hr_recruitment
 #: model:ir.model,name:hr_recruitment.model_hr_applicant_category
@@ -1417,6 +1417,11 @@ msgid "Email cc"
 msgstr "E-Mail-CC"
 
 #. module: hr_recruitment
+#: model:ir.model.fields,help:hr_recruitment.field_hr_job__alias_domain
+msgid "Email domain e.g. 'example.com' in 'odoo@example.com'"
+msgstr "E-Mail-Domain z. B. 'example.com' in 'odoo@example.com'"
+
+#. module: hr_recruitment
 #. odoo-python
 #: code:addons/hr_recruitment/wizard/applicant_refuse_reason.py:0
 #, python-format
@@ -1459,7 +1464,7 @@ msgstr "Name des Mitarbeiters"
 #. module: hr_recruitment
 #: model_terms:ir.ui.view,arch_db:hr_recruitment.applicant_hired_template
 msgid "Employee created:"
-msgstr "Mitarbeiter erstellt:"
+msgstr "Mitarbeiter angelegt:"
 
 #. module: hr_recruitment
 #: model:ir.model.fields,help:hr_recruitment.field_hr_applicant__emp_id
@@ -2177,7 +2182,7 @@ msgstr "Neue Bewerbung"
 #: model:ir.actions.act_window,name:hr_recruitment.hr_applicant_action_from_department
 #: model_terms:ir.ui.view,arch_db:hr_recruitment.view_hr_job_kanban
 msgid "New Applications"
-msgstr "Neue Bewerbungen"
+msgstr "Neue Bewerbung(en)"
 
 #. module: hr_recruitment
 #: model:ir.model.fields,field_description:hr_recruitment.field_digest_digest__kpi_hr_recruitment_new_colleagues
@@ -2247,6 +2252,11 @@ msgstr "Keine Bewerbung gefunden. Erstellen Sie eine!"
 #: model_terms:ir.actions.act_window,help:hr_recruitment.crm_case_categ0_act_job
 msgid "No applications yet"
 msgstr "Noch keine Bewerbungen"
+
+#. module: hr_recruitment
+#: model_terms:ir.actions.act_window,help:hr_recruitment.mail_activity_type_action_config_hr_applicant
+msgid "No data to display"
+msgstr "Keine Daten zum Anzeigen"
 
 #. module: hr_recruitment
 #: model_terms:ir.actions.act_window,help:hr_recruitment.action_hr_recruitment_report_filtered_department
@@ -2777,7 +2787,7 @@ msgstr "E-Mail versenden"
 #. module: hr_recruitment
 #: model_terms:ir.ui.view,arch_db:hr_recruitment.res_config_settings_view_form
 msgid "Send Interview Survey"
-msgstr "Umfrage zum Bewerbungsgespräch versenden"
+msgstr "Bewerbungsumfrage versenden"
 
 #. module: hr_recruitment
 #: model:ir.actions.act_window,name:hr_recruitment.action_hr_applicant_mass_sms
@@ -2790,7 +2800,7 @@ msgstr "SMS versenden"
 msgid ""
 "Send an Interview Survey to the applicant during the recruitment process"
 msgstr ""
-"Senden Sie dem Bewerber eine Umfrage zum Bewerbungsgespräch während des "
+"Senden Sie dem Bewerber eine Bewerbungsumfrage während des "
 "Einstellungsprozesses"
 
 #. module: hr_recruitment
@@ -3118,6 +3128,15 @@ msgid "Try sending an email"
 msgstr "Versuchen Sie, eine E-Mail zu senden"
 
 #. module: hr_recruitment
+#: model_terms:ir.actions.act_window,help:hr_recruitment.mail_activity_type_action_config_hr_applicant
+msgid ""
+"Try to add some records, or make sure that there is no active filter in the "
+"search bar."
+msgstr ""
+"Versuchen Sie, einige Datensätze hinzuzufügen, oder stellen Sie sicher, dass"
+" es keine aktiven Filter in der Suchleiste gibt."
+
+#. module: hr_recruitment
 #: model:ir.model.fields,help:hr_recruitment.field_hr_applicant__activity_exception_decoration
 msgid "Type of the exception activity on record."
 msgstr "Typ der Ausnahmeaktivität im Datensatz."
@@ -3265,6 +3284,7 @@ msgstr ""
 #. module: hr_recruitment
 #. odoo-python
 #: code:addons/hr_recruitment/models/hr_applicant.py:0
+#: code:addons/hr_recruitment/models/hr_applicant.py:0
 #, python-format
 msgid "You must define a Contact Name for this applicant."
 msgstr "Sie müssen eine Kontaktperson für diesen Bewerber bestimmen."
@@ -3312,4 +3332,4 @@ msgstr "z. B. Verkaufsleiter"
 #. module: hr_recruitment
 #: model_terms:ir.ui.view,arch_db:hr_recruitment.applicant_get_refuse_reason_view_form
 msgid "to"
-msgstr "bis"
+msgstr "an"

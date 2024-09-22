@@ -23,7 +23,7 @@ patch(ActionpadWidget.prototype, {
         if (!this.clicked) {
             this.clicked = true;
             try {
-                await this.pos.sendOrderInPreparation(this.currentOrder);
+                await this.pos.sendOrderInPreparationUpdateLastChange(this.currentOrder);
             } finally {
                 this.clicked = false;
             }
@@ -53,18 +53,26 @@ patch(ActionpadWidget.prototype, {
             const category = this.pos.db.category_by_id[categoryId];
             if (category) {
                 if (!acc[category.id]) {
-                    acc[category.id] = { count: curr.quantity, name: category.name };
+                    acc[category.id] = {
+                        count: curr.quantity,
+                        name: category.name,
+                        id: category.id,
+                    };
                 } else {
                     acc[category.id].count += curr.quantity;
                 }
             }
             return acc;
         }, {});
-
-        return Object.values(categories)
-            .map((value) => {
-                return `${value.name} ${value.count}`;
-            })
-            .join(" | ");
+        return Object.values(categories);
+    },
+    get displayCategoryCount() {
+        return this.categoryCount.slice(0, 3);
+    },
+    get isCategoryCountOverflow() {
+        if (this.categoryCount.length > 3) {
+            return true;
+        }
+        return false;
     },
 });

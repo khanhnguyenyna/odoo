@@ -6,8 +6,8 @@
             <t t-if="count">
                 <span class="fa fa-comments" />
                 <span class="o_message_count"> <t t-esc="count"/></span>
-                <t t-if="count == 1">comment</t>
-                <t t-else="">comments</t>
+                <t t-if="count == 1"> comment</t>
+                <t t-else=""> comments</t>
             </t>
             <t t-else="">
                 There are no comments for now.
@@ -37,9 +37,9 @@
                     <div class="flex-grow-1">
                         <div class="o_portal_chatter_composer_input">
                             <div class="o_portal_chatter_composer_body d-flex flex-nowrap align-items-start flex-grow-1 mb-4">
-                                <div class="d-flex flex-column flex-grow-1 border rounded-3">
+                                <div class="d-flex flex-column flex-grow-1 rounded-3">
                                     <div class="position-relative flex-grow-1">
-                                        <textarea rows="4" name="message" class="form-control border-0 rounded-3 shadow-none" placeholder="Write a message..." style="resize:none;"/>
+                                        <textarea rows="4" name="message" class="form-control rounded-3 shadow-none" placeholder="Write a message..." style="resize:none;"/>
                                     </div>
                                     <div class="d-flex flex-row align-self-end p-2">
                                         <div class="d-flex px-1">
@@ -62,14 +62,16 @@
 
     <t t-name="portal.Chatter.Attachments">
         <div t-if="attachments.length" class="d-flex flex-grow-1 flex-wrap gap-1">
-            <div t-foreach="attachments" t-as="attachment" t-key="attachment_index" class="bg-light p-2 rounded">
-                <div class="o_portal_chatter_attachment position-relative text-center" t-att-data-id="attachment.id">
+            <div t-foreach="attachments" t-as="attachment" t-key="attachment_index" class="bg-light p-2 rounded position-relative">
+                <div class="o_portal_chatter_attachment text-center" t-att-data-id="attachment.id">
                     <button t-if="showDelete and attachment.state == 'pending'" class="o_portal_chatter_attachment_delete btn btn-sm btn-outline-danger" title="Delete">
                         <i class="fa fa-times"/>
                     </button>
                     <a t-attf-href="/web/content/#{attachment.id}?download=true&amp;access_token=#{attachment.access_token}" target="_blank" class="d-flex flex-row">
                         <div class='oe_attachment_embedded o_image' t-att-title="attachment.name" t-att-data-mimetype="attachment.mimetype"/>
-                        <div class='o_portal_chatter_attachment_name align-self-center'><t t-esc='attachment.name'/></div>
+                        <div class='o_portal_chatter_attachment_name align-self-center text-truncate' t-att-data-tooltip="attachment.name" data-tooltip-position="top">
+                            <t t-esc='attachment.name'/>
+                        </div>
                     </a>
                 </div>
             </div>

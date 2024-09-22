@@ -78,6 +78,7 @@ class ViewCustom(models.Model):
     _description = 'Custom View'
     _order = 'create_date desc'  # search(limit=1) should return the last customization
     _rec_name = 'user_id'
+    _allow_sudo_commands = False
 
     ref_id = fields.Many2one('ir.ui.view', string='Original View', index=True, required=True, ondelete='cascade')
     user_id = fields.Many2one('res.users', string='User', index=True, required=True, ondelete='cascade')
@@ -153,6 +154,7 @@ class View(models.Model):
     _name = 'ir.ui.view'
     _description = 'View'
     _order = "priority,name,id"
+    _allow_sudo_commands = False
 
     name = fields.Char(string='View Name', required=True)
     model = fields.Char(index=True)
@@ -374,7 +376,7 @@ actual arch.
                 err = ValidationError(_(
                     "Error while parsing or validating view:\n\n%(error)s",
                     error=tools.ustr(e),
-                    view=self.key or self.id,
+                    view=view.key or view.id,
                 )).with_traceback(e.__traceback__)
                 err.context = getattr(e, 'context', None)
                 raise err from None
@@ -540,6 +542,7 @@ actual arch.
         # if in uninstall mode and has children views, emulate an ondelete cascade
         if self.env.context.get('_force_unlink', False) and self.inherit_children_ids:
             self.inherit_children_ids.unlink()
+        self.env.registry.clear_cache('templates')
         return super(View, self).unlink()
 
     def _update_field_translations(self, fname, translations, digest=None):
@@ -628,8 +631,8 @@ actual arch.
         views = self.browse(row[0] for row in rows)
 
         # optimization: fill in cache of inherit_id and mode
-        self.env.cache.update(views, type(self).inherit_id, [row[1] for row in rows])
-        self.env.cache.update(views, type(self).mode, [row[2] for row in rows])
+        self.env.cache.update(views, self._fields['inherit_id'], [row[1] for row in rows])
+        self.env.cache.update(views, self._fields['mode'], [row[2] for row in rows])
 
         # During an upgrade, we can only use the views that have been
         # fully upgraded already.
@@ -1266,7 +1269,7 @@ actual arch.
         if func is not None:
             return func(node, name_manager)
         # by default views are non-editable
-        return node.tag not in (item[0] for item in type(self).type.selection)
+        return node.tag not in (item[0] for item in self._fields['type'].selection)
 
     def _editable_tag_form(self, node, name_manager):
         return True
@@ -1488,7 +1491,7 @@ actual arch.
             elif not name:
                 self._raise_view_error(_("Button must have a name"), node)
             elif type_ == 'object':
-                func = getattr(type(name_manager.model), name, None)
+                func = getattr(name_manager.model, name, None)
                 if not func:
                     msg = _(
                         "%(action_name)s is not a valid action on %(model_name)s",
@@ -1504,7 +1507,7 @@ actual arch.
                     )
                     self._raise_view_error(msg, node)
                 try:
-                    inspect.signature(func).bind(self=name_manager.model)
+                    inspect.signature(func).bind()
                 except TypeError:
                     msg = "%s on %s has parameters and cannot be called from a button"
                     self._log_view_warning(msg % (name, name_manager.model._name), node)
@@ -1646,18 +1649,22 @@ actual arch.
                 self._validate_classes(node, expr)
 
             elif attr == 'context':
-                vnames = get_expression_field_names(expr) - {'id'}
+                try:
+                    vnames = get_expression_field_names(expr) - {'id'}
+                except SyntaxError as e:
+                    message = _('Invalid context: %(expr)r is not a valid Python expression \n\n %(e)s', expr=expr, e=e)
+                    self._raise_view_error(message)
                 if vnames:
                     name_manager.must_have_fields(node, vnames, f"context ({expr})")
                 for key, val_ast in get_dict_asts(expr).items():
                     if key == 'group_by':  # only in context
-                        if not isinstance(val_ast, ast.Str):
+                        if not isinstance(val_ast, ast.Constant) or not isinstance(val_ast.value, str):
                             msg = _(
                                 '"group_by" value must be a string %(attribute)s=%(value)r',
                                 attribute=attr, value=expr,
                             )
                             self._raise_view_error(msg, node)
-                        group_by = val_ast.s
+                        group_by = val_ast.value
                         fname = group_by.split(':')[0]
                         if fname not in name_manager.model._fields:
                             msg = _(
@@ -1764,6 +1771,8 @@ actual arch.
             elif node.tag == 'input' and node.get('type') in ('button', 'submit', 'reset'):
                 pass
             elif any(klass in classes for klass in ('btn-group', 'btn-toolbar', 'btn-addr')):
+                pass
+            elif node.tag == 'field' and node.get('widget') == 'url':
                 pass
             else:
                 msg = ("A simili button must be in tag a/button/select or tag `input` "
@@ -2692,6 +2701,29 @@ class Model(models.AbstractModel):
             'target': 'current',
             'res_id': self.id,
             'context': dict(self._context),
+        }
+
+    def _get_records_action(self, **kwargs):
+        """ Return an action to open given records.
+            If there's more than one record, it will be a List, otherwise it's a Form.
+            Given keyword arguments will overwrite default ones. """
+        match self.ids:  # `self.ids` will silently filter out new records (`NewId`s)
+            case []:
+                length_dependent = {'views': [(False, 'form')]}
+            case [res_id]:
+                length_dependent = {'views': [(False, 'form')], 'res_id': res_id}
+            case ids:
+                length_dependent = {
+                    'views': [(False, 'list'), (False, 'form')],
+                    'domain': [('id', 'in', ids)]
+                }
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': self._name,
+            'target': 'current',
+            'context': dict(self._context),
+            **length_dependent,
+            **kwargs
         }
 
     @api.model

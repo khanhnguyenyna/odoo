@@ -7,7 +7,6 @@
                     <main class="modal-body p-3">
                         <form t-attf-action="/event/#{eventId}/meeting_room_create"
                             id="o_wevent_create_meeting_room_form"
-                            class="text-dark"
                             method="POST">
                             <h2>Launch a new topic</h2>
                             <p>Be sure you are ready to spend at least 10 minutes in the room if you want to initiate a new topic.</p>
@@ -41,7 +40,7 @@
                                 </select>
                             </div>
                             <input name="event" t-att-value="event" type="hidden"/>
-                            <input name="csrf_token" t-att-value="widget.csrf_token" type="hidden"/>
+                            <input name="csrf_token" t-att-value="csrf_token" type="hidden"/>
                         </form>
                     </main>
                     <footer class="modal-footer justify-content-start">

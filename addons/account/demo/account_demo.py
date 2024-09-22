@@ -19,7 +19,6 @@ class AccountChartTemplate(models.AbstractModel):
         """Generate the demo data related to accounting."""
         # This is a generator because data created here might be referenced by xml_id to data
         # created later but defined in this same function.
-        self._get_demo_data_products(company)
         return {
             'account.move': self._get_demo_data_move(company),
             'account.bank.statement': self._get_demo_data_statement(company),
@@ -47,7 +46,7 @@ class AccountChartTemplate(models.AbstractModel):
             + self.ref('demo_move_auto_reconcile_7')
             + self.ref('demo_move_auto_reconcile_8')
             + self.ref('demo_move_auto_reconcile_9')
-        ).with_context(check_move_validity=False)
+        )
 
         # the invoice_extract acts like a placeholder for the OCR to be ran and doesn't contain
         # any lines yet
@@ -56,18 +55,6 @@ class AccountChartTemplate(models.AbstractModel):
                 move.action_post()
             except (UserError, ValidationError):
                 _logger.exception('Error while posting demo data')
-
-    @api.model
-    def _get_demo_data_products(self, company=False):
-        prod_templates = self.env['product.product'].search(self.env['product.product']._check_company_domain(company))
-        if self.env.company.account_sale_tax_id:
-            prod_templates_sale = prod_templates.filtered(
-                lambda p: not p.taxes_id.filtered_domain(p.taxes_id._check_company_domain(company)))
-            prod_templates_sale.write({'taxes_id': [Command.link(self.env.company.account_sale_tax_id.id)]})
-        if self.env.company.account_purchase_tax_id:
-            prod_templates_purchase = prod_templates.filtered(
-                lambda p: not p.supplier_taxes_id.filtered_domain(p.taxes_id._check_company_domain(company)))
-            prod_templates_purchase.write({'supplier_taxes_id': [Command.link(self.env.company.account_purchase_tax_id.id)]})
 
     @api.model
     def _get_demo_data_move(self, company=False):
@@ -154,6 +141,7 @@ class AccountChartTemplate(models.AbstractModel):
             },
             'demo_invoice_extract': {
                 'move_type': 'in_invoice',
+                'message_main_attachment_id': 'ir_attachment_in_invoice_1',
             },
             'demo_invoice_equipment_purchase': {
                 'move_type': 'in_invoice',
@@ -166,6 +154,7 @@ class AccountChartTemplate(models.AbstractModel):
                     Command.create({'name': 'Redeem Reference Number: PO02529', 'quantity': 1, 'price_unit': 541.10,
                                     'tax_ids': self.env.company.account_purchase_tax_id.ids}),
                 ],
+                'message_main_attachment_id': 'ir_attachment_in_invoice_2',
             },
             'demo_move_auto_reconcile_1': {
                 'move_type': 'out_refund',

@@ -3,11 +3,12 @@
 from collections import defaultdict
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+from pytz import timezone
 
 from markupsafe import escape, Markup
 from werkzeug.urls import url_encode
 
-from odoo import api, fields, models, _
+from odoo import api, Command, fields, models, _
 from odoo.osv import expression
 from odoo.tools import format_amount, format_date, formatLang, groupby
 from odoo.tools.float_utils import float_is_zero
@@ -87,8 +88,8 @@ class PurchaseOrder(models.Model):
     date_order = fields.Datetime('Order Deadline', required=True, index=True, copy=False, default=fields.Datetime.now,
         help="Depicts the date within which the Quotation should be confirmed and converted into a purchase order.")
     date_approve = fields.Datetime('Confirmation Date', readonly=True, index=True, copy=False)
-    partner_id = fields.Many2one('res.partner', string='Vendor', required=True, change_default=True, tracking=True, domain="['|', ('company_id', '=', False), ('company_id', '=', company_id)]", help="You can find a vendor by its Name, TIN, Email or Internal Reference.")
-    dest_address_id = fields.Many2one('res.partner', domain="['|', ('company_id', '=', False), ('company_id', '=', company_id)]", string='Dropship Address',
+    partner_id = fields.Many2one('res.partner', string='Vendor', required=True, change_default=True, tracking=True, check_company=True, help="You can find a vendor by its Name, TIN, Email or Internal Reference.")
+    dest_address_id = fields.Many2one('res.partner', check_company=True, string='Dropship Address',
         help="Put an address if you want to deliver directly from the vendor to the customer. "
              "Otherwise, keep empty to deliver to your own company.")
     currency_id = fields.Many2one('res.currency', 'Currency', required=True,
@@ -145,18 +146,22 @@ class PurchaseOrder(models.Model):
     mail_reminder_confirmed = fields.Boolean("Reminder Confirmed", default=False, readonly=True, copy=False, help="True if the reminder email is confirmed by the vendor.")
     mail_reception_confirmed = fields.Boolean("Reception Confirmed", default=False, readonly=True, copy=False, help="True if PO reception is confirmed by the vendor.")
 
-    receipt_reminder_email = fields.Boolean('Receipt Reminder Email', related='partner_id.receipt_reminder_email', readonly=False)
-    reminder_date_before_receipt = fields.Integer('Days Before Receipt', related='partner_id.reminder_date_before_receipt', readonly=False)
+    receipt_reminder_email = fields.Boolean('Receipt Reminder Email', compute='_compute_receipt_reminder_email')
+    reminder_date_before_receipt = fields.Integer('Days Before Receipt', compute='_compute_receipt_reminder_email')
 
     @api.constrains('company_id', 'order_line')
     def _check_order_line_company_id(self):
         for order in self:
-            companies = order.order_line.product_id.company_id
-            if companies and companies != order.company_id:
-                bad_products = order.order_line.product_id.filtered(lambda p: p.company_id and p.company_id != order.company_id)
+            invalid_companies = order.order_line.product_id.company_id.filtered(
+                lambda c: order.company_id not in c._accessible_branches()
+            )
+            if invalid_companies:
+                bad_products = order.order_line.product_id.filtered(
+                    lambda p: p.company_id and p.company_id in invalid_companies
+                )
                 raise ValidationError(_(
                     "Your quotation contains products from company %(product_company)s whereas your quotation belongs to company %(quote_company)s. \n Please change the company of your quotation or remove the products from other companies (%(bad_products)s).",
-                    product_company=', '.join(companies.mapped('display_name')),
+                    product_company=', '.join(invalid_companies.sudo().mapped('display_name')),
                     quote_company=order.company_id.display_name,
                     bad_products=', '.join(bad_products.mapped('display_name')),
                 ))
@@ -197,6 +202,13 @@ class PurchaseOrder(models.Model):
                 name += ': ' + formatLang(self.env, po.amount_total, currency_obj=po.currency_id)
             po.display_name = name
 
+    @api.depends('company_id', 'partner_id')
+    def _compute_receipt_reminder_email(self):
+        for order in self:
+            order.receipt_reminder_email = order.partner_id.with_company(order.company_id).receipt_reminder_email
+            order.reminder_date_before_receipt = order.partner_id.with_company(order.company_id).reminder_date_before_receipt
+
+    @api.depends_context('lang')
     @api.depends('order_line.taxes_id', 'order_line.price_subtotal', 'amount_total', 'amount_untaxed')
     def _compute_tax_totals(self):
         for order in self:
@@ -269,6 +281,18 @@ class PurchaseOrder(models.Model):
     def _must_delete_date_planned(self, field_name):
         # To be overridden
         return field_name == 'order_line'
+
+    def onchange(self, values, field_names, fields_spec):
+        """
+        Override onchange to NOT update all date_planned on PO lines when
+        date_planned on PO is updated by the change of date_planned on PO lines.
+        """
+        result = super().onchange(values, field_names, fields_spec)
+        if any(self._must_delete_date_planned(field) for field in field_names) and 'value' in result:
+            for line in result['value'].get('order_line', []):
+                if line[0] == Command.UPDATE and 'date_planned' in line[2]:
+                    del line[2]['date_planned']
+        return result
 
     def _get_report_base_filename(self):
         self.ensure_one()
@@ -367,7 +391,7 @@ class PurchaseOrder(models.Model):
 
         return groups
 
-    def _notify_by_email_prepare_rendering_context(self, message, msg_vals, model_description=False,
+    def _notify_by_email_prepare_rendering_context(self, message, msg_vals=False, model_description=False,
                                                    force_email_company=False, force_email_lang=False):
         render_context = super()._notify_by_email_prepare_rendering_context(
             message, msg_vals, model_description=model_description,
@@ -634,7 +658,6 @@ class PurchaseOrder(models.Model):
             'move_type': move_type,
             'narration': self.notes,
             'currency_id': self.currency_id.id,
-            'invoice_user_id': self.user_id and self.user_id.id or self.env.user.id,
             'partner_id': partner_invoice.id,
             'fiscal_position_id': (self.fiscal_position_id or self.fiscal_position_id._get_fiscal_position(partner_invoice)).id,
             'payment_reference': self.partner_ref or '',
@@ -811,10 +834,11 @@ class PurchaseOrder(models.Model):
         """When auto sending a reminder mail, only send for unconfirmed purchase
         order and not all products are service."""
         return self.search([
-            ('receipt_reminder_email', '=', True),
+            ('partner_id', '!=', False),
             ('state', 'in', ['purchase', 'done']),
             ('mail_reminder_confirmed', '=', False)
-        ]).filtered(lambda p: p.mapped('order_line.product_id.product_tmpl_id.type') != ['service'])
+        ]).filtered(lambda p: p.partner_id.with_company(p.company_id).receipt_reminder_email and\
+            p.mapped('order_line.product_id.product_tmpl_id.type') != ['service'])
 
     def _default_order_line_values(self):
         default_data = super()._default_order_line_values()
@@ -835,7 +859,10 @@ class PurchaseOrder(models.Model):
         return expression.AND([super()._get_product_catalog_domain(), [('purchase_ok', '=', True)]])
 
     def _get_product_catalog_order_data(self, products, **kwargs):
-        return {product.id: self._get_product_price_and_data(product) for product in products}
+        res = super()._get_product_catalog_order_data(products, **kwargs)
+        for product in products:
+            res[product.id] |= self._get_product_price_and_data(product)
+        return res
 
     def _get_product_catalog_record_lines(self, product_ids):
         grouped_lines = defaultdict(lambda: self.env['purchase.order.line'])
@@ -860,6 +887,10 @@ class PurchaseOrder(models.Model):
                 'id': product.uom_id.id,
             },
         }
+        if product.purchase_line_warn_msg:
+            product_infos['warning'] = product.purchase_line_warn_msg
+        if product.purchase_line_warn == "block":
+            product_infos['readOnly'] = True
         if product.uom_id != product.uom_po_id:
             product_infos['purchase_uom'] = {
                 'display_name': product.uom_po_id.display_name,
@@ -916,8 +947,8 @@ class PurchaseOrder(models.Model):
         for order in self:
             if order.state in ['purchase', 'done'] and not order.mail_reminder_confirmed:
                 order.mail_reminder_confirmed = True
-                date = confirmed_date or self.date_planned.date()
-                order.message_post(body=_("%s confirmed the receipt will take place on %s.", order.partner_id.name, date))
+                date_planned = order.get_localized_date_planned(confirmed_date).date()
+                order.message_post(body=_("%s confirmed the receipt will take place on %s.", order.partner_id.name, date_planned))
 
     def _approval_allowed(self):
         """Returns whether the order qualifies to be approved by the current user"""
@@ -935,6 +966,24 @@ class PurchaseOrder(models.Model):
             if order.state in ['purchase', 'done'] and not order.mail_reception_confirmed:
                 order.mail_reception_confirmed = True
                 order.message_post(body=_("The order receipt has been acknowledged by %s.", order.partner_id.name))
+
+    def get_localized_date_planned(self, date_planned=False):
+        """Returns the localized date planned in the timezone of the order's user or the
+        company's partner or UTC if none of them are set."""
+        self.ensure_one()
+        date_planned = date_planned or self.date_planned
+        if not date_planned:
+            return False
+        if isinstance(date_planned, str):
+            date_planned = fields.Datetime.from_string(date_planned)
+        tz = self.get_order_timezone()
+        return date_planned.astimezone(tz)
+
+    def get_order_timezone(self):
+        """ Returns the timezone of the order's user or the company's partner
+        or UTC if none of them are set. """
+        self.ensure_one()
+        return timezone(self.user_id.tz or self.company_id.partner_id.tz or 'UTC')
 
     def _update_date_planned_for_lines(self, updated_dates):
         # create or update the activity

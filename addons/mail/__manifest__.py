@@ -123,6 +123,7 @@ For more specific needs, you may also assign custom-defined actions
     ],
     'installable': True,
     'application': True,
+    'post_init_hook': '_mail_post_init',
     'assets': {
         'web._assets_primary_variables': [
             'mail/static/src/**/primary_variables.scss',
@@ -132,6 +133,7 @@ For more specific needs, you may also assign custom-defined actions
             'mail/static/src/scss/variables/derived_variables.scss',
             'mail/static/src/scss/*.scss',
             'mail/static/lib/**/*',
+            ('remove', 'mail/static/lib/odoo_sfu/odoo_sfu.js'),
             ('remove', 'mail/static/lib/lame/lame.js'),
             'mail/static/src/js/**/*',
             'mail/static/src/core/common/**/*',
@@ -144,8 +146,10 @@ For more specific needs, you may also assign custom-defined actions
             # discuss (loaded last to fix dependencies)
             ('remove', 'mail/static/src/discuss/**/*'),
             'mail/static/src/discuss/core/common/**/*',
+            'mail/static/src/discuss/core/public_web/**/*',
             'mail/static/src/discuss/core/web/**/*',
             'mail/static/src/discuss/**/common/**/*',
+            'mail/static/src/discuss/**/public_web/**/*',
             'mail/static/src/discuss/**/web/**/*',
             ('remove', 'mail/static/src/discuss/**/*.dark.scss'),
             'mail/static/src/views/fields/**/*',
@@ -178,6 +182,9 @@ For more specific needs, you may also assign custom-defined actions
             ('remove', 'mail/static/tests/tours/**/*'),
             ('remove', 'mail/static/tests/helpers/**/*'),
         ],
+        'mail.assets_odoo_sfu': [
+            'mail/static/lib/odoo_sfu/odoo_sfu.js',
+        ],
         'mail.assets_lamejs': [
             'mail/static/lib/lame/lame.js',
         ],
@@ -206,14 +213,18 @@ For more specific needs, you may also assign custom-defined actions
             'mail/static/src/core/common/**/*',
             'mail/static/src/**/common/**/*',
             'mail/static/src/**/public/**/*',
+            'mail/static/lib/selfie_segmentation/selfie_segmentation.js',
             ('remove', 'mail/static/src/**/*.dark.scss'),
             # discuss (loaded last to fix dependencies)
             ('remove', 'mail/static/src/discuss/**/*'),
             'mail/static/src/discuss/core/common/**/*',
+            'mail/static/src/discuss/core/public_web/**/*',
             'mail/static/src/discuss/core/public/**/*',
             'mail/static/src/discuss/**/common/**/*',
             'mail/static/src/discuss/**/public/**/*',
+            'mail/static/src/discuss/**/public_web/**/*',
             ('remove', 'mail/static/src/discuss/**/*.dark.scss'),
+            ('remove', 'web/static/src/**/*.dark.scss'),
         ]
     },
     'license': 'LGPL-3',

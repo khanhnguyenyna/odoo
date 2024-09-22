@@ -3,6 +3,7 @@
 
 import { Domain } from "@web/core/domain";
 import { DynamicList } from "./dynamic_list";
+import { getGroupServerValue } from "./utils";
 
 export class DynamicGroupList extends DynamicList {
     static type = "DynamicGroupList";
@@ -104,6 +105,11 @@ export class DynamicGroupList extends DynamicList {
         // step 1: move record to correct position
         const refIndex = targetGroup.list.records.findIndex((r) => r.id === refId);
         const oldIndex = sourceGroup.list.records.findIndex((r) => r.id === dataRecordId);
+
+        const sourceList = sourceGroup.list;
+        // if the source contains more records than what's loaded, reload it after moving the record
+        const mustReloadSourceList = sourceList.count > sourceList.offset + sourceList.limit;
+
         sourceGroup._removeRecords([record.id]);
         targetGroup._addRecord(record, refIndex + 1);
         // step 2: update record value
@@ -126,14 +132,18 @@ export class DynamicGroupList extends DynamicList {
             revert();
             throw e;
         }
-        if (!targetGroup.isFolded) {
-            await targetGroup.list._resequence(
-                targetGroup.list.records,
-                this.resModel,
-                dataRecordId,
-                refId
-            );
+
+        const proms = [];
+        if (mustReloadSourceList) {
+            const { offset, limit, orderBy, domain } = sourceGroup.list;
+            proms.push(sourceGroup.list._load(offset, limit, orderBy, domain));
         }
+        if (!targetGroup.isFolded) {
+            const targetList = targetGroup.list;
+            const records = targetList.records;
+            proms.push(targetList._resequence(records, this.resModel, dataRecordId, refId));
+        }
+        return Promise.all(proms);
     }
 
     async resequence(movedGroupId, targetGroupId) {
@@ -149,6 +159,13 @@ export class DynamicGroupList extends DynamicList {
                 targetGroupId
             );
         });
+    }
+
+    _selectDomain(value) {
+        for (const group of this.groups) {
+            group.list._selectDomain(value);
+        }
+        super._selectDomain(value);
     }
 
     async sortBy(fieldName) {
@@ -226,6 +243,7 @@ export class DynamicGroupList extends DynamicList {
             __domain: domain,
             [this.groupByField.name]: [id, groupName],
             value: id,
+            serverValue: getGroupServerValue(this.groupByField, id),
             displayName: groupName,
             rawValue: [id, groupName],
         };
@@ -247,11 +265,11 @@ export class DynamicGroupList extends DynamicList {
     async _deleteGroups(groups) {
         const shouldReload = groups.some((g) => g.count > 0);
         await this._unlinkGroups(groups);
+        const configGroups = { ...this.config.groups };
+        for (const group of groups) {
+            delete configGroups[group.value];
+        }
         if (shouldReload) {
-            const configGroups = { ...this.config.groups };
-            for (const group of groups) {
-                delete configGroups[group.value];
-            }
             await this.model._updateConfig(
                 this.config,
                 { groups: configGroups },
@@ -261,6 +279,7 @@ export class DynamicGroupList extends DynamicList {
             for (const group of groups) {
                 this._removeGroup(group);
             }
+            this.model._updateConfig(this.config, { groups: configGroups }, { reload: false });
         }
     }
 

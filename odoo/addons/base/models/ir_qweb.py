@@ -437,6 +437,12 @@ _SAFE_QWEB_OPCODES = _EXPR_OPCODES.union(to_opcodes([
     'POP_JUMP_BACKWARD_IF_FALSE', 'POP_JUMP_BACKWARD_IF_TRUE',
     'POP_JUMP_FORWARD_IF_NONE', 'POP_JUMP_FORWARD_IF_NOT_NONE',
     'POP_JUMP_BACKWARD_IF_NONE', 'POP_JUMP_BACKWARD_IF_NOT_NONE',
+    # 3.12 https://docs.python.org/3/whatsnew/3.12.html#new-opcodes
+    'END_FOR',
+    'LOAD_FAST_AND_CLEAR',
+    'POP_JUMP_IF_NOT_NONE', 'POP_JUMP_IF_NONE',
+    'RERAISE',
+    'CALL_INTRINSIC_1',
 ])) - _BLACKLIST
 
 
@@ -597,7 +603,7 @@ class IrQWeb(models.AbstractModel):
     # assume cache will be invalidated by third party on write to ir.ui.view
     def _get_template_cache_keys(self):
         """ Return the list of context keys to use for caching ``_compile``. """
-        return ['lang', 'inherit_branding', 'edit_translations', 'profile']
+        return ['lang', 'inherit_branding', 'inherit_branding_auto', 'edit_translations', 'profile']
 
     @tools.conditional(
         'xml' not in tools.config['dev_mode'],
@@ -710,8 +716,10 @@ class IrQWeb(models.AbstractModel):
         # Reference to the last node being compiled. It is mainly used for debugging and displaying error messages.
         compile_context['_qweb_error_path_xml'] = None
 
-        if not compile_context.get('nsmap'):
-            compile_context['nsmap'] = {}
+        compile_context['nsmap'] = {
+            ns_prefix: str(ns_definition)
+            for ns_prefix, ns_definition in compile_context.get('nsmap', {}).items()
+        }
 
         # The options dictionary includes cache key elements and template
         # references. It will be attached to the generated function. This
@@ -1315,7 +1323,7 @@ class IrQWeb(models.AbstractModel):
 
         if unqualified_el_tag != 't':
             el.set('t-tag-open', el_tag)
-            if unqualified_el_tag not in VOID_ELEMENTS:
+            if el_tag not in VOID_ELEMENTS:
                 el.set('t-tag-close', el_tag)
 
         if not ({'t-out', 't-esc', 't-raw', 't-field'} & set(el.attrib)):
@@ -1369,7 +1377,7 @@ class IrQWeb(models.AbstractModel):
             attributes = ''.join(f' {name}="{escape(str(value))}"'
                                 for name, value in attrib.items() if value or isinstance(value, str))
             self._append_text(f'<{el_tag}{"".join(attributes)}', compile_context)
-            if unqualified_el_tag in VOID_ELEMENTS:
+            if el_tag in VOID_ELEMENTS:
                 self._append_text('/>', compile_context)
             else:
                 self._append_text('>', compile_context)
@@ -1384,7 +1392,7 @@ class IrQWeb(models.AbstractModel):
             body = self._compile_directive(el, compile_context, 'inner-content', level)
 
         if unqualified_el_tag != 't':
-            if unqualified_el_tag not in VOID_ELEMENTS:
+            if el_tag not in VOID_ELEMENTS:
                 self._append_text(f'</{el_tag}>', compile_context)
 
         return body

@@ -115,15 +115,28 @@ export class PaymentStripe extends PaymentInterface {
         );
     }
 
-    _getInteracTransactionId(processPayment) {
-        const intentCharge = processPayment.paymentIntent.charges.data[0];
-        const processPaymentDetails = intentCharge.payment_method_details;
-
-        if (processPaymentDetails.type === 'interac_present') {
-            return intentCharge.id;
+    _getCapturedCardAndTransactionId(processPayment) {
+        const charges = processPayment.paymentIntent.charges;
+        if (!charges) {
+            return [false, false];
         }
 
-        return false;
+        const intentCharge = charges.data[0];
+        const processPaymentDetails = intentCharge.payment_method_details;
+
+        if (processPaymentDetails.type === "interac_present") {
+            // Canadian interac payments should not be captured:
+            // https://stripe.com/docs/terminal/payments/regional?integration-country=CA#create-a-paymentintent
+            return ['interac', intentCharge.id];
+        }
+        const cardPresentBrand = this.getCardBrandFromPaymentMethodDetails(processPaymentDetails);
+        if (cardPresentBrand.includes("eftpos")) {
+            // Australian eftpos should not be captured:
+            // https://stripe.com/docs/terminal/payments/regional?integration-country=AU
+            return [cardPresentBrand, intentCharge.id];
+        }
+
+        return [false, false];
     }
 
     async collectPayment(amount) {
@@ -152,12 +165,10 @@ export class PaymentStripe extends PaymentInterface {
             } else if (processPayment.paymentIntent) {
                 line.set_payment_status("waitingCapture");
 
-                const interacTransactionId = this._getInteracTransactionId(processPayment);
-                if (interacTransactionId) {
-                    // Canadian interac payments should not be captured:
-                    // https://stripe.com/docs/terminal/payments/regional?integration-country=CA#create-a-paymentintent
-                    line.card_type = "interac";
-                    line.transaction_id = interacTransactionId;
+                const [captured_card_type, captured_transaction_id] = this._getCapturedCardAndTransactionId(processPayment);
+                if (captured_card_type && captured_transaction_id) {
+                    line.card_type = captured_card_type;
+                    line.transaction_id = captured_transaction_id;
                 } else {
                     await this.captureAfterPayment(processPayment, line);
                 }
@@ -183,11 +194,20 @@ export class PaymentStripe extends PaymentInterface {
         }
     }
 
+    getCardBrandFromPaymentMethodDetails(paymentMethodDetails) {
+        // Both `card_present` and `interac_present` are "nullable" so we need to check for their existence, see:
+        // https://docs.stripe.com/api/charges/object#charge_object-payment_method_details-card_present
+        // https://docs.stripe.com/api/charges/object#charge_object-payment_method_details-interac_present
+        // In Canada `card_present` might not be present, but `interac_present` will be 
+        return paymentMethodDetails?.card_present?.brand || paymentMethodDetails?.interac_present?.brand || "";
+    }
+
     async captureAfterPayment(processPayment, line) {
         const capturePayment = await this.capturePayment(processPayment.paymentIntent.id);
         if (capturePayment.charges) {
-            line.card_type =
-                capturePayment.charges.data[0].payment_method_details.card_present.brand;
+            line.card_type = this.getCardBrandFromPaymentMethodDetails(
+                capturePayment.charges.data[0].payment_method_details
+            );
         }
         line.transaction_id = capturePayment.id;
     }

@@ -34,13 +34,22 @@ class StockPicking(models.Model):
 
     @api.depends('move_line_ids', 'move_line_ids.result_package_id')
     def _compute_packages(self):
-        for package in self:
+        counts = dict(self.env['stock.move.line']._read_group(
+           domain=[
+              ('picking_id', 'in', self.ids),
+              ('result_package_id', '!=', False)],
+              groupby=['picking_id'],
+              aggregates=['__count'],
+        ))
+        self.fetch(['move_line_ids'])
+        self.move_line_ids.fetch(['result_package_id'])
+        for picking in self:
             packs = set()
-            if self.env['stock.move.line'].search_count([('picking_id', '=', package.id), ('result_package_id', '!=', False)]):
-                for move_line in package.move_line_ids:
+            if counts.get(picking, 0):
+                for move_line in picking.move_line_ids:
                     if move_line.result_package_id:
                         packs.add(move_line.result_package_id.id)
-            package.package_ids = list(packs)
+            picking.package_ids = list(packs)
 
     @api.depends('move_line_ids', 'move_line_ids.result_package_id', 'move_line_ids.product_uom_id', 'move_line_ids.quantity')
     def _compute_bulk_weight(self):
@@ -63,7 +72,10 @@ class StockPicking(models.Model):
     def _compute_shipping_weight(self):
         for picking in self:
             # if shipping weight is not assigned => default to calculated product weight
-            picking.shipping_weight = picking.weight_bulk + sum([pack.shipping_weight or pack.weight for pack in picking.package_ids])
+            picking.shipping_weight = (
+                picking.weight_bulk +
+                sum(pack.shipping_weight or pack.weight for pack in picking.package_ids.sudo())
+            )
 
     def _get_default_weight_uom(self):
         return self.env['product.template']._get_weight_uom_name_from_ir_config_parameter()
@@ -114,7 +126,7 @@ class StockPicking(models.Model):
         except (ValueError, TypeError):
             return False
 
-    @api.depends('move_ids')
+    @api.depends('move_ids.weight')
     def _cal_weight(self):
         for picking in self:
             picking.weight = sum(move.weight for move in picking.move_ids if move.state != 'cancel')
@@ -129,12 +141,15 @@ class StockPicking(models.Model):
     def _pre_put_in_pack_hook(self, move_line_ids):
         res = super(StockPicking, self)._pre_put_in_pack_hook(move_line_ids)
         if not res:
-            if self.carrier_id:
-                return self._set_delivery_package_type()
+            if move_line_ids.carrier_id:
+                if len(move_line_ids.carrier_id) > 1 or any(not ml.carrier_id for ml in move_line_ids):
+                    # avoid (duplicate) costs for products
+                    raise UserError(_("You cannot pack products into the same package when they have different carriers (i.e. check that all of their transfers have a carrier assigned and are using the same carrier)."))
+                return self._set_delivery_package_type(batch_pack=len(move_line_ids.picking_id) > 1)
         else:
             return res
 
-    def _set_delivery_package_type(self):
+    def _set_delivery_package_type(self, batch_pack=False):
         """ This method returns an action allowing to set the package type and the shipping weight
         on the stock.quant.package.
         """
@@ -143,7 +158,8 @@ class StockPicking(models.Model):
         context = dict(
             self.env.context,
             current_package_carrier_type=self.carrier_id.delivery_type,
-            default_picking_id=self.id
+            default_picking_id=self.id,
+            batch_pack=batch_pack,
         )
         # As we pass the `delivery_type` ('fixed' or 'base_on_rule' by default) in a key who
         # correspond to the `package_carrier_type` ('none' to default), we make a conversion.
@@ -151,6 +167,10 @@ class StockPicking(models.Model):
         #`package_carrier_type` will be the same in these cases.
         if context['current_package_carrier_type'] in ['fixed', 'base_on_rule']:
             context['current_package_carrier_type'] = 'none'
+        # Update the context 'default_package_type_id' passed from JS
+        # to populate the scanned package type in the package wizard opened from the barcode.
+        if self.env.context.get('default_package_type_id'):
+            context['default_delivery_package_type_id'] = self.env.context.get('default_package_type_id')
         return {
             'name': _('Package Details'),
             'type': 'ir.actions.act_window',
@@ -169,7 +189,7 @@ class StockPicking(models.Model):
             amount_without_delivery = self.sale_id._compute_amount_total_without_delivery()
             if self.carrier_id._compute_currency(self.sale_id, amount_without_delivery, 'pricelist_to_company') >= self.carrier_id.amount:
                 res['exact_price'] = 0.0
-        self.carrier_price = res['exact_price'] * (1.0 + (self.carrier_id.margin / 100.0))
+        self.carrier_price = self.carrier_id._apply_margins(res['exact_price'])
         if res['tracking_number']:
             related_pickings = self.env['stock.picking'] if self.carrier_tracking_ref and res['tracking_number'] in self.carrier_tracking_ref else self
             accessed_moves = previous_moves = self.move_ids.move_orig_ids
@@ -177,10 +197,11 @@ class StockPicking(models.Model):
                 related_pickings |= previous_moves.picking_id
                 previous_moves = previous_moves.move_orig_ids - accessed_moves
                 accessed_moves |= previous_moves
-            next_moves = self.move_ids.move_dest_ids
+            accessed_moves = next_moves = self.move_ids.move_dest_ids
             while next_moves:
                 related_pickings |= next_moves.picking_id
-                next_moves = next_moves.move_dest_ids
+                next_moves = next_moves.move_dest_ids - accessed_moves
+                accessed_moves |= next_moves
             without_tracking = related_pickings.filtered(lambda p: not p.carrier_tracking_ref)
             without_tracking.carrier_tracking_ref = res['tracking_number']
             for p in related_pickings - without_tracking:

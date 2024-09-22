@@ -24,6 +24,7 @@ export class LinkTools extends Link {
         onPreApplyLink: { type: Function, optional: true },
         onPostApplyLink: { type: Function, optional: true },
         onDestroy: { type: Function, optional: true },
+        getColorpickerTemplate: { type: Function, optional: true },
     };
     static defaultProps = {
         ...Link.defaultProps,
@@ -51,10 +52,12 @@ export class LinkTools extends Link {
 
     setup() {
         super.setup(...arguments);
-        onWillUpdateProps((newProps) => {
+        onWillUpdateProps(async (newProps) => {
+            await this.mountedPromise;
             this.$link = newProps.link ? $(newProps.link) : this.link;
             this._setSelectOptionFromLink();
             this._updateOptionsUI();
+            this._updateLabelInput();
         });
         onMounted(() => {
             this._observer = new MutationObserver(records => {
@@ -413,7 +416,8 @@ export class LinkTools extends Link {
      */
     _updateLabelInput() {
         if (this.$el) {
-            this.$el[0].querySelector('#o_link_dialog_label_input').value = this.linkEl.innerText;
+            this.$el[0].querySelector('#o_link_dialog_label_input').value =
+                weUtils.getLinkLabel(this.linkEl);
         }
     }
 
@@ -517,7 +521,7 @@ export class LinkTools extends Link {
             return;
         }
         const protocolLessPrevUrl = previousUrl.replace(/^https?:\/\/|^mailto:/i, '');
-        const content = this.linkEl.innerText.trim().replaceAll('\u200B', '');
+        const content = weUtils.getLinkLabel(this.linkEl);
         if (content === previousUrl || content === protocolLessPrevUrl) {
             const newUrl = this.linkComponentWrapperRef.el.querySelector('input[name="url"]').value;
             const protocolLessNewUrl = newUrl.replace(/^https?:\/\/|^mailto:/i, '')

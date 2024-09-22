@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import base64
+import binascii
 from datetime import time
 import logging
 import re
@@ -15,6 +16,7 @@ from odoo import api, fields, models, _, _lt, tools
 from odoo.tools import posix_to_ldml, float_utils, format_date, format_duration, pycompat
 from odoo.tools.mail import safe_attrs
 from odoo.tools.misc import get_lang, babel_locale_parse
+from odoo.tools.mimetypes import guess_mimetype
 
 _logger = logging.getLogger(__name__)
 
@@ -389,16 +391,28 @@ class ImageConverter(models.AbstractModel):
     _inherit = 'ir.qweb.field'
 
     @api.model
-    def value_to_html(self, value, options):
-        try: # FIXME: maaaaaybe it could also take raw bytes?
-            image = Image.open(BytesIO(base64.b64decode(value)))
+    def _get_src_data_b64(self, value, options):
+        try:
+            img_b64 = base64.b64decode(value)
+        except binascii.Error:
+            raise ValueError("Invalid image content") from None
+
+        if img_b64 and guess_mimetype(img_b64, '') == 'image/webp':
+            return self.env["ir.qweb"]._get_converted_image_data_uri(value)
+
+        try:
+            image = Image.open(BytesIO(img_b64))
             image.verify()
         except IOError:
-            raise ValueError("Non-image binary fields can not be converted to HTML")
+            raise ValueError("Non-image binary fields can not be converted to HTML") from None
         except: # image.verify() throws "suitable exceptions", I have no idea what they are
-            raise ValueError("Invalid image content")
+            raise ValueError("Invalid image content") from None
 
-        return Markup('<img src="data:%s;base64,%s">' % (Image.MIME[image.format], value.decode('ascii')))
+        return "data:%s;base64,%s" % (Image.MIME[image.format], value.decode('ascii'))
+
+    @api.model
+    def value_to_html(self, value, options):
+        return Markup('<img src="%s">') % self._get_src_data_b64(value, options)
 
 class ImageUrlConverter(models.AbstractModel):
     """ ``image_url`` widget rendering, inserts an image tag in the
@@ -635,13 +649,26 @@ class DurationConverter(models.AbstractModel):
             v, r = divmod(r, secs_per_unit)
             if not v:
                 continue
-            section = babel.dates.format_timedelta(
-                v*secs_per_unit,
-                granularity=round_to,
-                add_direction=options.get('add_direction'),
-                format=options.get('format', 'long'),
-                threshold=1,
-                locale=locale)
+            try:
+                section = babel.dates.format_timedelta(
+                    v*secs_per_unit,
+                    granularity=round_to,
+                    add_direction=options.get('add_direction'),
+                    format=options.get('format', 'long'),
+                    threshold=1,
+                    locale=locale)
+            except KeyError:
+                # in case of wrong implementation of babel, try to fallback on en_US locale.
+                # https://github.com/python-babel/babel/pull/827/files
+                # Some bugs already fixed in 2.10 but ubuntu22 is 2.8
+                localeUS = babel_locale_parse('en_US')
+                section = babel.dates.format_timedelta(
+                    v*secs_per_unit,
+                    granularity=round_to,
+                    add_direction=options.get('add_direction'),
+                    format=options.get('format', 'long'),
+                    threshold=1,
+                    locale=localeUS)
             if section:
                 sections.append(section)
 
@@ -777,15 +804,16 @@ class Contact(models.AbstractModel):
             opsep = Markup('<br/>')
 
         value = value.sudo().with_context(show_address=True)
+        display_name = value.display_name or ''
         # Avoid having something like:
         # display_name = 'Foo\n  \n' -> This is a res.partner with a name and no address
         # That would return markup('<br/>') as address. But there is no address set.
-        if any(elem.strip() for elem in value.display_name.split("\n")[1:]):
-            address = opsep.join(value.display_name.split("\n")[1:]).strip()
+        if any(elem.strip() for elem in display_name.split("\n")[1:]):
+            address = opsep.join(display_name.split("\n")[1:]).strip()
         else:
             address = ''
         val = {
-            'name': value.display_name.split("\n")[0],
+            'name': display_name.split("\n")[0],
             'address': address,
             'phone': value.phone,
             'mobile': value.mobile,
@@ -809,7 +837,7 @@ class QwebView(models.AbstractModel):
 
     @api.model
     def record_to_html(self, record, field_name, options):
-        view = getattr(record, field_name)
+        view = record[field_name]
         if not view:
             return ''
 

@@ -21,12 +21,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.oi-close:before {
-  content: '\00d7';
-  font-family: sans-serif;
-  font-weight: bold;
-}
-
 .oi-view-pivot:before { content: '\e800'; }
 .oi-text-break:before { content: '\e801'; }
 .oi-text-inline:before { content: '\e802'; }
@@ -64,3 +58,18 @@
 .oi-unarchive:before { content: '\e863'; }
 .oi-text-effect:before { content: '\e827'; }
 .oi-smile-add:before { content: '\e84e'; }
+.oi-close:before { content: '\e852'; }
+
+/* RTL adaptations. */
+/* Flip directional icons by 180 degree. */
+/* ---------------------------------------------------------------------------- */
+.o_rtl .oi-chevron-left,
+.o_rtl .oi-chevron-right,
+.o_rtl .oi-arrow-down-left,
+.o_rtl .oi-arrow-down-right,
+.o_rtl .oi-arrow-left,
+.o_rtl .oi-arrow-right,
+.o_rtl .oi-arrow-up-left,
+.o_rtl .oi-arrow-up-right {
+  transform: rotate(180deg);
+}

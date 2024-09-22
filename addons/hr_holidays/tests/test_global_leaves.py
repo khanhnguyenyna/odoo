@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from odoo.addons.hr_holidays.tests.common import TestHrHolidaysCommon
 from odoo.exceptions import ValidationError
 from freezegun import freeze_time
@@ -111,7 +111,7 @@ class TestGlobalLeaves(TestHrHolidaysCommon):
         """
         calendar_asia = self.env['resource.calendar'].create({
             'name': 'Asia calendar',
-            'tz': 'Asia/Calcutta', # UTC +05:30
+            'tz': 'Asia/Kolkata', # UTC +05:30
             'hours_per_day': 8.0,
             'attendance_ids': []
         })
@@ -124,9 +124,54 @@ class TestGlobalLeaves(TestHrHolidaysCommon):
         })
         # Expectation:
         # 6:00:00 in UTC (data from the browser) --> 8:00:00 for Europe/Brussel (UTC +02:00)
-        # 8:00:00 for Asia/Calcutta (UTC +05:30) --> 2:30:00 in UTC
+        # 8:00:00 for Asia/Kolkata (UTC +05:30) --> 2:30:00 in UTC
         self.assertEqual(global_leave.date_from, datetime(2023, 5, 15, 2, 30))
         self.assertEqual(global_leave.date_to, datetime(2023, 5, 15, 11, 30))
         # Note:
         # The user in Europe/Brussels timezone see 4:30 and not 2:30 because he is in UTC +02:00.
-        # The user in Asia/Calcutta timezone (determined via the browser) see 8:00 because he is in UTC +05:30
+        # The user in Asia/Kolkata timezone (determined via the browser) see 8:00 because he is in UTC +05:30
+
+    def test_global_leave_number_of_days_with_new(self):
+        """
+            Check that leaves stored in memory (and not in the database)
+            take into account global leaves.
+        """
+        global_leave = self.env['resource.calendar.leaves'].create({
+            'name': 'Global Time Off',
+            'date_from': datetime(2024, 1, 3, 6, 0, 0),
+            'date_to': datetime(2024, 1, 3, 19, 0, 0),
+            'calendar_id': self.calendar_1.id,
+        })
+        leave_type = self.env['hr.leave.type'].create({
+            'name': 'Paid Time Off',
+            'time_type': 'leave',
+            'requires_allocation': 'no',
+        })
+        self.employee_emp.resource_calendar_id = self.calendar_1.id
+
+        leave = self.env['hr.leave'].create({
+            'name': 'Test new leave',
+            'employee_id': self.employee_emp.id,
+            'holiday_status_id': leave_type.id,
+            'request_date_from': global_leave.date_from,
+            'request_date_to': global_leave.date_to,
+        })
+        self.assertEqual(leave.number_of_days, 0, 'It is a global leave')
+
+        leave = self.env['hr.leave'].new({
+            'name': 'Test new leave',
+            'employee_id': self.employee_emp.id,
+            'holiday_status_id': leave_type.id,
+            'request_date_from': global_leave.date_from,
+            'request_date_to': global_leave.date_to,
+        })
+        self.assertEqual(leave.number_of_days, 0, 'It is a global leave')
+
+        leave = self.env['hr.leave'].new({
+            'name': 'Test new leave',
+            'employee_id': self.employee_emp.id,
+            'holiday_status_id': leave_type.id,
+            'request_date_from': global_leave.date_from - timedelta(days=1),
+            'request_date_to': global_leave.date_to + timedelta(days=1),
+        })
+        self.assertEqual(leave.number_of_days, 2, 'There is a global leave')

@@ -9,6 +9,7 @@
     import { _t } from "@web/core/l10n/translation";
     import { renderToElement } from "@web/core/utils/render";
     import { post } from "@web/core/network/http_service";
+    import { localization } from "@web/core/l10n/localization";
 import {
     formatDate,
     formatDateTime,
@@ -18,6 +19,7 @@ import {
     serializeDateTime,
 } from "@web/core/l10n/dates";
 const { DateTime } = luxon;
+import wUtils from '@website/js/utils';
 
     publicWidget.registry.EditModeWebsiteForm = publicWidget.Widget.extend({
         selector: '.s_website_form form, form.s_website_form', // !compatibility
@@ -47,6 +49,7 @@ const { DateTime } = luxon;
         selector: '.s_website_form form, form.s_website_form', // !compatibility
         events: {
             'click .s_website_form_send, .o_website_form_send': 'send', // !compatibility
+            'submit': 'send',
             "change input[type=file]": "_onFileChange",
             "click input.o_add_files_button": "_onAddFilesButtonClick",
             "click .o_file_delete": "_onFileDeleteClick",
@@ -110,6 +113,7 @@ const { DateTime } = luxon;
                 const defaultValue = input.getAttribute("value");
                 this.call("datetime_picker", "create", {
                     target: input,
+                    onChange: () => input.dispatchEvent(new Event("input", { bubbles: true })),
                     pickerProps: {
                         type: field.matches('.s_website_form_date, .o_website_form_date') ? 'date' : 'datetime',
                         value: defaultValue && DateTime.fromSeconds(parseInt(defaultValue)),
@@ -123,26 +127,17 @@ const { DateTime } = luxon;
             // Because, using t-att- inside form make it non-editable
             // Data-fill-with attribute is given during registry and is used by
             // to know which user data should be used to prfill fields.
-            const dataForEl = document.querySelector(`[data-for='${this.el.id}']`);
+            let dataForValues = wUtils.getParsedDataFor(this.el.id, document);
             this.editTranslations = !!this._getContext(true).edit_translations;
             // On the "edit_translations" mode, a <span/> with a translated term
             // will replace the attribute value, leading to some inconsistencies
             // (setting again the <span> on the attributes after the editor's
             // cleanup, setting wrong values on the attributes after translating
             // default values...)
-            if (!this.editTranslations && (dataForEl || Object.keys(this.preFillValues).length)) {
-                const dataForValues = dataForEl ?
-                    JSON.parse(dataForEl.dataset.values
-                        // replaces `True` by `true` if they are after `,` or `:` or `[`
-                        .replace(/([,:\[]\s*)True/g, '$1true')
-                        // replaces `False` and `None` by `""` if they are after `,` or `:` or `[`
-                        .replace(/([,:\[]\s*)(False|None)/g, '$1""')
-                        // replaces the `'` by `"` if they are before `,` or `:` or `]` or `}`
-                        .replace(/'(\s*[,:\]}])/g, '"$1')
-                        // replaces the `'` by `"` if they are after `{` or `[` or `,` or `:`
-                        .replace(/([{\[:,]\s*)'/g, '$1"')
-                    ) : {};
-                const fieldNames = this.$el.serializeArray().map(el => el.name);
+            if (!this.editTranslations
+                    && (dataForValues || Object.keys(this.preFillValues).length)) {
+                dataForValues = dataForValues || {};
+                const fieldNames = this.$target.serializeArray().map(el => el.name);
                 // All types of inputs do not have a value property (eg:hidden),
                 // for these inputs any function that is supposed to put a value
                 // property actually puts a HTML value attribute. Because of
@@ -151,7 +146,7 @@ const { DateTime } = luxon;
                 // the values to submit() for these fields but this could break
                 // customizations that use the current behavior as a feature.
                 for (const name of fieldNames) {
-                    const fieldEl = this.el.querySelector(`[name="${name}"]`);
+                    const fieldEl = this.el.querySelector(`[name="${CSS.escape(name)}"]`);
 
                     // In general, we want the data-for and prefill values to
                     // take priority over set default values. The 'email_to'
@@ -680,8 +675,16 @@ const { DateTime } = luxon;
                 case '!fileSet':
                     return value.name === '';
             }
+
+            const format = value.includes(':')
+                ? localization.dateTimeFormat
+                : localization.dateFormat;
             // Date & Date Time comparison requires formatting the value
-            value = (value.includes(':') ? parseDateTime(value) : parseDate(value)).toUnixInteger();
+            const dateTime = DateTime.fromFormat(value, format);
+            // If invalid, any value other than "NaN" would cause certain
+            // conditions to be broken.
+            value = dateTime.isValid ? dateTime.toUnixInteger() : NaN;
+
             comparable = parseInt(comparable);
             between = parseInt(between) || '';
             switch (comparator) {

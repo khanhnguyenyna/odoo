@@ -175,7 +175,7 @@ class TestAccountAccount(AccountTestInvoicingCommon):
         self.assertEqual(account.name, "Existing Account")
 
     def test_compute_account_type(self):
-        existing_account = self.env['account.account'].search([], limit=1)
+        existing_account = self.company_data['default_account_revenue']
         # account_type should be computed
         new_account_code = self.env['account.account']._search_new_account_code(
             company=existing_account.company_id,
@@ -380,3 +380,108 @@ class TestAccountAccount(AccountTestInvoicingCommon):
             move_type="out_invoice"
         )
         self.assertFalse(account.id in results_2, "Deprecated account should NOT appear in account suggestions")
+
+    @freeze_time('2017-01-01')
+    def test_account_opening_balance(self):
+        company = self.env.company
+        account = self.company_data['default_account_revenue']
+        balancing_account = company.get_unaffected_earnings_account()
+
+        self.assertFalse(company.account_opening_move_id)
+
+        account.opening_debit = 300
+        self.cr.precommit.run()
+        self.assertRecordValues(company.account_opening_move_id.line_ids.sorted(), [
+            # pylint: disable=bad-whitespace
+            {'account_id': account.id,              'balance': 300.0},
+            {'account_id': balancing_account.id,    'balance': -300.0},
+        ])
+
+        account.opening_credit = 500
+        self.cr.precommit.run()
+        self.assertRecordValues(company.account_opening_move_id.line_ids.sorted(), [
+            # pylint: disable=bad-whitespace
+            {'account_id': account.id,              'balance': 300.0},
+            {'account_id': account.id,              'balance': -500.0},
+            {'account_id': balancing_account.id,    'balance': 200.0},
+        ])
+
+        account.opening_balance = 0
+        self.cr.precommit.run()
+        self.assertFalse(company.account_opening_move_id.line_ids)
+
+        account.currency_id = self.currency_data['currency']
+        account.opening_debit = 100
+        self.cr.precommit.run()
+        self.assertRecordValues(company.account_opening_move_id.line_ids.sorted(), [
+            # pylint: disable=bad-whitespace
+            {'account_id': account.id,              'balance': 100.0,   'amount_currency': 200.0},
+            {'account_id': balancing_account.id,    'balance': -100.0,  'amount_currency': -100.0},
+        ])
+
+        company.account_opening_move_id.write({'line_ids': [
+            Command.create({
+                'account_id': account.id,
+                'balance': 100.0,
+                'amount_currency': 200.0,
+                'currency_id': account.currency_id.id,
+            }),
+            Command.create({
+                'account_id': balancing_account.id,
+                'balance': -100.0,
+            }),
+        ]})
+        self.assertRecordValues(company.account_opening_move_id.line_ids.sorted(), [
+            # pylint: disable=bad-whitespace
+            {'account_id': account.id,              'balance': 100.0,   'amount_currency': 200.0},
+            {'account_id': balancing_account.id,    'balance': -100.0,  'amount_currency': -100.0},
+            {'account_id': account.id,              'balance': 100.0,   'amount_currency': 200.0},
+            {'account_id': balancing_account.id,    'balance': -100.0,  'amount_currency': -100.0},
+        ])
+
+        account.opening_credit = 1000
+        self.cr.precommit.run()
+        self.assertRecordValues(company.account_opening_move_id.line_ids.sorted(), [
+            # pylint: disable=bad-whitespace
+            {'account_id': account.id,              'balance': 100.0,   'amount_currency': 200.0},
+            {'account_id': account.id,              'balance': 100.0,   'amount_currency': 200.0},
+            {'account_id': account.id,              'balance': -1000.0, 'amount_currency': -2000.0},
+            {'account_id': balancing_account.id,    'balance': 800.0,   'amount_currency': 800.0},
+        ])
+
+        account.opening_debit = 1000
+        self.cr.precommit.run()
+        self.assertRecordValues(company.account_opening_move_id.line_ids.sorted(), [
+            # pylint: disable=bad-whitespace
+            {'account_id': account.id,              'balance': 1000.0,  'amount_currency': 2000.0},
+            {'account_id': account.id,              'balance': -1000.0, 'amount_currency': -2000.0},
+        ])
+
+    def test_account_group_hierarchy_consistency(self):
+        """ Test if the hierarchy of account groups is consistent when creating, deleting and recreating an account group """
+        def create_account_group(name, code_prefix, company):
+            return self.env['account.group'].create({
+                'name': name,
+                'code_prefix_start': code_prefix,
+                'code_prefix_end': code_prefix,
+                'company_id': company.id
+            })
+
+        group_1 = create_account_group('group_1', 1, self.env.company)
+        group_10 = create_account_group('group_10', 10, self.env.company)
+        group_100 = create_account_group('group_100', 100, self.env.company)
+        group_101 = create_account_group('group_101', 101, self.env.company)
+
+        self.assertEqual(len(group_1.parent_id), 0)
+        self.assertEqual(group_10.parent_id, group_1)
+        self.assertEqual(group_100.parent_id, group_10)
+        self.assertEqual(group_101.parent_id, group_10)
+
+        # Delete group_101 and recreate it
+        group_101.unlink()
+        group_101 = create_account_group('group_101', 101, self.env.company)
+
+        self.assertEqual(len(group_1.parent_id), 0)
+        self.assertEqual(group_10.parent_id, group_1)
+        self.assertEqual(group_100.parent_id, group_10)
+        self.assertEqual(group_101.parent_id, group_10)

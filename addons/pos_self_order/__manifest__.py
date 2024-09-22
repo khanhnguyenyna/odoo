@@ -35,6 +35,8 @@
         "pos_self_order.assets": [
             "pos_self_order/static/src/app/primary_variables.scss",
             "pos_self_order/static/src/app/bootstrap_overridden.scss",
+            "pos_self_order/static/scss/pos_self_order.scss",
+            "point_of_sale/static/src/css/pos_receipts.css",
             ("include", "web._assets_helpers"),
             ("include", "web._assets_backend_helpers"),
             ("include", "web._assets_primary_variables"),
@@ -55,6 +57,7 @@
             'bus/static/src/bus_parameters_service.js',
             'bus/static/src/multi_tab_service.js',
             'bus/static/src/workers/*',
+            'barcodes/static/src/barcode_service.js',
             'web/static/lib/bootstrap/js/dist/dom/data.js',
             'web/static/lib/bootstrap/js/dist/dom/event-handler.js',
             'web/static/lib/bootstrap/js/dist/dom/manipulator.js',
@@ -72,9 +75,12 @@
             "pos_self_order/static/src/overrides/components/receipt_header/*",
             "point_of_sale/static/src/app/printer/base_printer.js",
             "point_of_sale/static/src/app/printer/printer_service.js",
-            'web_editor/static/lib/html2canvas.js',
+            'point_of_sale/static/src/app/utils/html-to-image.js',
             "point_of_sale/static/src/app/printer/render_service.js",
             "pos_self_order/static/src/app/**/*",
+            "point_of_sale/static/src/app/printer/hw_printer.js",
+            "web/static/src/core/utils/render.js",
+            "pos_self_order/static/src/app/store/order_change_receipt_template.xml",
         ],
         # Assets tests
         "pos_self_order.assets_tests": [

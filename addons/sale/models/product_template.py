@@ -118,3 +118,37 @@ class ProductTemplate(models.Model):
                     'template': '/product/static/xls/product_template.xls'
                 }]
         return res
+
+    @api.model
+    def _get_incompatible_types(self):
+        return []
+
+    @api.constrains(lambda self: self._get_incompatible_types())
+    def _check_incompatible_types(self):
+        incompatible_types = self._get_incompatible_types()
+        if len(incompatible_types) < 2:
+            return
+        fields = self.env['ir.model.fields'].sudo().search_read(
+            [('model', '=', 'product.template'), ('name', 'in', incompatible_types)],
+            ['name', 'field_description'])
+        field_descriptions = {v['name']: v['field_description'] for v in fields}
+        field_list = incompatible_types + ['name']
+        values = self.read(field_list)
+        for val in values:
+            incompatible_fields = [f for f in incompatible_types if val[f]]
+            if len(incompatible_fields) > 1:
+                raise ValidationError(_(
+                    "The product (%s) has incompatible values: %s",
+                    val['name'],
+                    ','.join(field_descriptions[v] for v in incompatible_fields),
+                ))
+
+    def get_single_product_variant(self):
+        res = super().get_single_product_variant()
+        if self.sale_line_warn != 'no-message':
+            res['sale_warning'] = {
+                'type': self.sale_line_warn,
+                'title': _("Warning for %s", self.name),
+                'message': self.sale_line_warn_msg,
+            }
+        return res

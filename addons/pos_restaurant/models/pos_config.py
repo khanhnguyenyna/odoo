@@ -11,7 +11,7 @@ class PosConfig(models.Model):
 
     iface_splitbill = fields.Boolean(string='Bill Splitting', help='Enables Bill Splitting in the Point of Sale.')
     iface_printbill = fields.Boolean(string='Bill Printing', help='Allows to print the Bill before payment.')
-    iface_orderline_notes = fields.Boolean(string='Internal Notes', help='Allow custom Internal notes on Orderlines.', default=True)
+    iface_orderline_notes = fields.Boolean(string='Internal Notes', help='Allow custom Internal notes on Orderlines.')
     floor_ids = fields.Many2many('restaurant.floor', string='Restaurant Floors', help='The restaurant floors served by this point of sale.')
     set_tip_after_payment = fields.Boolean('Set Tip After Payment', help="Adjust the amount authorized by payment terminals to add a tip after the customers left or at the end of the day.")
     module_pos_restaurant = fields.Boolean(default=True)
@@ -19,7 +19,8 @@ class PosConfig(models.Model):
 
     def get_tables_order_count_and_printing_changes(self):
         self.ensure_one()
-        tables = self.env['restaurant.table'].search([('floor_id.pos_config_ids', '=', self.id)])
+        floors = self.env['restaurant.floor'].search([('pos_config_ids', '=', self.id)])
+        tables = self.env['restaurant.table'].search([('floor_id', 'in', floors.ids)])
         domain = [('state', '=', 'draft'), ('table_id', 'in', tables.ids)]
 
         order_stats = self.env['pos.order']._read_group(domain, ['table_id'], ['__count'])
@@ -59,15 +60,6 @@ class PosConfig(models.Model):
         forbidden_keys = super(PosConfig, self)._get_forbidden_change_fields()
         forbidden_keys.append('floor_ids')
         return forbidden_keys
-
-    def _set_tips_after_payment_if_country_custom(self):
-        self.ensure_one()
-        company = self.company_id or self.env.company or self.env['res.company']._get_main_company()
-        if company and company.country_id and company.country_id.code == 'US':
-            self.update({
-                'iface_tipproduct': True,
-                'set_tip_after_payment': True,
-            })
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -120,7 +112,7 @@ class PosConfig(models.Model):
 
     def setup_defaults(self, company):
         main_restaurant = self.env.ref('pos_restaurant.pos_config_main_restaurant', raise_if_not_found=False)
-        main_restaurant_is_present = main_restaurant and self.filtered(lambda cfg: cfg.id == main_restaurant.id)
+        main_restaurant_is_present = main_restaurant and not main_restaurant.has_active_session and self.filtered(lambda cfg: cfg.id == main_restaurant.id)
         if main_restaurant_is_present:
             non_main_restaurant_configs = self - main_restaurant
             non_main_restaurant_configs.assign_payment_journals(company)
@@ -132,9 +124,16 @@ class PosConfig(models.Model):
 
     def _setup_main_restaurant_defaults(self):
         self.ensure_one()
-        self._set_tips_after_payment_if_country_custom()
         self._link_same_non_cash_payment_methods_if_exists('point_of_sale.pos_config_main')
         self._ensure_cash_payment_method('MRCSH', _('Cash Restaurant'))
+        self._archive_shop()
+
+    def _archive_shop(self):
+        shop = self.env.ref('point_of_sale.pos_config_main', raise_if_not_found=False)
+        if shop:
+            session_count = self.env['pos.session'].search_count([('config_id', '=', shop.id)])
+            if session_count == 0:
+                shop.update({'active': False})
 
     def _setup_default_floor(self, pos_config):
         if not pos_config.floor_ids:

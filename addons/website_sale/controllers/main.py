@@ -177,6 +177,9 @@ class WebsiteSale(payment_portal.PaymentPortal):
         order = post.get('order') or request.env['website'].get_current_website().shop_default_sort
         return 'is_published desc, %s, id desc' % order
 
+    def _add_search_subdomains_hook(self, search):
+        return []
+
     def _get_shop_domain(self, search, category, attrib_values, search_in_description=True):
         domains = [request.website.sale_product_domain()]
         if search:
@@ -188,6 +191,9 @@ class WebsiteSale(payment_portal.PaymentPortal):
                 if search_in_description:
                     subdomains.append([('website_description', 'ilike', srch)])
                     subdomains.append([('description_sale', 'ilike', srch)])
+                extra_subdomain = self._add_search_subdomains_hook(srch)
+                if extra_subdomain:
+                    subdomains.append(extra_subdomain)
                 domains.append(expression.OR(subdomains))
 
         if category:
@@ -269,6 +275,10 @@ class WebsiteSale(payment_portal.PaymentPortal):
         """ Hook to update values used for rendering website_sale.products template """
         return {}
 
+    def _get_additional_extra_shop_values(self, values, **post):
+        """ Hook to update values used for rendering website_sale.products template """
+        return self._get_additional_shop_values(values)
+
     @http.route([
         '/shop',
         '/shop/page/<int:page>',
@@ -343,7 +353,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
 
         filter_by_price_enabled = website.is_view_active('website_sale.filter_products_price')
         if filter_by_price_enabled:
-            company_currency = website.company_id.currency_id
+            company_currency = website.company_id.sudo().currency_id
             conversion_rate = request.env['res.currency']._get_conversion_rate(
                 company_currency, website.currency_id, request.website.company_id, fields.Date.today())
         else:
@@ -398,18 +408,17 @@ class WebsiteSale(payment_portal.PaymentPortal):
                     max_price = max_price if max_price >= available_min_price else available_max_price
                     post['max_price'] = max_price
 
-        if filter_by_tags_enabled:
-            if (
-                search_product.product_tag_ids
-                or search_product.product_variant_ids.additional_product_tag_ids
-            ):
-                ProductTag = request.env['product.tag']
-                all_tags = ProductTag.search(
-                    [('product_ids.is_published', '=', True), ('visible_on_ecommerce', '=', True)]
-                    + website_domain
-                )
-            else:
-                all_tags = []
+        ProductTag = request.env['product.tag']
+        if filter_by_tags_enabled and search_product:
+            all_tags = ProductTag.search(
+                expression.AND([
+                    [('product_ids.is_published', '=', True), ('visible_on_ecommerce', '=', True)],
+                    website_domain
+                ])
+            )
+        else:
+            all_tags = ProductTag
+
         categs_domain = [('parent_id', '=', False)] + website_domain
         if search:
             search_categories = Category.search(
@@ -484,7 +493,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
             values.update({'all_tags': all_tags, 'tags': tags})
         if category:
             values['main_object'] = category
-        values.update(self._get_additional_shop_values(values))
+        values.update(self._get_additional_extra_shop_values(values, **post))
         return request.render("website_sale.products", values)
 
     @http.route(['/shop/<model("product.template"):product>'], type='http', auth="public", website=True, sitemap=True)
@@ -578,6 +587,20 @@ class WebsiteSale(payment_portal.PaymentPortal):
 
     @http.route(['/shop/product/resequence-image'], type='json', auth='user', website=True)
     def resequence_product_image(self, image_res_model, image_res_id, move):
+        """
+        Move the product image in the given direction and update all images' sequence.
+
+        :param str image_res_model: The model of the image. It can be 'product.template',
+                                    'product.product', or 'product.image'.
+        :param str image_res_id: The record ID of the image to move.
+        :param str move: The direction of the move. It can be 'first', 'left', 'right', or 'last'.
+        :raises NotFound: If the user does not have the required permissions, if the model of the
+                          image is not allowed, or if the move direction is not allowed.
+        :raise ValidationError: If the product is not found.
+        :raise ValidationError: If the image to move is not found in the product images.
+        :raise ValidationError: If a video is moved to the first position.
+        :return: None
+        """
         if (
             not request.env.user.has_group('website.group_website_restricted_editor')
             or image_res_model not in ['product.product', 'product.template', 'product.image']
@@ -587,8 +610,6 @@ class WebsiteSale(payment_portal.PaymentPortal):
 
         image_res_id = int(image_res_id)
         image_to_resequence = request.env[image_res_model].browse(image_res_id)
-        product = request.env['product.product']
-        product_template = request.env['product.template']
         if image_res_model == 'product.product':
             product = image_to_resequence
             product_template = product.product_tmpl_id
@@ -618,28 +639,34 @@ class WebsiteSale(payment_portal.PaymentPortal):
         # no-op resequences
         if new_image_idx == image_idx:
             return
-        # We can not move an embedded image to the first position (main product image)
-        if image_res_model == 'product.image' and image_to_resequence.video_url and product_images[new_image_idx]._name != 'product.image':
-            raise ValidationError(_("Can not resequence embedded image/video with a non compatible image."))
 
-        # Swap images
-        other_image = product_images[new_image_idx]
-        source_field = hasattr(image_to_resequence, 'video_url') and image_to_resequence.video_url and 'video_url' or 'image_1920'
-        target_field = hasattr(other_image, 'video_url') and other_image.video_url and 'video_url' or 'image_1920'
-        if target_field == 'video_url' and image_res_model == 'product.product':
-            raise ValidationError(_("Can not resequence a video at first position."))
-        previous_data = other_image[target_field]
-        other_image[source_field] = image_to_resequence[source_field]
-        image_to_resequence[target_field] = previous_data
-        if source_field == 'video_url' and target_field != 'video_url':
-            image_to_resequence.video_url = False
-        if target_field == 'video_url' and source_field != 'video_url':
-            other_image.video_url = False
+        # Reorder images locally.
+        product_images.insert(new_image_idx, product_images.pop(image_idx))
 
-        if hasattr(other_image, 'video_url'):
-            other_image._onchange_video_url()
-        if hasattr(image_to_resequence, 'video_url'):
-            image_to_resequence._onchange_video_url()
+        # If the main image has been reordered (i.e. it's no longer in first position), use the
+        # image that's now in first position as main image instead.
+        # Additional images are product.image records. The main image is a product.product or
+        # product.template record.
+        main_image_idx = next(
+            idx for idx, image in enumerate(product_images) if image._name != 'product.image'
+        )
+        if main_image_idx != 0:
+            main_image = product_images[main_image_idx]
+            additional_image = product_images[0]
+            if additional_image.video_url:
+                raise ValidationError(_("You can't use a video as the product's main image."))
+            # Swap records.
+            product_images[main_image_idx], product_images[0] = additional_image, main_image
+            # Swap image data.
+            main_image.image_1920, additional_image.image_1920 = (
+                additional_image.image_1920, main_image.image_1920
+            )
+            additional_image.name = main_image.name  # Update image name but not product name.
+
+        # Resequence additional images according to the new ordering.
+        for idx, product_image in enumerate(product_images):
+            if product_image._name == 'product.image':
+                product_image.sequence = idx
 
     @http.route(['/shop/product/is_add_to_cart_allowed'], type='json', auth="public", website=True)
     def is_add_to_cart_allowed(self, product_id, **kwargs):
@@ -759,15 +786,15 @@ class WebsiteSale(payment_portal.PaymentPortal):
         revive: Revival method when abandoned cart. Can be 'merge' or 'squash'
         """
         order = request.website.sale_get_order()
+        if order and order.state != 'draft':
+            request.session['sale_order_id'] = None
+            order = request.website.sale_get_order()
         if order and order.carrier_id:
             # Express checkout is based on the amout of the sale order. If there is already a
             # delivery line, Express Checkout form will display and compute the price of the
             # delivery two times (One already computed in the total amount of the SO and one added
             # in the form while selecting the delivery carrier)
             order._remove_delivery_line()
-        if order and order.state != 'draft':
-            request.session['sale_order_id'] = None
-            order = request.website.sale_get_order()
 
         request.session['website_sale_cart_quantity'] = order.cart_quantity
 
@@ -793,7 +820,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
             'suggested_products': [],
         })
         if order:
-            order.order_line.filtered(lambda l: not l.product_id.active).unlink()
+            order.order_line.filtered(lambda l: l.product_id and not l.product_id.active).unlink()
             values['suggested_products'] = order._cart_accessories()
             values.update(self._get_express_shop_payment_values(order))
 
@@ -948,7 +975,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
                 { # For the cart_notification
                     'id': line.id,
                     'image_url': order.website_id.image_url(line.product_id, 'image_128'),
-                    'quantity': line.product_uom_qty,
+                    'quantity': line._get_displayed_quantity(),
                     'name': line.name_short,
                     'description': line._get_sale_order_line_multiline_description_variants(),
                     'line_price_total': line.price_total if show_tax else line.price_subtotal,
@@ -1235,10 +1262,9 @@ class WebsiteSale(payment_portal.PaymentPortal):
                 else:
                     address_mode = kw.get('mode')
                     if not address_mode:
+                        address_mode = 'shipping'
                         if partner_id == order.partner_invoice_id.id:
                             address_mode = 'billing'
-                        elif partner_id == order.partner_shipping_id.id:
-                            address_mode = 'shipping'
 
                     # Make sure the address exists and belongs to the customer of the SO
                     partner_sudo = Partner.browse(partner_id).exists()
@@ -1250,7 +1276,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
                         billing_partners = partners_sudo.filtered(lambda p: p.type != 'delivery')
                         if partner_sudo not in billing_partners:
                             raise Forbidden()
-                    elif address_mode == 'shipping':
+                    else:
                         shipping_partners = partners_sudo.filtered(lambda p: p.type != 'invoice')
                         if partner_sudo not in shipping_partners:
                             raise Forbidden()
@@ -1327,7 +1353,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
 
                 # TDE FIXME: don't ever do this
                 # -> TDE: you are the guy that did what we should never do in commit e6f038a
-                order.message_partner_ids = [(4, partner_id), (3, request.website.partner_id.id)]
+                order.message_partner_ids = [(4, order.partner_id.id), (3, request.website.partner_id.id)]
                 if not errors:
                     return request.redirect(kw.get('callback') or '/shop/confirm_order')
 
@@ -1344,7 +1370,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
             'account_on_checkout': request.website.account_on_checkout,
             'is_public_user': is_public_user,
             'is_public_order': order._is_public_order(),
-            'use_same': is_public_user or ('use_same' in kw and str2bool(kw.get('use_same'))),
+            'use_same': is_public_user or ('use_same' in kw and str2bool(kw.get('use_same') or '0')),
         }
         render_values.update(self._get_country_related_render_values(kw, render_values))
         return request.render("website_sale.address", render_values)
@@ -1542,7 +1568,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
     @http.route(['/shop/checkout'], type='http', auth="public", website=True, sitemap=False)
     def checkout(self, **post):
         order_sudo = request.website.sale_get_order()
-
+        request.session['sale_last_order_id'] = order_sudo.id
         redirection = self.checkout_redirection(order_sudo)
         if redirection:
             return redirection
@@ -1596,6 +1622,9 @@ class WebsiteSale(payment_portal.PaymentPortal):
             and partner_sudo != order_sudo.partner_shipping_id
         ):
             order_sudo.partner_shipping_id = partner_id
+            if order_sudo.carrier_id:
+                # update carrier rates on shipping address change
+                order_sudo._check_carrier_quotation(force_carrier_id=order_sudo.carrier_id.id)
         else:
             # TODO someday we should gracefully handle invalid addresses
             return
@@ -1613,7 +1642,6 @@ class WebsiteSale(payment_portal.PaymentPortal):
             return redirection
 
         order.order_line._compute_tax_id()
-        request.session['sale_last_order_id'] = order.id
         request.website.sale_get_order(update_pricelist=True)
         extra_step = request.website.viewref('website_sale.extra_info')
         if extra_step.active:
@@ -1667,20 +1695,17 @@ class WebsiteSale(payment_portal.PaymentPortal):
             'express_checkout_route': self._express_checkout_route,
             'landing_route': '/shop/payment/validate',
             'payment_method_unknown_id': request.env.ref('payment.payment_method_unknown').id,
+            'shipping_info_required': not order.only_services,
+            'shipping_address_update_route': self._express_checkout_shipping_route,
         })
         if request.website.is_public_user():
             payment_form_values['partner_id'] = -1
-        if request.website.enabled_delivery:
-            payment_form_values.update({
-                'shipping_info_required': not order.only_services,
-                'shipping_address_update_route': self._express_checkout_shipping_route,
-            })
         return payment_form_values
 
     def _get_shop_payment_values(self, order, **kwargs):
         checkout_page_values = {
             'website_sale_order': order,
-            'errors': [],
+            'errors': self._get_shop_payment_errors(order),
             'partner': order.partner_invoice_id,
             'order': order,
             'submit_button_label': _("Pay now"),
@@ -1703,13 +1728,6 @@ class WebsiteSale(payment_portal.PaymentPortal):
             has_storable_products = any(
                 line.product_id.type in ['consu', 'product'] for line in order.order_line
             )
-            if not order._get_delivery_methods() and has_storable_products:
-                values['errors'].append((
-                    _('Sorry, we are unable to ship your order'),
-                    _('No shipping method is available for your current order and shipping address.'
-                    ' Please contact us for more information.')
-                ))
-
             if has_storable_products:
                 if order.carrier_id and not order.delivery_rating_success:
                     order._remove_delivery_line()
@@ -1722,6 +1740,23 @@ class WebsiteSale(payment_portal.PaymentPortal):
             ).id
 
         return values
+
+    def _get_shop_payment_errors(self, order):
+        """ Check that there is no error that should block the payment.
+
+        :param sale.order order: The sales order to pay
+        :return: A list of errors (error_title, error_message)
+        :rtype: list[tuple]
+        """
+        errors = []
+
+        if not order.only_services and not order._get_delivery_methods():
+            errors.append((
+                _('Sorry, we are unable to ship your order'),
+                _('No shipping method is available for your current order and shipping address. '
+                   'Please contact us for more information.'),
+            ))
+        return errors
 
     @http.route('/shop/payment', type='http', auth='public', website=True, sitemap=False)
     def shop_payment(self, **post):
@@ -1736,7 +1771,7 @@ class WebsiteSale(payment_portal.PaymentPortal):
         """
         order = request.website.sale_get_order()
 
-        if order and (request.httprequest.method == 'POST' or not order.carrier_id):
+        if order and not order.only_services and (request.httprequest.method == 'POST' or not order.carrier_id):
             # Update order's carrier_id (will be the one of the partner if not defined)
             # If a carrier_id is (re)defined, redirect to "/shop/payment" (GET method to avoid infinite loop)
             carrier_id = post.get('carrier_id')
@@ -1781,13 +1816,21 @@ class WebsiteSale(payment_portal.PaymentPortal):
             order = request.env['sale.order'].sudo().browse(sale_order_id)
             assert order.id == request.session.get('sale_last_order_id')
 
+        errors = self._get_shop_payment_errors(order)
+        if errors:
+            first_error = errors[0]  # only display first error
+            error_msg = f"{first_error[0]}\n{first_error[1]}"
+            raise ValidationError(error_msg)
+
         tx_sudo = order.get_portal_last_transaction() if order else order.env['payment.transaction']
 
         if not order or (order.amount_total and not tx_sudo):
             return request.redirect('/shop')
 
         if order and not order.amount_total and not tx_sudo:
-            order.with_context(send_email=True).with_user(SUPERUSER_ID).action_confirm()
+            if order.state != 'sale':
+                order.with_context(send_email=True).with_user(SUPERUSER_ID).action_confirm()
+            request.website.sale_reset()
             return request.redirect(order.get_portal_url())
 
         # clean context and session, then redirect to the confirmation page
@@ -1988,11 +2031,10 @@ class PaymentPortal(payment_portal.PaymentPortal):
             'currency_id': order_sudo.currency_id.id,
             'sale_order_id': order_id,  # Include the SO to allow Subscriptions to tokenize the tx
         })
-        total = order_sudo.amount_total + order_sudo.amount_delivery
         if not kwargs.get('amount'):
-            kwargs['amount'] = total
+            kwargs['amount'] = order_sudo.amount_total
 
-        if tools.float_compare(kwargs['amount'], total, precision_rounding=order_sudo.currency_id.rounding):
+        if tools.float_compare(kwargs['amount'], order_sudo.amount_total, precision_rounding=order_sudo.currency_id.rounding):
             raise ValidationError(_("The cart has been updated. Please refresh the page."))
 
         tx_sudo = self._create_transaction(

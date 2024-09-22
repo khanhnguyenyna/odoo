@@ -1,6 +1,6 @@
 /* @odoo-module */
 
-import { Component } from "@odoo/owl";
+import { Component, useState } from "@odoo/owl";
 
 import { ConfirmationDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { useFileViewer } from "@web/core/file_viewer/file_viewer_hook";
@@ -21,6 +21,7 @@ export class AttachmentList extends Component {
     static template = "mail.AttachmentList";
 
     setup() {
+        this.ui = useState(useService("ui"));
         // Arbitrary high value, this is effectively a max-width.
         this.imagesWidth = 1920;
         this.dialog = useService("dialog");
@@ -109,11 +110,18 @@ export class AttachmentList extends Component {
     }
 
     get showDelete() {
+        // in the composer they should all be implicitly deletable
+        if (this.env.inComposer) {
+            return true;
+        }
+        if (!this.attachment.isDeletable) {
+            return false;
+        }
+        // in messages users are expected to delete the message instead of just the attachment
         return (
-            (this.attachment.isDeletable &&
-                (!this.env.message || this.env.message?.hasTextContent)) ||
-            this.env.inComposer ||
-            this.props.attachments.length > 1
+            !this.env.message ||
+            this.env.message.hasTextContent ||
+            (this.env.message && this.props.attachments.length > 1)
         );
     }
 }

@@ -114,6 +114,8 @@ patch(MockServer.prototype, {
                 "partner_ids",
                 "subtype_xmlid",
                 "parent_id",
+                "partner_emails",
+                "partner_additional_values",
             ]) {
                 if (args.post_data[allowedField] !== undefined) {
                     finalData[allowedField] = args.post_data[allowedField];
@@ -151,7 +153,7 @@ patch(MockServer.prototype, {
             return this._mockMailMessageMessageFormat([args.message_id])[0];
         }
         if (route === "/mail/partner/from_email") {
-            return this._mockRouteMailPartnerFromEmail(args.emails);
+            return this._mockRouteMailPartnerFromEmail(args.emails, args.additional_values);
         }
         if (route === "/mail/read_subscription_data") {
             const follower_id = args.follower_id;
@@ -167,7 +169,7 @@ patch(MockServer.prototype, {
             return this._mockRouteMailRtcChannelLeaveCall(args.channel_id);
         }
         if (route === "/mail/rtc/session/update_and_broadcast") {
-            return;
+            return this._mockRouteMailRtcSessionUpdateAndBroadcast(args.session_id, args.values);
         }
         if (route === "/mail/starred/messages") {
             const { search_term, after, before, limit } = args;
@@ -468,15 +470,17 @@ patch(MockServer.prototype, {
      * @param {string[]} emails
      * @returns {Object[]} list of partner data
      */
-    _mockRouteMailPartnerFromEmail(emails) {
+    _mockRouteMailPartnerFromEmail(emails, additional_values = {}) {
         const partners = emails.map(
             (email) => this.pyEnv["res.partner"].search([["email", "=", email]])[0]
         );
         for (const index in partners) {
             if (!partners[index]) {
+                const email = emails[index];
                 partners[index] = this.pyEnv["res.partner"].create({
-                    email: emails[index],
-                    name: emails[index],
+                    email,
+                    name: email,
+                    ...(additional_values[email] || {}),
                 });
             }
         }
@@ -601,6 +605,23 @@ patch(MockServer.prototype, {
             ]);
         }
         this.pyEnv["bus.bus"]._sendmany(notifications);
+    },
+    /**
+     * Simulates the `/mail/rtc/session/update_and_broadcast` route.
+     *
+     * @param {number} session_id
+     * @param {object} values
+     */
+    async _mockRouteMailRtcSessionUpdateAndBroadcast(session_id, values) {
+        const [session] = this.pyEnv["discuss.channel.rtc.session"].searchRead([
+            ["id", "=", session_id],
+        ]);
+        const [currentChannelMember] = this.pyEnv["discuss.channel.member"].searchRead([
+            ["id", "=", session.channel_member_id[0]],
+        ]);
+        if (session && currentChannelMember.partner_id[0] === this.pyEnv.currentPartnerId) {
+            this._mockDiscussChannelRtcSession__updateAndBroadcast(session.id, values);
+        }
     },
     /**
      * Simulates the `/mail/thread/data` route.

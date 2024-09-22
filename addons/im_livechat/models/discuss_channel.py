@@ -21,8 +21,8 @@ class DiscussChannel(models.Model):
     channel_type = fields.Selection(selection_add=[('livechat', 'Livechat Conversation')], ondelete={'livechat': 'cascade'})
     duration = fields.Float('Duration', compute='_compute_duration', help='Duration of the session in hours')
     livechat_active = fields.Boolean('Is livechat ongoing?', help='Livechat session is active until visitor leaves the conversation.')
-    livechat_channel_id = fields.Many2one('im_livechat.channel', 'Channel')
-    livechat_operator_id = fields.Many2one('res.partner', string='Operator')
+    livechat_channel_id = fields.Many2one('im_livechat.channel', 'Channel', index='btree_not_null')
+    livechat_operator_id = fields.Many2one('res.partner', string='Operator', index='btree_not_null')
     chatbot_current_step_id = fields.Many2one('chatbot.script.step', string='Chatbot Current Step')
     chatbot_message_ids = fields.One2many('chatbot.message', 'discuss_channel_id', string='Chatbot Messages')
     country_id = fields.Many2one('res.country', string="Country", help="Country of the visitor of the channel")
@@ -83,7 +83,9 @@ class DiscussChannel(models.Model):
     def _execute_command_help_message_extra(self):
         msg = super()._execute_command_help_message_extra()
         if self.channel_type == 'livechat':
-            return msg + _("Type <b>:shortcut</b> to insert a canned response in your message.<br>")
+            return msg + html_escape(
+                _("%(new_line)sType %(bold_start)s:shortcut%(bold_end)s to insert a canned response in your message.")
+            ) % {"bold_start": Markup("<b>"), "bold_end": Markup("</b>"), "new_line": Markup("<br>")}
         return msg
 
     def execute_command_history(self, **kwargs):
@@ -239,3 +241,6 @@ class DiscussChannel(models.Model):
             chatbot_script,
             Markup('<div class="o_mail_notification">%s</div>') % _('Restarting conversation...'),
         )
+
+    def _types_allowing_seen_infos(self):
+        return super()._types_allowing_seen_infos() + ["livechat"]

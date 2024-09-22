@@ -1,8 +1,18 @@
 @include media-breakpoint-down(md) {
-    img, .media_iframe_video, span.fa, i.fa {
+    img, .media_iframe_video {
         &:not(.o_animate) {
             transform: none !important;
         }
+    }
+
+    // For RTL (Right-to-Left) purposes, don't disable the transform directive
+    // for Font Awesome icons that are flipped by 180deg.
+    $not-selectors: '';
+    @each $class in $rtl-fa-classes {
+        $not-selectors: '#{$not-selectors}:not(.#{$class})';
+    }
+    .fa:where(#{$not-selectors}:not(.o_animate)) {
+        transform: none !important;
     }
 }
 
@@ -45,6 +55,19 @@
     > * {
         padding: var(--grid-item-padding-y) var(--grid-item-padding-x) !important;
     }
+
+    // Adapt the horizontal margins of the first inner row of a grid item, to
+    // make them compensate the grid item horizontal padding (to avoid an
+    // overflow).
+    .o_grid_item .row {
+        --grid-inner-row-gutter-x: clamp(0px, 2 * var(--grid-item-padding-x), 30px);
+        margin-left: calc(-0.5 * var(--grid-inner-row-gutter-x));
+        margin-right: calc(-0.5 * var(--grid-inner-row-gutter-x));
+
+        .row {
+            --grid-inner-row-gutter-x: var(--gutter-x);
+        }
+    }
 }
 
 @include media-breakpoint-up(lg) {
@@ -75,15 +98,32 @@
     }
 
     .o_grid_item_image {
-        > img, > .media_iframe_video {
+        img, .media_iframe_video {
             width: 100% !important;
             height: 100% !important;
             object-fit: cover !important;
         }
 
-        &.o_grid_item_image_contain > img,
-        > img[data-shape] {
+        &.o_grid_item_image_contain img,
+        img[data-shape] {
             object-fit: contain !important;
+        }
+
+        // Allowing "cover" for some hover effects.
+        &:not(.o_grid_item_image_contain) img[data-shape$="geo_square"] {
+            &:not(
+                [data-hover-effect="dolly_zoom"],
+                [data-hover-effect="outline"],
+                [data-hover-effect="image_mirror_blur"],
+            ) {
+                object-fit: cover !important;
+            }
+        }
+
+        // Needed when "a" is "display: block".
+        > a {
+            width: 100%;
+            height: 100%;
         }
     }
 }

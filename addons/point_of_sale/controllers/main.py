@@ -150,6 +150,10 @@ class PosController(PortalAccount):
         if not pos_order:
             return request.not_found()
 
+        # Set the proper context in case of unauthenticated user accessing
+        # from the main company website
+        pos_order = pos_order.with_company(pos_order.company_id)
+
         # If the order was already invoiced, return the invoice directly by forcing the access token so that the non-connected user can see it.
         if pos_order.account_move and pos_order.account_move.is_sale_document():
             return request.redirect('/my/invoices/%s?access_token=%s' % (pos_order.account_move.id, pos_order.account_move._portal_ensure_token()))
@@ -242,7 +246,7 @@ class PosController(PortalAccount):
             partner = request.env['res.partner'].sudo().create(partner_values)  # In this case, partner_values contains the whole partner info form.
         # If the user is connected, then we can update if needed its fields with the additional localized fields if any, then proceed.
         else:
-            partner = (not request.env.user._is_public() and request.env.user.partner_id) or pos_order.partner_id
+            partner = pos_order.partner_id or (not request.env.user._is_public() and request.env.user.partner_id)
             partner.write(partner_values)  # In this case, partner_values only contains the additional fields that can be updated.
 
         pos_order.partner_id = partner

@@ -11,7 +11,6 @@ from odoo import fields
 from odoo import http
 from odoo.http import request
 from odoo.addons.http_routing.models.ir_http import slug, unslug
-from odoo.addons.website.models.ir_http import sitemap_qs2dom
 from odoo.addons.portal.controllers.portal import CustomerPortal
 from odoo.addons.website_partner.controllers.main import WebsitePartnerPage
 
@@ -132,7 +131,9 @@ class WebsiteAccount(CustomerPortal):
 
         if date_begin and date_end:
             domain += [('create_date', '>', date_begin), ('create_date', '<=', date_end)]
-        # pager
+        # pager: bypass activities access rights for search but still apply access rules
+        leads_sudo = CrmLead.sudo()._search(domain)
+        domain = [('id', 'in', leads_sudo)]
         opp_count = CrmLead.search_count(domain)
         pager = request.website.pager(
             url="/my/opportunities",
@@ -187,19 +188,20 @@ class WebsiteCrmPartnerAssign(WebsitePartnerPage):
     def sitemap_partners(env, rule, qs):
         if not qs or qs.lower() in '/partners':
             yield {'loc': '/partners'}
-
-        Grade = env['res.partner.grade']
-        dom = [('website_published', '=', True)]
-        dom += sitemap_qs2dom(qs=qs, route='/partners/grade/', field=Grade._rec_name)
-        for grade in env['res.partner.grade'].search(dom):
+        base_partner_domain = [
+            ('is_company', '=', True),
+            ('grade_id', '!=', False),
+            ('website_published', '=', True),
+            ('grade_id.website_published', '=', True),
+            ('grade_id.active', '=', True),
+        ]
+        grades = env['res.partner'].sudo()._read_group(base_partner_domain, groupby=['grade_id'])
+        for [grade] in grades:
             loc = '/partners/grade/%s' % slug(grade)
             if not qs or qs.lower() in loc:
                 yield {'loc': loc}
-
-        partners_dom = [('is_company', '=', True), ('grade_id', '!=', False), ('website_published', '=', True),
-                        ('grade_id.website_published', '=', True), ('country_id', '!=', False)]
-        dom += sitemap_qs2dom(qs=qs, route='/partners/country/')
-        countries = env['res.partner'].sudo()._read_group(partners_dom, groupby=['country_id'])
+        country_partner_domain = base_partner_domain + [('country_id', '!=', False)]
+        countries = env['res.partner'].sudo()._read_group(country_partner_domain, groupby=['country_id'])
         for [country] in countries:
             loc = '/partners/country/%s' % slug(country)
             if not qs or qs.lower() in loc:
@@ -224,17 +226,33 @@ class WebsiteCrmPartnerAssign(WebsitePartnerPage):
         country_obj = request.env['res.country']
         search = post.get('search', '')
 
-        base_partner_domain = [('is_company', '=', True), ('grade_id', '!=', False), ('website_published', '=', True)]
+        base_partner_domain = [('is_company', '=', True), ('grade_id', '!=', False), ('website_published', '=', True), ('grade_id.active', '=', True)]
         if not request.env['res.users'].has_group('website.group_website_restricted_editor'):
             base_partner_domain += [('grade_id.website_published', '=', True)]
         if search:
             base_partner_domain += ['|', ('name', 'ilike', search), ('website_description', 'ilike', search)]
 
-        # group by grade
-        grade_domain = list(base_partner_domain)
+        # Infer Country
         if not country and not country_all:
             if request.geoip.country_code:
                 country = country_obj.search([('code', '=', request.geoip.country_code)], limit=1)
+
+        # Group by country
+        country_domain = list(base_partner_domain)
+        if grade:
+            country_domain += [('grade_id', '=', grade.id)]
+        countries = partner_obj.sudo().read_group(
+            country_domain + [('country_id', '!=', False)],
+            ["id", "country_id"],
+            groupby="country_id", orderby="country_id")
+
+        # Fallback: Show all partners when country has no associates.
+        country_ids = [c['country_id'][0] for c in countries]
+        if country and country.id not in country_ids:
+            country = None
+
+        # Group by grade
+        grade_domain = list(base_partner_domain)
         if country:
             grade_domain += [('country_id', '=', country.id)]
         grades = partner_obj.sudo().read_group(
@@ -250,13 +268,6 @@ class WebsiteCrmPartnerAssign(WebsitePartnerPage):
             'active': bool(grade is None),
         })
 
-        # group by country
-        country_domain = list(base_partner_domain)
-        if grade:
-            country_domain += [('grade_id', '=', grade.id)]
-        countries = partner_obj.sudo().read_group(
-            country_domain, ["id", "country_id"],
-            groupby="country_id", orderby="country_id")
         countries_partners = partner_obj.sudo().search_count(country_domain)
         # flag active country
         for country_dict in countries:
@@ -321,6 +332,7 @@ class WebsiteCrmPartnerAssign(WebsitePartnerPage):
     # Do not use semantic controller due to sudo()
     @http.route()
     def partners_detail(self, partner_id, **post):
+        current_slug = partner_id
         _, partner_id = unslug(partner_id)
         current_grade, current_country = None, None
         grade_id = post.get('grade_id')
@@ -333,6 +345,8 @@ class WebsiteCrmPartnerAssign(WebsitePartnerPage):
             partner = request.env['res.partner'].sudo().browse(partner_id)
             is_website_restricted_editor = request.env['res.users'].has_group('website.group_website_restricted_editor')
             if partner.exists() and (partner.website_published or is_website_restricted_editor):
+                if slug(partner) != current_slug:
+                    return request.redirect('/partners/%s' % slug(partner))
                 values = {
                     'main_object': partner,
                     'partner': partner,
@@ -340,4 +354,4 @@ class WebsiteCrmPartnerAssign(WebsitePartnerPage):
                     'current_country': current_country
                 }
                 return request.render("website_crm_partner_assign.partner", values)
-        return self.partners(**post)
+        raise request.not_found()

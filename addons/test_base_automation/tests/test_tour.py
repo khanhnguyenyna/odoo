@@ -244,8 +244,6 @@ class BaseAutomationTestUi(HttpCase):
                     {"default_model_id": model.id, "default_usage": "base_automation"},
                 )
             if onchange_link_passes == 2:
-                self.assertFalse(res["value"], "No change should be triggered here")
-            if onchange_link_passes == 3:
                 self.assertEqual(res["value"]["name"], "Add followers: ")
 
             return res
@@ -259,7 +257,7 @@ class BaseAutomationTestUi(HttpCase):
             "test_form_view_resequence_actions",
             login="admin",
         )
-        self.assertEqual(onchange_link_passes, 3)
+        self.assertEqual(onchange_link_passes, 2)
         self.assertEqual(
             automation.action_server_ids.mapped("name"),
             ["Update Active 2", "Update Active 0", "Update Active 1"],
@@ -293,3 +291,19 @@ class BaseAutomationTestUi(HttpCase):
             "test_form_view_mail_triggers",
             login="admin",
         )
+
+    def test_on_change_rule_creation(self):
+        """ test on_change rule creation from the UI """
+        self.start_tour("/web#action=base_automation.base_automation_act", 'base_automation.on_change_rule_creation', login="admin")
+
+        rule = self.env['base.automation'].search([], order="create_date desc", limit=1)[0]
+        view_model = self.env['ir.model']._get("ir.ui.view")
+        active_field = self.env['ir.model.fields'].search([
+            ('name', '=', 'active'),
+            ('model', '=', 'ir.ui.view'),
+        ])[0]
+        self.assertEqual(rule.name, "Test rule")
+        self.assertEqual(rule.model_id, view_model)
+        self.assertEqual(rule.trigger, 'on_change')
+        self.assertEqual(len(rule.on_change_field_ids), 1)
+        self.assertEqual(rule.on_change_field_ids[0], active_field)

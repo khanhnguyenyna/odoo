@@ -200,6 +200,9 @@ mimetypes.add_type('application/x-font-ttf', '.ttf')
 mimetypes.add_type('image/webp', '.webp')
 # Add potentially wrong (detected on windows) svg mime types
 mimetypes.add_type('image/svg+xml', '.svg')
+# this one can be present on windows with the value 'text/plain' which
+# breaks loading js files from an addon's static folder
+mimetypes.add_type('text/javascript', '.js')
 
 # To remove when corrected in Babel
 babel.core.LOCALE_ALIASES['nb'] = 'nb_NO'
@@ -456,23 +459,36 @@ class Stream:
     max_age = None
     immutable = False
     size = None
+    public = False
 
     def __init__(self, **kwargs):
+        # Remove class methods from the instances
+        self.from_path = self.from_attachment = self.from_binary_field = None
         self.__dict__.update(kwargs)
 
     @classmethod
-    def from_path(cls, path, filter_ext=('',)):
-        """ Create a :class:`~Stream`: from an addon resource. """
+    def from_path(cls, path, filter_ext=('',), public=False):
+        """
+        Create a :class:`~Stream`: from an addon resource.
+
+        :param path: See :func:`~odoo.tools.file_path`
+        :param filter_ext: See :func:`~odoo.tools.file_path`
+        :param bool public: Advertise the resource as being cachable by
+            intermediate proxies, otherwise only let the browser caches
+            it.
+        """
         path = file_path(path, filter_ext)
         check = adler32(path.encode())
         stat = os.stat(path)
         return cls(
             type='path',
             path=path,
+            mimetype=mimetypes.guess_type(path)[0],
             download_name=os.path.basename(path),
             etag=f'{int(stat.st_mtime)}-{stat.st_size}-{check}',
             last_modified=stat.st_mtime,
             size=stat.st_size,
+            public=public,
         )
 
     @classmethod
@@ -483,8 +499,8 @@ class Stream:
         self = cls(
             mimetype=attachment.mimetype,
             download_name=attachment.name,
-            conditional=True,
             etag=attachment.checksum,
+            public=attachment.public,
         )
 
         if attachment.store_fname:
@@ -512,7 +528,7 @@ class Stream:
                 host=request.httprequest.environ.get('HTTP_HOST', '')
             )
             if static_path:
-                self = cls.from_path(static_path)
+                self = cls.from_path(static_path, public=True)
             else:
                 self.type = 'url'
                 self.url = attachment.url
@@ -535,6 +551,7 @@ class Stream:
             etag=request.env['ir.attachment']._compute_checksum(data),
             last_modified=record.write_date if record._log_access else None,
             size=len(data),
+            public=record.env.user._is_public()  # good enough
         )
 
     def read(self):
@@ -548,16 +565,27 @@ class Stream:
         with open(self.path, 'rb') as file:
             return file.read()
 
-    def get_response(self, as_attachment=None, immutable=None, **send_file_kwargs):
+    def get_response(
+        self,
+        as_attachment=None,
+        immutable=None,
+        content_security_policy="default-src 'none'",
+        **send_file_kwargs
+    ):
         """
         Create the corresponding :class:`~Response` for the current stream.
 
         :param bool as_attachment: Indicate to the browser that it
             should offer to save the file instead of displaying it.
-        :param bool immutable: Add the ``immutable`` directive to the
-            ``Cache-Control`` response header, allowing intermediary
-            proxies to aggressively cache the response. This option
-            also set the ``max-age`` directive to 1 year.
+        :param bool|None immutable: Add the ``immutable`` directive to
+            the ``Cache-Control`` response header, allowing intermediary
+            proxies to aggressively cache the response. This option also
+            set the ``max-age`` directive to 1 year.
+        :param str|None content_security_policy: Optional value for the
+            ``Content-Security-Policy`` (CSP) header. This header is
+            used by browsers to allow/restrict the downloaded resource
+            to itself perform new http requests. By default CSP is set
+            to ``"default-scr 'none'"`` which restrict all requests.
         :param send_file_kwargs: Other keyword arguments to send to
             :func:`odoo.tools._vendor.send_file.send_file` instead of
             the stream sensitive values. Discouraged.
@@ -587,28 +615,37 @@ class Stream:
         }
 
         if self.type == 'data':
-            return _send_file(BytesIO(self.data), **send_file_kwargs)
+            res = _send_file(BytesIO(self.data), **send_file_kwargs)
+        else:  # self.type == 'path'
+            send_file_kwargs['use_x_sendfile'] = False
+            if config['x_sendfile']:
+                with contextlib.suppress(ValueError):  # outside of the filestore
+                    fspath = Path(self.path).relative_to(opj(config['data_dir'], 'filestore'))
+                    x_accel_redirect = f'/web/filestore/{fspath}'
+                    send_file_kwargs['use_x_sendfile'] = True
 
-        # self.type == 'path'
-        send_file_kwargs['use_x_sendfile'] = False
-        if config['x_sendfile']:
-            with contextlib.suppress(ValueError):  # outside of the filestore
-                fspath = Path(self.path).relative_to(opj(config['data_dir'], 'filestore'))
-                x_accel_redirect = f'/web/filestore/{fspath}'
-                send_file_kwargs['use_x_sendfile'] = True
+            res = _send_file(self.path, **send_file_kwargs)
+            if 'X-Sendfile' in res.headers:
+                res.headers['X-Accel-Redirect'] = x_accel_redirect
 
-        res = _send_file(self.path, **send_file_kwargs)
+                # In case of X-Sendfile/X-Accel-Redirect, the body is empty,
+                # yet werkzeug gives the length of the file. This makes
+                # NGINX wait for content that'll never arrive.
+                res.headers['Content-Length'] = '0'
 
-        if immutable and res.cache_control:
-            res.cache_control["immutable"] = None  # None sets the directive
+        res.headers['X-Content-Type-Options'] = 'nosniff'
 
-        if 'X-Sendfile' in res.headers:
-            res.headers['X-Accel-Redirect'] = x_accel_redirect
+        if content_security_policy:  # see also Application.set_csp()
+            res.headers['Content-Security-Policy'] = content_security_policy
 
-            # In case of X-Sendfile/X-Accel-Redirect, the body is empty,
-            # yet werkzeug gives the length of the file. This makes
-            # NGINX wait for content that'll never arrive.
-            res.headers['Content-Length'] = '0'
+        if self.public:
+            if (res.cache_control.max_age or 0) > 0:
+                res.cache_control.public = True
+        else:
+            res.cache_control.pop('public', '')
+            res.cache_control.private = True
+        if immutable:
+            res.cache_control['immutable'] = None  # None sets the directive
 
         return res
 
@@ -863,6 +900,8 @@ class FilesystemSessionStore(sessions.FilesystemSessionStore):
     """ Place where to load and save session objects. """
     def get_session_filename(self, sid):
         # scatter sessions across 256 directories
+        if not self.is_valid_key(sid):
+            raise ValueError(f'Invalid session id {sid!r}')
         sha_dir = sid[:2]
         dirname = os.path.join(self.path, sha_dir)
         session_path = os.path.join(dirname, sid)
@@ -908,7 +947,7 @@ class FilesystemSessionStore(sessions.FilesystemSessionStore):
 
 class Session(collections.abc.MutableMapping):
     """ Structure containing data persisted across requests. """
-    __slots__ = ('can_save', '_Session__data', 'is_dirty', 'is_explicit', 'is_new',
+    __slots__ = ('can_save', '_Session__data', 'is_dirty', 'is_new',
                  'should_rotate', 'sid')
 
     def __init__(self, data, sid, new=False):
@@ -916,7 +955,6 @@ class Session(collections.abc.MutableMapping):
         self.__data = {}
         self.update(data)
         self.is_dirty = False
-        self.is_explicit = False
         self.is_new = new
         self.should_rotate = False
         self.sid = sid
@@ -1002,6 +1040,8 @@ class Session(collections.abc.MutableMapping):
             # Like update_env(user=request.session.uid) but works when uid is None
             request.env = odoo.api.Environment(request.env.cr, self.uid, self.context)
             request.update_context(**self.context)
+            # request env needs to be able to access the latest changes from the auth layers
+            request.env.cr.commit()
 
         return pre_uid
 
@@ -1166,6 +1206,49 @@ def borrow_request():
         _request_stack.push(req)
 
 
+def make_request_wrap_methods(attr):
+    def getter(self):
+        return getattr(self._HTTPRequest__wrapped, attr)
+
+    def setter(self, value):
+        return setattr(self._HTTPRequest__wrapped, attr, value)
+
+    return getter, setter
+
+
+class HTTPRequest:
+    def __init__(self, environ):
+        httprequest = werkzeug.wrappers.Request(environ)
+        httprequest.user_agent_class = UserAgent  # use vendored userAgent since it will be removed in 2.1
+        httprequest.parameter_storage_class = werkzeug.datastructures.ImmutableOrderedMultiDict
+        httprequest.max_content_length = DEFAULT_MAX_CONTENT_LENGTH
+
+        self.__wrapped = httprequest
+        self.__environ = self.__wrapped.environ
+        self.environ = self.headers.environ = {
+            key: value
+            for key, value in self.__environ.items()
+            if (not key.startswith(('werkzeug.', 'wsgi.', 'socket')) or key in ['wsgi.url_scheme', 'werkzeug.proxy_fix.orig'])
+        }
+
+    def __enter__(self):
+        return self
+
+
+HTTPREQUEST_ATTRIBUTES = [
+    '__str__', '__repr__', '__exit__',
+    'accept_charsets', 'accept_languages', 'accept_mimetypes', 'access_route', 'args', 'authorization', 'base_url',
+    'charset', 'content_encoding', 'content_length', 'content_md5', 'content_type', 'cookies', 'data', 'date',
+    'encoding_errors', 'files', 'form', 'full_path', 'get_data', 'get_json', 'headers', 'host', 'host_url', 'if_match',
+    'if_modified_since', 'if_none_match', 'if_range', 'if_unmodified_since', 'is_json', 'is_secure', 'json',
+    'max_content_length', 'method', 'mimetype', 'mimetype_params', 'origin', 'path', 'pragma', 'query_string', 'range',
+    'referrer', 'remote_addr', 'remote_user', 'root_path', 'root_url', 'scheme', 'script_root', 'server', 'session',
+    'trusted_hosts', 'url', 'url_charset', 'url_root', 'user_agent', 'values',
+]
+for attr in HTTPREQUEST_ATTRIBUTES:
+    setattr(HTTPRequest, attr, property(*make_request_wrap_methods(attr)))
+
+
 class Response(werkzeug.wrappers.Response):
     """
     Outgoing HTTP response with body, status, headers and qweb support.
@@ -1310,25 +1393,12 @@ class Request:
         self.session, self.db = self._get_session_and_dbname()
 
     def _get_session_and_dbname(self):
-        # The session is explicit when it comes from the query-string or
-        # the header. It is implicit when it comes from the cookie or
-        # that is does not exist yet. The explicit session should be
-        # used in this request only, it should not be saved on the
-        # response cookie.
-        sid = (self.httprequest.args.get('session_id')
-            or self.httprequest.headers.get("X-Openerp-Session-Id"))
-        if sid:
-            is_explicit = True
-        else:
-            sid = self.httprequest.cookies.get('session_id')
-            is_explicit = False
-
-        if sid is None:
+        sid = self.httprequest.cookies.get('session_id')
+        if not sid or not root.session_store.is_valid_key(sid):
             session = root.session_store.new()
         else:
             session = root.session_store.get(sid)
             session.sid = sid  # in case the session was not persisted
-        session.is_explicit = is_explicit
 
         for key, val in get_default_session().items():
             session.setdefault(key, val)
@@ -1493,24 +1563,11 @@ class Request:
         :returns: The merged key-value pairs.
         :rtype: dict
         """
-        if self.env:
-            ICP = self.env['ir.config_parameter'].sudo()
-            try:
-                key = 'web.max_file_upload_size'
-                self.httprequest.max_content_length = int(ICP.get_param(
-                    key, DEFAULT_MAX_CONTENT_LENGTH
-                ))
-            except ValueError:  # better not crash on ALL requests
-                _logger.error("invalid %s: %r, use %s instead",
-                    key, ICP.get_param(key), self.httprequest.max_content_length,
-                )
-
         params = {
             **self.httprequest.args,
             **self.httprequest.form,
             **self.httprequest.files
         }
-        params.pop('session_id', None)
         return params
 
     def get_json_data(self):
@@ -1647,17 +1704,8 @@ class Request:
         elif sess.is_dirty:
             root.session_store.save(sess)
 
-        # We must not set the cookie if the session id was specified
-        # using a http header or a GET parameter.
-        # There are two reasons to this:
-        # - When using one of those two means we consider that we are
-        #   overriding the cookie, which means creating a new session on
-        #   top of an already existing session and we don't want to
-        #   create a mess with the 'normal' session (the one using the
-        #   cookie). That is a special feature of the Javascript Session.
-        # - It could allow session fixation attacks.
         cookie_sid = self.httprequest.cookies.get('session_id')
-        if not sess.is_explicit and (sess.is_dirty or cookie_sid != sess.sid):
+        if sess.is_dirty or cookie_sid != sess.sid:
             self.future_response.set_cookie('session_id', sess.sid, max_age=SESSION_LIFETIME, httponly=True)
 
     def _set_request_dispatcher(self, rule):
@@ -1682,9 +1730,12 @@ class Request:
         try:
             directory = root.statics[module]
             filepath = werkzeug.security.safe_join(directory, path)
-            return Stream.from_path(filepath).get_response(
+            res = Stream.from_path(filepath, public=True).get_response(
                 max_age=0 if 'assets' in self.session.debug else STATIC_CACHE,
+                content_security_policy=None,
             )
+            root.set_csp(res)
+            return res
         except KeyError:
             raise NotFound(f'Module "{module}" not found.\n')
         except OSError:  # cover both missing file and invalid permissions
@@ -1813,6 +1864,9 @@ class Dispatcher(ABC):
                        'Origin, X-Requested-With, Content-Type, Accept, Authorization')
             werkzeug.exceptions.abort(Response(status=204))
 
+        if 'max_content_length' in routing:
+            self.request.httprequest.max_content_length = routing['max_content_length']
+
     @abstractmethod
     def dispatch(self, endpoint, args):
         """
@@ -1891,7 +1945,7 @@ class HttpDispatcher(Dispatcher):
             was_connected = session.uid is not None
             session.logout(keep_db=True)
             response = self.request.redirect_query('/web/login', {'redirect': self.request.httprequest.full_path})
-            if not session.is_explicit and was_connected:
+            if was_connected:
                 root.session_store.rotate(session, self.request.env)
                 response.set_cookie('session_id', session.sid, max_age=SESSION_LIFETIME, httponly=True)
             return response
@@ -2140,53 +2194,50 @@ class Application:
                 return
             ProxyFix(fake_app)(environ, fake_start_response)
 
-        httprequest = werkzeug.wrappers.Request(environ)
-        httprequest.user_agent_class = UserAgent  # use vendored userAgent since it will be removed in 2.1
-        httprequest.parameter_storage_class = (
-            werkzeug.datastructures.ImmutableOrderedMultiDict)
-        httprequest.max_content_length = DEFAULT_MAX_CONTENT_LENGTH
-        request = Request(httprequest)
-        _request_stack.push(request)
-        request._post_init()
-        current_thread.url = httprequest.url
+        with HTTPRequest(environ) as httprequest:
+            request = Request(httprequest)
+            _request_stack.push(request)
 
-        try:
-            if self.get_static_file(httprequest.path):
-                response = request._serve_static()
-            elif request.db:
-                with request._get_profiler_context_manager():
-                    response = request._serve_db()
-            else:
-                response = request._serve_nodb()
-            return response(environ, start_response)
+            try:
+                request._post_init()
+                current_thread.url = httprequest.url
 
-        except Exception as exc:
-            # Valid (2xx/3xx) response returned via werkzeug.exceptions.abort.
-            if isinstance(exc, HTTPException) and exc.code is None:
-                response = exc.get_response()
-                HttpDispatcher(request).post_dispatch(response)
+                if self.get_static_file(httprequest.path):
+                    response = request._serve_static()
+                elif request.db:
+                    with request._get_profiler_context_manager():
+                        response = request._serve_db()
+                else:
+                    response = request._serve_nodb()
                 return response(environ, start_response)
 
-            # Logs the error here so the traceback starts with ``__call__``.
-            if hasattr(exc, 'loglevel'):
-                _logger.log(exc.loglevel, exc, exc_info=getattr(exc, 'exc_info', None))
-            elif isinstance(exc, HTTPException):
-                pass
-            elif isinstance(exc, SessionExpiredException):
-                _logger.info(exc)
-            elif isinstance(exc, (UserError, AccessError, NotFound)):
-                _logger.warning(exc)
-            else:
-                _logger.error("Exception during request handling.", exc_info=True)
+            except Exception as exc:
+                # Valid (2xx/3xx) response returned via werkzeug.exceptions.abort.
+                if isinstance(exc, HTTPException) and exc.code is None:
+                    response = exc.get_response()
+                    HttpDispatcher(request).post_dispatch(response)
+                    return response(environ, start_response)
 
-            # Ensure there is always a WSGI handler attached to the exception.
-            if not hasattr(exc, 'error_response'):
-                exc.error_response = request.dispatcher.handle_error(exc)
+                # Logs the error here so the traceback starts with ``__call__``.
+                if hasattr(exc, 'loglevel'):
+                    _logger.log(exc.loglevel, exc, exc_info=getattr(exc, 'exc_info', None))
+                elif isinstance(exc, HTTPException):
+                    pass
+                elif isinstance(exc, SessionExpiredException):
+                    _logger.info(exc)
+                elif isinstance(exc, (UserError, AccessError)):
+                    _logger.warning(exc)
+                else:
+                    _logger.error("Exception during request handling.", exc_info=True)
 
-            return exc.error_response(environ, start_response)
+                # Ensure there is always a WSGI handler attached to the exception.
+                if not hasattr(exc, 'error_response'):
+                    exc.error_response = request.dispatcher.handle_error(exc)
 
-        finally:
-            _request_stack.pop()
+                return exc.error_response(environ, start_response)
+
+            finally:
+                _request_stack.pop()
 
 
 root = Application()

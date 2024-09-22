@@ -4,17 +4,19 @@
 # 
 # Translators:
 # Martin Trigaux, 2023
-# Wil Odoo, 2023
-# Jolien De Paepe, 2023
-# Erwin van der Ploeg <erwin@odooexperts.nl>, 2023
+# Dylan Kiss, 2023
+# Jolien De Paepe, 2024
+# Erwin van der Ploeg <erwin@odooexperts.nl>, 2024
+# Larissa Manderfeld, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Erwin van der Ploeg <erwin@odooexperts.nl>, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Dutch (https://app.transifex.com/odoo/teams/41243/nl/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -291,7 +293,7 @@ msgstr "<font style=\"font-size: 18px;\">Evenement één</font>"
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_picture
 msgid "<font style=\"font-size: 48px;\">A Punchy Headline</font>"
-msgstr "<font style=\"font-size: 48px;\">Een pittige kop</font>"
+msgstr "<font style=\"font-size: 48px;\">Een treffende titel</font>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_cover
@@ -534,8 +536,8 @@ msgstr "<span name=\"sent\">e-mails zijn verzonden.</span>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.digest_mail_main
-msgid "<span style=\"color: #8f8f8f;\">Turn off Mailing Reports</span>"
-msgstr "<span style=\"color: #8f8f8f;\">E-mailrapportages uitschakelen</span>"
+msgid "<span style=\"color: #878d97;\">Turn off Mailing Reports</span>"
+msgstr "<span style=\"color: #878d97;\">E-mailrapportages uitschakelen</span>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_alert
@@ -987,7 +989,7 @@ msgstr ""
 "Laat de ontvanger toe om zelf zijn status op de zwarte lijst te beheren via "
 "de afmeldpagina. Als de optie actief is, is de knop 'Me blacklisten' "
 "verborgen op de afmeldpagina. De knop 'Kom terug' is altijd zichtbaar zodat "
-"leads en partners zich opnieuw kunnen abonneren."
+"leads en relaties zich opnieuw kunnen abonneren."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_masonry_block_options
@@ -2343,12 +2345,12 @@ msgstr "Voetteksten"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_company_team
 msgid ""
 "Founder and chief visionary, Tony is the driving force behind the company. "
-"He lovesto keep his hands full by participating in the development of the "
+"He loves to keep his hands full by participating in the development of the "
 "software, marketing, and customer experience strategies."
 msgstr ""
-"Oprichter en belangrijkste visionair, Tony is de drijvende kracht achter het"
-" bedrijf. Hij houdt ervan zijn handen vol te houden door deel te nemen aan "
-"de ontwikkeling van de software-, marketing- en klantervaringsstrategieën."
+"Oprichter en hoofdvisionair Tony is de drijvende kracht achter het bedrijf. "
+"Hij houdt ervan zijn handen vol te houden door deel te nemen aan de "
+"ontwikkeling van de software-, marketing- en klantervaringsstrategieën."
 
 #. module: mass_mailing
 #: model:ir.model.fields,field_description:mass_mailing.field_mailing_trace_report__email_from
@@ -2399,6 +2401,11 @@ msgstr "Groeperen op"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_trace_report_view_search
 msgid "Group By..."
 msgstr "Groeperen op..."
+
+#. module: mass_mailing
+#: model:ir.model,name:mass_mailing.model_ir_http
+msgid "HTTP Routing"
+msgstr "HTTP routing"
 
 #. module: mass_mailing
 #: model:ir.model.fields,field_description:mass_mailing.field_mailing_contact__has_message
@@ -2985,7 +2992,7 @@ msgstr "Mailinglijst #"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_contact_view_search
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_contact_view_tree
 msgid "Mailing List Contacts"
-msgstr "Mailinglijst contacten"
+msgstr "Mailinglijstcontacten"
 
 #. module: mass_mailing
 #: model:ir.model,name:mass_mailing.model_mailing_subscription
@@ -3748,7 +3755,7 @@ msgstr ""
 #: model:ir.ui.menu,name:mass_mailing.mailing_menu_report_subscribe_reason
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_subscription_view_search
 msgid "Optout"
-msgstr "Afmelden"
+msgstr "Afgemeld"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_subscription_view_search
@@ -3878,7 +3885,7 @@ msgstr "Voorkeur antwoord aan-adres"
 #. module: mass_mailing
 #: model:ir.model.fields,field_description:mass_mailing.field_mailing_mailing__preview
 msgid "Preview"
-msgstr "Preview"
+msgstr "Voorbeeld"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.view_mail_mass_mailing_form
@@ -3901,6 +3908,11 @@ msgstr "Verwerken"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_trace_view_search
 msgid "Processing"
 msgstr "In verwerking"
+
+#. module: mass_mailing
+#: model_terms:ir.ui.view,arch_db:mass_mailing.view_mail_mass_mailing_kanban
+msgid "Progress bar"
+msgstr "Voortgangsbalk"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.email_designer_snippets
@@ -4697,7 +4709,7 @@ msgstr "Bedankt dat je bij ons aangesloten bent!"
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_text_block
 msgid "That way, Odoo evolves much faster than any other solution."
-msgstr "Daarom ontwikkeld Odoo zich veel sneller dan andere oplossingen."
+msgstr "Daarom ontwikkelt Odoo zich veel sneller dan andere oplossingen."
 
 #. module: mass_mailing
 #: model:ir.model.constraint,message:mass_mailing.constraint_mailing_mailing_percentage_valid
@@ -4727,7 +4739,7 @@ msgstr "Het filterdomein is niet geldig voor deze ontvangers."
 #: model:ir.model.fields,help:mass_mailing.field_mailing_list__is_public
 msgid ""
 "The mailing list can be accessible by recipients in the subscription "
-"management page to allows them to update their preferences."
+"management page to allow them to update their preferences."
 msgstr ""
 "De mailinglijst is toegankelijk voor ontvangers op de pagina voor "
 "abonnementsbeheer, zodat ze hun voorkeuren kunnen bijwerken."

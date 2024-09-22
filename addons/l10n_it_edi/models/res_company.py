@@ -38,7 +38,7 @@ class ResCompany(models.Model):
     )
 
     # Economic and Administrative Index
-    l10n_it_has_eco_index = fields.Boolean(default=False,
+    l10n_it_has_eco_index = fields.Boolean(
         help="The seller/provider is a company listed on the register of companies and as\
         such must also indicate the registration data on all documents (art. 2250, Italian\
         Civil Code)")
@@ -47,7 +47,7 @@ class ResCompany(models.Model):
     l10n_it_eco_index_number = fields.Char(string="Number in register of companies", size=20,
         help="This field must contain the number under which the\
         seller/provider is listed on the register of companies.")
-    l10n_it_eco_index_share_capital = fields.Float(default=0.0, string="Share capital actually paid up",
+    l10n_it_eco_index_share_capital = fields.Float(string="Share capital actually paid up",
         help="Mandatory if the seller/provider is a company with share\
         capital (SpA, SApA, Srl), this field must contain the amount\
         of share capital actually paid up as resulting from the last\
@@ -66,7 +66,7 @@ class ResCompany(models.Model):
 
 
     # Tax representative
-    l10n_it_has_tax_representative = fields.Boolean(default=False,
+    l10n_it_has_tax_representative = fields.Boolean(
         help="The seller/provider is a non-resident subject which\
         carries out transactions in Italy with relevance for VAT\
         purposes and which takes avail of a tax representative in\
@@ -115,3 +115,47 @@ class ResCompany(models.Model):
     def _compute_l10n_it_edi_proxy_user_id(self):
         for company in self:
             company.l10n_it_edi_proxy_user_id = company.account_edi_proxy_client_ids.filtered(lambda x: x.proxy_type == 'l10n_it_edi')
+
+    def _l10n_it_edi_export_check(self):
+        checks = {
+            'company_vat_codice_fiscale_missing': {
+                'fields': [('vat', 'l10n_it_codice_fiscale')],
+                'message': _("Company/ies should have a VAT number or Codice Fiscale."),
+            },
+            'company_address_missing': {
+                'fields': [('street', 'street2'), ('zip',), ('city',), ('country_id',)],
+                'message': _("Company/ies should have a complete address, verify their Street, City, Zipcode and Country."),
+            },
+            'company_l10n_it_tax_system_missing': {
+                'fields': [('l10n_it_tax_system',)],
+                'message': _("Company/ies should have a Tax System"),
+            },
+        }
+        errors = {}
+        for key, check in checks.items():
+            for fields_tuple in check.pop('fields'):
+                if invalid_records := self.filtered(lambda record: not any(record[field] for field in fields_tuple)):
+                    errors[key] = {
+                        'message': check['message'],
+                        'action_text': _("View Company/ies"),
+                        'action': invalid_records._get_records_action(name=_("Check Company Data")),
+                    }
+        if self.filtered(lambda x: not x.l10n_it_edi_proxy_user_id):
+            new_context = {
+                **self.env.context,
+                'module': 'account',
+                'default_search_setting': _("Italian Electronic Invoicing"),
+                'bin_size': False,
+            }
+            errors['settings_l10n_it_edi_proxy_user_id'] = {
+                'message': _("You must accept the terms and conditions in the Settings to use the IT EDI."),
+                'action_text': _("View Settings"),
+                'action': self.env['res.config.settings']._get_records_action(name=_("Settings"), context=new_context),
+            }
+        return errors
+
+    @api.onchange("l10n_it_has_tax_representative")
+    def _onchange_l10n_it_has_tax_represeentative(self):
+        for company in self:
+            if not company.l10n_it_has_tax_representative:
+                company.l10n_it_tax_representative_partner_id = False

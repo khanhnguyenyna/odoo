@@ -131,7 +131,7 @@ export class StatusBarField extends Component {
                 {
                     category: "smart_action",
                     hotkey: "alt+shift+x",
-                    isAvailable: () => !this.props.readonly && !this.props.isDisabled,
+                    isAvailable: () => !this.props.isDisabled,
                 }
             );
             useCommand(
@@ -145,9 +145,7 @@ export class StatusBarField extends Component {
                     category: "smart_action",
                     hotkey: "alt+x",
                     isAvailable: () =>
-                        !this.props.readonly &&
-                        !this.props.isDisabled &&
-                        !this.getAllItems().at(-1).isSelected,
+                        !this.props.isDisabled && !this.getAllItems().at(-1).isSelected,
                 }
             );
         }
@@ -195,6 +193,7 @@ export class StatusBarField extends Component {
             itemEls.forEach((el) => el.classList.remove("o_first"));
         } else {
             hide(this.afterRef.el);
+            itemEls[0]?.classList.add("o_first");
         }
 
         // Reset items variables
@@ -341,12 +340,15 @@ export const statusBarField = {
             name: "fold_field",
             type: "field",
             availableTypes: ["boolean"],
+            help: _t(
+                "Boolean field from the model used in the relation, which indicates whether the state is folded or not."
+            ),
         },
     ],
     supportedTypes: ["many2one", "selection"],
     isEmpty: (record, fieldName) => !record.data[fieldName],
     extractProps: ({ attrs, options, viewType }, dynamicInfo) => ({
-        isDisabled: !options.clickable,
+        isDisabled: !options.clickable || dynamicInfo.readonly,
         visibleSelection: attrs.statusbar_visible?.trim().split(/\s*,\s*/g),
         withCommand: viewType === "form",
         foldField: options.fold_field,

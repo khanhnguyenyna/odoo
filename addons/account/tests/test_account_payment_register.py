@@ -2,7 +2,9 @@
 from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo.exceptions import UserError
 from odoo.tests import tagged, Form
-from odoo import Command
+from odoo import fields, Command
+
+from dateutil.relativedelta import relativedelta
 
 
 @tagged('post_install', '-at_install')
@@ -24,6 +26,21 @@ class TestAccountPaymentRegister(AccountTestInvoicingCommon):
 
         cls.bank_journal_1 = cls.company_data['default_journal_bank']
         cls.bank_journal_2 = cls.company_data['default_journal_bank'].copy()
+
+        cls.invoice_payment_term_1 = cls.env['account.payment.term'].create({
+            'name': '2% 10 Net 30',
+            'early_discount': True,
+            'discount_days': 10,
+            'discount_percentage': 2,
+            'line_ids': [
+                Command.create({
+                    'value': 'percent',
+                    'value_amount': 100,
+                    'delay_type': 'days_after',
+                    'nb_days': 30,
+                }),
+            ],
+        })
 
         cls.partner_bank_account1 = cls.env['res.partner.bank'].create({
             'acc_number': "0123456789",
@@ -105,7 +122,23 @@ class TestAccountPaymentRegister(AccountTestInvoicingCommon):
             'currency_id': cls.currency_data['currency'].id,
             'invoice_line_ids': [(0, 0, {'product_id': cls.product_a.id, 'price_unit': 3000.0, 'tax_ids': []})],
         })
-        (cls.in_invoice_1 + cls.in_invoice_2 + cls.in_invoice_3).action_post()
+        cls.in_invoice_epd_applied = cls.env['account.move'].create({
+            'move_type': 'in_invoice',
+            'date': fields.Date.today(),
+            'invoice_date': fields.Date.today(),
+            'partner_id': cls.partner_b.id,
+            'invoice_payment_term_id': cls.invoice_payment_term_1.id,
+            'invoice_line_ids': [Command.create({'product_id': cls.product_a.id, 'price_unit': 25.0, 'tax_ids': []})],
+        })
+        cls.in_invoice_epd_not_applied = cls.env['account.move'].create({
+            'move_type': 'in_invoice',
+            'date': fields.Date.today() - relativedelta(days=11),
+            'invoice_date': fields.Date.today() - relativedelta(days=11),
+            'partner_id': cls.partner_b.id,
+            'invoice_payment_term_id': cls.invoice_payment_term_1.id,
+            'invoice_line_ids': [Command.create({'product_id': cls.product_a.id, 'price_unit': 25.0, 'tax_ids': []})],
+        })
+        (cls.in_invoice_1 + cls.in_invoice_2 + cls.in_invoice_3 + cls.in_invoice_epd_applied + cls.in_invoice_epd_not_applied).action_post()
 
         # Credit note
         cls.in_refund_1 = cls.env['account.move'].create({
@@ -115,7 +148,14 @@ class TestAccountPaymentRegister(AccountTestInvoicingCommon):
             'partner_id': cls.partner_a.id,
             'invoice_line_ids': [(0, 0, {'product_id': cls.product_a.id, 'price_unit': 1600.0, 'tax_ids': []})],
         })
-        cls.in_refund_1.action_post()
+        cls.in_refund_2 = cls.env['account.move'].create({
+            'move_type': 'in_refund',
+            'date': fields.Date.today(),
+            'invoice_date': fields.Date.today(),
+            'partner_id': cls.partner_b.id,
+            'invoice_line_ids': [Command.create({'product_id': cls.product_a.id, 'price_unit': 10.0, 'tax_ids': []})],
+        })
+        (cls.in_refund_1 + cls.in_refund_2).action_post()
 
     def test_register_payment_single_batch_grouped_keep_open_lower_amount(self):
         ''' Pay 800.0 with 'open' as payment difference handling on two customer invoices (1000 + 2000). '''
@@ -1007,6 +1047,143 @@ class TestAccountPaymentRegister(AccountTestInvoicingCommon):
             },
         ])
 
+    def test_register_foreign_currency_on_payment_exchange_writeoff_account(self):
+        invoice = self.env['account.move'].create({
+            'move_type': 'out_invoice',
+            'date': '2017-01-01',
+            'invoice_date': '2017-01-01',
+            'partner_id': self.partner_a.id,
+            'invoice_line_ids': [Command.create({'product_id': self.product_a.id, 'price_unit': 1000.0, 'tax_ids': []})],
+        })
+        invoice.action_post()
+        # 1998 GOL = 999 USD
+        payment = self.env['account.payment.register']\
+            .with_context(active_model='account.move', active_ids=invoice.ids)\
+            .create({
+                'currency_id': self.currency_data['currency'].id,
+                'amount': 1998,
+                'payment_difference_handling': 'reconcile',
+                'writeoff_account_id': self.env.company.expense_currency_exchange_account_id.id,
+            })\
+            ._create_payments()
+
+        self.assertRecordValues(payment.line_ids.sorted('balance'), [
+            # Receivable line:
+            {
+                'debit': 0.0,
+                'credit': 1000.0,
+                'currency_id': self.currency_data['currency'].id,
+                'amount_currency': -1998.0,
+                'reconciled': True,
+            },
+            # Liquidity line:
+            {
+                'debit': 1000.0,
+                'credit': 0.0,
+                'currency_id': self.currency_data['currency'].id,
+                'amount_currency': 1998.0,
+                'reconciled': False,
+            },
+        ])
+
+    def test_register_foreign_currency_on_invoice_exchange_writeoff_account(self):
+        self.env.company.tax_exigibility = True
+        self.env.company.account_cash_basis_base_account_id = self.env['account.account'].create({
+            'code': 'cash.basis.base.account',
+            'name': 'cash_basis_base_account',
+            'account_type': 'income',
+        })
+
+        default_tax = self.company_data['default_tax_sale']
+        default_tax.cash_basis_transition_account_id = self.env['account.account'].create({
+            'code': 'cash.basis.transfer.account',
+            'name': 'cash_basis_transfer_account',
+            'account_type': 'income',
+            'reconcile': True,
+        })
+        default_tax.tax_exigibility = 'on_payment'
+
+        # 1150 GOL = 575 USD
+        invoice = self.env['account.move'].create({
+            'move_type': 'out_invoice',
+            'date': '2017-01-01',
+            'invoice_date': '2017-01-01',
+            'partner_id': self.partner_a.id,
+            'currency_id': self.currency_data['currency'].id,
+            'invoice_line_ids': [Command.create({
+                'product_id': self.product_a.id,
+                'price_unit': 1000.0,
+                'tax_ids': [Command.set(default_tax.ids)],
+            })],
+        })
+        invoice.action_post()
+
+        # 1110 GOL = 370 USD
+        payment = self.env['account.payment.register']\
+            .with_context(active_model='account.move', active_ids=invoice.ids)\
+            .create({
+                'currency_id': self.env.company.currency_id.id,
+                'amount': 370.0,
+                'payment_date': '2016-01-01',
+                'payment_difference_handling': 'reconcile',
+                'writeoff_account_id': self.env.company.expense_currency_exchange_account_id.id,
+            })\
+            ._create_payments()
+
+        self.assertRecordValues(payment.line_ids.sorted('balance'), [
+            # Receivable line:
+            {
+                'balance': -370.0,
+                'currency_id': self.env.company.currency_id.id,
+                'amount_currency': -370.0,
+                'reconciled': True,
+            },
+            # Liquidity line:
+            {
+                'balance': 370.0,
+                'currency_id': self.env.company.currency_id.id,
+                'amount_currency': 370.0,
+                'reconciled': False,
+            },
+        ])
+        self.assertRecordValues(invoice.line_ids.matched_credit_ids, [
+            {
+                'amount': 370.0,
+                'debit_amount_currency': 1150.0,
+                'credit_amount_currency': 370.0,
+            },
+            {
+                'amount': 205.00,
+                'debit_amount_currency': 0.0,
+                'credit_amount_currency': 0.0,
+            },
+        ])
+
+        # Cash basis.
+        caba_move = self.env['account.move'].search([('tax_cash_basis_origin_move_id', '=', invoice.id)])
+        self.assertRecordValues(caba_move.line_ids.sorted('balance'), [
+            {
+                'balance': -321.74,
+                'currency_id': self.currency_data['currency'].id,
+                'amount_currency': -1000.0,
+            },
+            {
+                'balance': -48.26,
+                'currency_id': self.currency_data['currency'].id,
+                'amount_currency': -150.0,
+            },
+            {
+                'balance': 48.26,
+                'currency_id': self.currency_data['currency'].id,
+                'amount_currency': 150.0,
+            },
+            {
+                'balance': 321.74,
+                'currency_id': self.currency_data['currency'].id,
+                'amount_currency': 1000.0,
+            },
+        ])
+
     def test_suggested_default_partner_bank_inbound_payment(self):
         """ Test the suggested bank account on the wizard for inbound payment. """
         self.out_invoice_1.partner_bank_id = False
@@ -1312,3 +1489,23 @@ class TestAccountPaymentRegister(AccountTestInvoicingCommon):
                 'reconciled': False,
             },
         ])
+
+    def test_group_payment_method_with_and_without_discount(self):
+        """ Test payment methods when creating group payment for discounted and non-discounted bills"""
+        active_ids = (self.in_invoice_epd_applied + self.in_invoice_epd_not_applied).ids
+
+        wizard = self.env['account.payment.register'].with_context(active_model='account.move', active_ids=active_ids).create({
+            'group_payment': True,
+        })
+
+        self.assertEqual(wizard.amount, 49.50)
+
+    def test_group_payment_method_with_and_without_discount_and_refund(self):
+        """ Test payment methods when creating group payment for discounted and non-discounted bills with a refund"""
+        active_ids = (self.in_invoice_epd_applied + self.in_invoice_epd_not_applied + self.in_refund_2).ids
+
+        wizard = self.env['account.payment.register'].with_context(active_model='account.move', active_ids=active_ids).create({
+            'group_payment': True,
+        })
+
+        self.assertEqual(wizard.amount, 39.50)

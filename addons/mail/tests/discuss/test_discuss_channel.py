@@ -199,6 +199,60 @@ class TestChannelInternals(MailCommon):
             "Last message id should stay the same after mark channel as seen with an older message"
         )
 
+    @users('employee')
+    def test_set_last_seen_message_should_send_notification_only_once(self):
+        chat = self.env['discuss.channel'].with_user(self.user_admin).channel_get((self.partner_employee | self.user_admin.partner_id).ids)
+        msg_1 = self._add_messages(chat, 'Body1', author=self.user_employee.partner_id)
+        member = chat.channel_member_ids.filtered(lambda m: m.partner_id == self.user_admin.partner_id)
+        self._reset_bus()
+        with self.assertBus(
+            [
+                (self.env.cr.dbname, "discuss.channel", chat.id),
+                (self.env.cr.dbname, "res.partner", self.user_admin.partner_id.id)
+            ],
+            [
+                {
+                    "type": "mail.record/insert",
+                    "payload": {
+                        "ChannelMember": {
+                            "id": member.id,
+                            "persona": {
+                                "id": self.user_admin.partner_id.id,
+                                "type": "partner",
+                            },
+                            "lastSeenMessage": {"id": msg_1.id},
+                        },
+                    },
+                },
+                   {
+                    "type": "mail.record/insert",
+                    "payload": {
+                        "ChannelMember": {
+                            "id": member.id,
+                            "persona": {
+                                "id": self.user_admin.partner_id.id,
+                                "type": "partner",
+                            },
+                            "lastSeenMessage": {"id": msg_1.id},
+                            "thread": {
+                                "id": chat.id,
+                                "message_unread_counter": 0,
+                                "message_unread_counter_bus_id": self.env['bus.bus'].sudo()._bus_last_id(),
+                                "model": "discuss.channel",
+                                "seen_message_id": msg_1.id
+                            }
+                        },
+                    },
+                },
+            ],
+        ):
+            chat._channel_seen(msg_1.id)
+        # There should be no channel member to be set as seen in the second time
+        # So no notification should be sent
+        self._reset_bus()
+        with self.assertBus([], []):
+            chat._channel_seen(msg_1.id)
+
     def test_channel_message_post_should_not_allow_adding_wrong_parent(self):
         channels = self.env['discuss.channel'].create([{'name': '1'}, {'name': '2'}])
         message = self._add_messages(channels[0], 'Body1')
@@ -323,7 +377,7 @@ class TestChannelInternals(MailCommon):
 
     def test_channel_write_should_send_notification(self):
         channel = self.env['discuss.channel'].create({"name": "test", "description": "test"})
-        # do the operation once before the assert to grab the value to expect
+        self._reset_bus()
         with self.assertBus(
             [(self.cr.dbname, 'discuss.channel', channel.id)],
             [{
@@ -338,7 +392,6 @@ class TestChannelInternals(MailCommon):
             }]
         ):
             channel.name = "test test"
-            channel.description = "test"
 
     def test_channel_write_should_send_notification_if_image_128_changed(self):
         channel = self.env['discuss.channel'].create({'name': '', 'uuid': 'test-uuid'})
@@ -346,16 +399,16 @@ class TestChannelInternals(MailCommon):
         channel.image_128 = base64.b64encode(("<svg/>").encode())
         avatar_cache_key = channel._get_avatar_cache_key()
         channel.image_128 = False
-        self.env['bus.bus'].search([]).unlink()
+        self._reset_bus()
         with self.assertBus(
             [(self.cr.dbname, 'discuss.channel', channel.id)],
             [{
                 "type": "mail.record/insert",
                 "payload": {
                     'Thread': {
-                        "avatarCacheKey": avatar_cache_key,
                         "id": channel.id,
                         'model': "discuss.channel",
+                        "avatarCacheKey": avatar_cache_key,
                     }
                 },
             }]
@@ -402,3 +455,66 @@ class TestChannelInternals(MailCommon):
         member_of_correspondent = self.env['discuss.channel.member'].search([('channel_id', '=', chat.id), ('partner_id', '=', self.test_partner.id)])
         self.assertTrue(member_of_current_user.is_pinned)
         self.assertFalse(member_of_correspondent.is_pinned)
+
+    @users("employee")
+    def test_channel_command_help_in_channel(self):
+        """Ensures the command '/help' works in a channel"""
+        channel = self.env["discuss.channel"].browse(self.test_channel.ids)
+        channel.name = "<strong>R&D</strong>"
+        self._reset_bus()
+        with self.assertBus(
+            [(self.env.cr.dbname, "res.partner", self.env.user.partner_id.id)],
+            [
+                {
+                    "type": "discuss.channel/transient_message",
+                    "payload": {
+                        "body":
+                            "<span class='o_mail_notification'>"
+                            "You are in channel <b>#&lt;strong&gt;R&amp;D&lt;/strong&gt;</b>."
+                            "<br><br>Type <b>@username</b> to mention someone, and grab their attention."
+                            "<br>Type <b>#channel</b> to mention a channel."
+                            "<br>Type <b>/command</b> to execute a command."
+                            "</span>",
+                        "model": "discuss.channel",
+                        "res_id": channel.id,
+                    },
+                },
+            ],
+        ):
+            channel.execute_command_help()
+
+    def test_channel_command_help_in_group(self):
+        """Ensures the command '/help' works in a group"""
+        test_user = self.env['res.users'].create({
+            "login": "mario",
+            "name": "Mario",
+        })
+        self.partner_employee_nomail.name = f"<strong>{self.partner_employee_nomail.name}</strong>"
+        # Guarantee that the channel member ids in the group are in order.
+        test_group = self.env['discuss.channel'].create({
+            'name': 'Private Channel',
+            'channel_type': 'group',
+            'channel_partner_ids': [(6, 0, test_user.partner_id.id)]
+        })
+        test_group.add_members(self.partner_employee_nomail.ids)
+        self._reset_bus()
+        with self.assertBus(
+            [(self.env.cr.dbname, "res.partner", self.env.user.partner_id.id)],
+            [
+                {
+                    "type": "discuss.channel/transient_message",
+                    "payload": {
+                        "body":
+                            "<span class='o_mail_notification'>"
+                            "You are in a private conversation with <b>@Mario</b> and <b>@&lt;strong&gt;Evita Employee NoEmail&lt;/strong&gt;</b>."
+                            "<br><br>Type <b>@username</b> to mention someone, and grab their attention."
+                            "<br>Type <b>#channel</b> to mention a channel."
+                            "<br>Type <b>/command</b> to execute a command."
+                            "</span>",
+                        "model": "discuss.channel",
+                        "res_id": test_group.id,
+                    },
+                },
+            ],
+        ):
+            test_group.execute_command_help()

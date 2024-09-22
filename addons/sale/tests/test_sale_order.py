@@ -1,14 +1,16 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
+
 from datetime import timedelta
+from unittest.mock import patch
+
 from freezegun import freeze_time
 
 from odoo import fields
-from odoo.fields import Command
 from odoo.exceptions import AccessError, UserError, ValidationError
-from odoo.tests import tagged, Form
-from odoo.tools import float_compare
+from odoo.fields import Command
+from odoo.tests import Form, tagged
 
+from odoo.addons.account.tests.common import AccountTestInvoicingCommon
 from odoo.addons.sale.tests.common import SaleCommon
 
 
@@ -113,20 +115,6 @@ class TestSaleOrder(SaleCommon):
         self.assertEqual(mail_message.author_id, sale_order.partner_id, 'Sale: author should be same as customer')
         self.assertEqual(mail_message.author_id, mail_message.partner_ids, 'Sale: author should be in composer recipients thanks to "partner_to" field set on template')
         self.assertEqual(mail_message.partner_ids, mail_message.sudo().mail_ids.recipient_ids, 'Sale: author should receive mail due to presence in composer recipients')
-
-    def test_invoice_state_when_ordered_quantity_is_negative(self):
-        """When you invoice a SO line with a product that is invoiced on ordered quantities and has negative ordered quantity,
-        this test ensures that the  invoicing status of the SO line is 'invoiced' (and not 'upselling')."""
-        sale_order = self.env['sale.order'].create({
-            'partner_id': self.partner.id,
-            'order_line': [(0, 0, {
-                'product_id': self.product.id,
-                'product_uom_qty': -1,
-            })]
-        })
-        sale_order.action_confirm()
-        sale_order._create_invoices(final=True)
-        self.assertTrue(sale_order.invoice_status == 'invoiced', 'Sale: The invoicing status of the SO should be "invoiced"')
 
     def test_sale_sequence(self):
         self.env['ir.sequence'].search([
@@ -451,6 +439,206 @@ class TestSaleOrder(SaleCommon):
         })
         self.assertEqual(sale_order.amount_total, 15.41, "")
 
+    def test_order_auto_lock_with_public_user(self):
+        public_user = self.env.ref('base.public_user')
+        self.sale_order.create_uid.groups_id += self.env.ref('sale.group_auto_done_setting')
+        self.sale_order.with_user(public_user.id).sudo().action_confirm()
+
+        self.assertFalse(public_user.has_group('sale.group_auto_done_setting'))
+        self.assertTrue(self.sale_order.locked)
+
+    def test_generate_account_analytic_when_confirm_so(self):
+        """ Test generate account analytic when SO with expense product is confirmed """
+        restaurant_expenses_product = self.env['product.product'].create({
+            'name': 'Restaurant Expenses',
+            'type': 'service',
+            'expense_policy': 'sales_price',
+            'list_price': 14.0,
+            'standard_price': 10.0,
+        })
+        sale_order = self.env['sale.order'].with_user(self.sale_user).create({
+            'partner_id': self.partner.id,
+            'order_line': [Command.create({
+                'product_id': restaurant_expenses_product.id,
+                'product_uom_qty': 1,
+            })],
+        })
+        self.assertFalse(sale_order.analytic_account_id)
+        sale_order.action_confirm()
+        self.assertTrue(sale_order.analytic_account_id, "An analytic account should be generated")
+
+    def test_so_discount_is_not_reset(self):
+        """ Discounts should not be recomputed on order confirmation """
+        with patch(
+            'odoo.addons.sale.models.sale_order_line.SaleOrderLine'
+            '._compute_discount'
+        ) as patched:
+            self.sale_order.action_confirm()
+            self.sale_order.order_line.flush_recordset(['discount'])
+            patched.assert_not_called()
+
+    def test_so_is_not_invoiceable_if_only_discount_line_is_to_invoice(self):
+        self.sale_order.order_line.product_id.invoice_policy = 'delivery'
+        self.sale_order.action_confirm()
+
+        self.assertEqual(self.sale_order.invoice_status, 'no')
+        standard_lines = self.sale_order.order_line
+
+        self.env['sale.order.discount'].create({
+            'sale_order_id': self.sale_order.id,
+            'discount_amount': 33,
+            'discount_type': 'amount',
+        }).action_apply_discount()
+
+        # Only the discount line is invoiceable (there are lines not invoiced and not invoiceable)
+        discount_line = self.sale_order.order_line - standard_lines
+        self.assertEqual(discount_line.invoice_status, 'to invoice')
+        self.assertEqual(self.sale_order.invoice_status, 'no')
+
+    def test_so_is_invoiceable_if_only_discount_line_remains_to_invoice(self):
+        self.sale_order.order_line.product_id.invoice_policy = 'delivery'
+        self.sale_order.action_confirm()
+
+        self.assertEqual(self.sale_order.invoice_status, 'no')
+        standard_lines = self.sale_order.order_line
+
+        for sol in standard_lines:
+            sol.qty_delivered = sol.product_uom_qty
+        self.sale_order._create_invoices()
+
+        self.assertEqual(self.sale_order.invoice_status, 'invoiced')
+
+        self.env['sale.order.discount'].create({
+            'sale_order_id': self.sale_order.id,
+            'discount_amount': 33,
+            'discount_type': 'amount',
+        }).action_apply_discount()
+
+        # Only the discount line is invoiceable (there are no other lines remaining to invoice)
+        discount_line = (self.sale_order.order_line - standard_lines)
+        self.assertEqual(discount_line.invoice_status, 'to invoice')
+        self.assertEqual(self.sale_order.invoice_status, 'to invoice')
+
+    def test_sale_order_line_product_taxes_on_branch(self):
+        """ Check taxes populated on SO lines from product on branch company.
+            Taxes from the branch company should be taken with a fallback on parent company.
+        """
+        # create the following branch hierarchy:
+        #     Parent company
+        #         |----> Branch X
+        #                   |----> Branch XX
+        company = self.env.company
+        branch_x = self.env['res.company'].create({
+            'name': 'Branch X',
+            'country_id': company.country_id.id,
+            'parent_id': company.id,
+        })
+        branch_xx = self.env['res.company'].create({
+            'name': 'Branch XX',
+            'country_id': company.country_id.id,
+            'parent_id': branch_x.id,
+        })
+        # create taxes for the parent company and its branches
+        tax_groups = self.env['account.tax.group'].create([{
+            'name': 'Tax Group',
+            'company_id': company.id,
+        }, {
+            'name': 'Tax Group X',
+            'company_id': branch_x.id,
+        }, {
+            'name': 'Tax Group XX',
+            'company_id': branch_xx.id,
+        }])
+        tax_a = self.env['account.tax'].create({
+            'name': 'Tax A',
+            'type_tax_use': 'sale',
+            'amount_type': 'percent',
+            'amount': 10,
+            'tax_group_id': tax_groups[0].id,
+            'company_id': company.id,
+        })
+        tax_b = self.env['account.tax'].create({
+            'name': 'Tax B',
+            'type_tax_use': 'sale',
+            'amount_type': 'percent',
+            'amount': 15,
+            'tax_group_id': tax_groups[0].id,
+            'company_id': company.id,
+        })
+        tax_x = self.env['account.tax'].create({
+            'name': 'Tax X',
+            'type_tax_use': 'sale',
+            'amount_type': 'percent',
+            'amount': 20,
+            'tax_group_id': tax_groups[1].id,
+            'company_id': branch_x.id,
+        })
+        tax_xx = self.env['account.tax'].create({
+            'name': 'Tax XX',
+            'type_tax_use': 'sale',
+            'amount_type': 'percent',
+            'amount': 25,
+            'tax_group_id': tax_groups[2].id,
+            'company_id': branch_xx.id,
+        })
+        # create several products with different taxes combination
+        product_all_taxes = self.env['product.product'].create({
+            'name': 'Product all taxes',
+            'taxes_id': [Command.set((tax_a + tax_b + tax_x + tax_xx).ids)],
+        })
+        product_no_xx_tax = self.env['product.product'].create({
+            'name': 'Product no tax from XX',
+            'taxes_id': [Command.set((tax_a + tax_b + tax_x).ids)],
+        })
+        product_no_branch_tax = self.env['product.product'].create({
+            'name': 'Product no tax from branch',
+            'taxes_id': [Command.set((tax_a + tax_b).ids)],
+        })
+        product_no_tax = self.env['product.product'].create({
+            'name': 'Product no tax',
+            'taxes_id': [],
+        })
+        # create a SO from Branch XX
+        so_form = Form(self.env['sale.order'].with_company(branch_xx))
+        so_form.partner_id = self.partner
+        # add 4 SO lines with the different products:
+        # - Product all taxes           => tax from Branch XX should be set
+        # - Product no tax from XX      => tax from Branch X should be set
+        # - Product no tax from branch  => 2 taxes from parent company should be set
+        # - Product no tax              => no tax should be set
+        with so_form.order_line.new() as line:
+            line.product_id = product_all_taxes
+        with so_form.order_line.new() as line:
+            line.product_id = product_no_xx_tax
+        with so_form.order_line.new() as line:
+            line.product_id = product_no_branch_tax
+        with so_form.order_line.new() as line:
+            line.product_id = product_no_tax
+        so = so_form.save()
+        self.assertRecordValues(so.order_line, [
+            {'product_id': product_all_taxes.id, 'tax_id': tax_xx.ids},
+            {'product_id': product_no_xx_tax.id, 'tax_id': tax_x.ids},
+            {'product_id': product_no_branch_tax.id, 'tax_id': (tax_a + tax_b).ids},
+            {'product_id': product_no_tax.id, 'tax_id': []},
+        ])
+
+
+@tagged('post_install', '-at_install')
+class TestSaleOrderInvoicing(AccountTestInvoicingCommon, SaleCommon):
+    def test_invoice_state_when_ordered_quantity_is_negative(self):
+        """When you invoice a SO line with a product that is invoiced on ordered quantities and has negative ordered quantity,
+        this test ensures that the  invoicing status of the SO line is 'invoiced' (and not 'upselling')."""
+        sale_order = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'order_line': [(0, 0, {
+                'product_id': self.product.id,
+                'product_uom_qty': -1,
+            })]
+        })
+        sale_order.action_confirm()
+        sale_order._create_invoices(final=True)
+        self.assertTrue(sale_order.invoice_status == 'invoiced', 'Sale: The invoicing status of the SO should be "invoiced"')
+
 
 @tagged('post_install', '-at_install')
 class TestSalesTeam(SaleCommon):
@@ -537,8 +725,9 @@ class TestSalesTeam(SaleCommon):
                 'product_id': great_product.id,
             },
         ])
+        partner = self.env['res.partner'].create({'name': 'Test Partner'})
         sale_order = self.env['sale.order'].create({
-            'partner_id': self.env.ref('base.res_partner_1').id,
+            'partner_id': partner.id,
         })
         sol = self.env['sale.order.line'].create({
             'name': super_product.name,
@@ -551,7 +740,7 @@ class TestSalesTeam(SaleCommon):
         self.assertEqual(sol.analytic_distribution, {str(analytic_account_great.id): 100}, "The analytic distribution should be set to Great Account")
 
         so_no_analytic_account = self.env['sale.order'].create({
-            'partner_id': self.env.ref('base.res_partner_1').id,
+            'partner_id': partner.id,
         })
         sol_no_analytic_account = self.env['sale.order.line'].create({
             'name': super_product.name,
@@ -582,7 +771,7 @@ class TestSalesTeam(SaleCommon):
         company_b = self.env['res.company'].create({'name': 'B'})
         tax_group_a = self.env['account.tax.group'].create({'name': 'A', 'company_id': company_a.id})
         tax_group_b = self.env['account.tax.group'].create({'name': 'B', 'company_id': company_b.id})
-        country = self.env['res.country'].search([])[0]
+        country = self.env['res.country'].search([], limit=1)
 
         tax_a = self.env['account.tax'].create({
             'name': 'A',
@@ -616,6 +805,55 @@ class TestSalesTeam(SaleCommon):
         with self.assertRaises(UserError):
             sol.tax_id = tax_b
 
+    def test_assign_tax_multi_company(self):
+        root_company = self.env['res.company'].create({'name': 'B0 company'})
+        root_company.write({'child_ids': [
+            Command.create({'name': 'B1 company'}),
+            Command.create({'name': 'B2 company'}),
+        ]})
+
+        country = self.env['res.country'].search([], limit=1)
+        basic_tax_group = self.env['account.tax.group'].create({'name': 'basic group', 'country_id': country.id})
+        tax_b0 = self.env['account.tax'].create({
+            'name': 'B0 tax',
+            'company_id': root_company.id,
+            'amount': 10,
+            'tax_group_id': basic_tax_group.id,
+            'country_id': country.id,
+        })
+        tax_b1 = self.env['account.tax'].create({
+            'name': 'B1 tax',
+            'company_id': root_company.child_ids[0].id,
+            'amount': 11,
+            'tax_group_id': basic_tax_group.id,
+            'country_id': country.id,
+        })
+        tax_b2 = self.env['account.tax'].create({
+            'name': 'B2 tax',
+            'company_id': root_company.child_ids[1].id,
+            'amount': 20,
+            'tax_group_id': basic_tax_group.id,
+            'country_id': country.id,
+        })
+
+        sale_order = self.env['sale.order'].create({'partner_id': self.partner.id, 'company_id': root_company.child_ids[0].id})
+        product = self.env['product.product'].create({'name': 'Product'})
+
+        # In sudo to simulate an user that have access to both companies.
+        sol_b1 = self.env['sale.order.line'].sudo().create({
+            'name': product.name,
+            'product_id': product.id,
+            'order_id': sale_order.id,
+            'tax_id': tax_b1,
+        })
+
+        # should not raise anything
+        sol_b1.tax_id = tax_b0
+        sol_b1.tax_id = tax_b1
+        # should raise (b2 is not on the same branch lineage as b1)
+        with self.assertRaises(UserError):
+            sol_b1.tax_id = tax_b2
+
     def test_downpayment_amount_constraints(self):
         """Down payment amounts should be in the interval ]0, 1]."""
 
@@ -624,3 +862,244 @@ class TestSalesTeam(SaleCommon):
             self.sale_order.prepayment_percent = -1
         with self.assertRaises(ValidationError):
             self.sale_order.prepayment_percent = 1.01
+
+    def test_sales_team_defined_on_partner_user_no_team(self):
+        """ Test that sale order picks up a team from res.partner on change if user has no team specified """
+
+        crm_team0 = self.env['crm.team'].create({
+            'name':"Test Team A"
+        })
+
+        crm_team1 = self.env['crm.team'].create({
+            'name':"Test Team B"
+        })
+
+        partner_a = self.env['res.partner'].create({
+            'name': 'Partner A',
+            'team_id': crm_team0.id,
+        })
+
+        partner_b = self.env['res.partner'].create({
+            'name': 'Partner B',
+            'team_id': crm_team1.id,
+        })
+
+        sale_order = self.env['sale.order'].with_user(self.user_not_in_team).create({
+            'partner_id': partner_a.id,
+        })
+
+        self.assertEqual(sale_order.team_id, crm_team0, "Sales team should change to partner's")
+        sale_order.with_user(self.user_not_in_team).write({'partner_id': partner_b.id})
+        self.assertEqual(sale_order.team_id, crm_team1, "Sales team should change to partner's")
+
+    def test_qty_delivered_on_creation(self):
+        """Checks that the qty delivered of sol is automatically set to 0.0 when an so is created"""
+        sale_order = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'order_line': [
+                Command.create({
+                    'product_id': self.product.id,
+                })],
+        })
+        # As we want to determine if the value is set in the DB we need to perform a search
+        self.assertFalse(self.env['sale.order.line'].search(['&', ('order_id', '=', sale_order.id), ('qty_delivered', '=', False)]))
+        self.assertEqual(self.env['sale.order.line'].search(['&', ('order_id', '=', sale_order.id), ('qty_delivered', '=', 0.0)]), sale_order.order_line)
+
+    def test_action_recompute_taxes(self):
+        '''
+        This test verifies the taxes recomputation action that can be triggered
+        after updating the fiscal position on a sale order document.
+        '''
+        special_tax = self.env['account.tax'].create({
+            'name': "special_tax_10",
+            'amount_type': 'percent',
+            'amount': 25.0,
+            'include_base_amount': True,
+            'price_include': True,
+        })
+
+        mapped_tax_a = self.env['account.tax'].create({
+            'name': "tax_a",
+            'amount_type': 'percent',
+            'amount': 12.5,
+            'include_base_amount': True,
+            'price_include': True,
+        })
+
+        mapped_tax_b = self.env['account.tax'].create({
+            'name': "tax_b",
+            'amount_type': 'percent',
+            'amount': 5.0,
+            'include_base_amount': True,
+            'price_include': True,
+        })
+
+        sales_tax = self.env['account.tax'].create({
+            'name': "VAT 20%",
+            'amount_type': 'percent',
+            'amount': 20.0,
+            'price_include': True,
+        })
+
+        mapping_a = self.env['account.fiscal.position'].create({
+            'name': 'Special Tax Reduction',
+            'tax_ids': [Command.create({'tax_src_id': special_tax.id, 'tax_dest_id': mapped_tax_a.id})],
+        })
+        mapping_b = self.env['account.fiscal.position'].create({
+            'name': 'Special Tax Reduction',
+            'tax_ids': [Command.create({'tax_src_id': special_tax.id, 'tax_dest_id': mapped_tax_b.id})],
+        })
+
+        # taxes and standard price need to be set on the product, as they will be
+        # recomputed when changing the fiscal position.
+        self.consumable_product.write({
+            'lst_price': 300,
+            'taxes_id': [Command.set((special_tax + sales_tax).ids)],
+        })
+
+        order = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'order_line': [
+                Command.create({
+                    'product_id': self.consumable_product.id,
+                    'product_uom_qty': 1.0,
+                }),
+            ],
+        })
+
+        self.assertEqual(order.amount_total, 300)
+        self.assertEqual(order.amount_tax, 100)
+        order.fiscal_position_id = mapping_a
+        order._recompute_prices()
+        order.action_update_taxes()
+        self.assertEqual(order.amount_total, 270)
+        self.assertEqual(order.amount_tax, 70)
+        order.fiscal_position_id = mapping_b
+        order._recompute_prices()
+        order.action_update_taxes()
+        self.assertEqual(order.amount_total, 252)
+        self.assertEqual(order.amount_tax, 52)
+
+    def test_recompute_taxes_rounded_globally_multi_company_currency(self):
+        '''
+        Check that taxes computation are made in the currency of the company
+        configured on the SO lines.
+        '''
+        # create a currency with no decimal
+        currency_b = self.env['res.currency'].create({
+            'name': 'B',
+            'symbol': 'B',
+            'rounding': 1.000000,
+        })
+        # create a company with USD as currency (rounding == 0.01)
+        company_a = self.env['res.company'].create({
+            'name': 'Company A',
+            'country_id': self.env.ref('base.us').id,
+        })
+        # create a company with currency_b as currency
+        company_b = self.env['res.company'].create({
+            'name': 'Company B',
+            'tax_calculation_rounding_method': 'round_globally',
+            'currency_id': currency_b.id,
+        })
+        # set company_b as default company of current user
+        self.env.user.company_id = company_b
+        tax_group_a = self.env['account.tax.group'].create({
+            'name': 'Tax Group A',
+            'company_id': company_a.id,
+        })
+        tax_a = self.env['account.tax'].create({
+            'name': 'Tax A',
+            'amount': 10,
+            'company_id': company_a.id,
+            'tax_group_id': tax_group_a.id,
+            'country_id': self.env.ref('base.us').id,
+        })
+        # create a SO from company_a
+        so = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'company_id': company_a.id,
+            'order_line': [
+                Command.create({
+                    'product_id': self.product.id,
+                    'product_uom_qty': 1,
+                    'price_unit': 123.4,
+                    'tax_id': tax_a.ids,
+                }),
+            ],
+        })
+        # edit the price unit
+        so.write({
+            'order_line': [
+                Command.update(so.order_line[0].id, {'price_unit': 123.5}),
+            ],
+        })
+        # call "flush_all" as it is done in "call_kw" method to test
+        # the tax values that have been recomputed after it
+        self.env.flush_all()
+        self.assertEqual(so.amount_tax, 12.35)
+        self.assertEqual(so.amount_total, 135.85)
+        # set "Rounding Method" of company A to "Round Globally"
+        company_a.tax_calculation_rounding_method = 'round_globally'
+        # edit the price unit
+        so.write({
+            'order_line': [
+                Command.update(so.order_line[0].id, {'price_unit': 123.6}),
+            ],
+        })
+        self.env.flush_all()
+        self.assertEqual(so.amount_tax, 12.36)
+        self.assertEqual(so.amount_total, 135.96)
+
+    def test_recompute_taxes_rounded_globally_currency_precision(self):
+        '''
+        Check that taxes computation are made in the currency of the company
+        configured on the SO lines.
+        '''
+        # create a currency with no decimal
+        currency_b = self.env['res.currency'].create({
+            'name': 'B',
+            'symbol': 'B',
+            'rounding': 1.000000,
+        })
+        # create a company with currency_b as currency
+        company_b = self.env['res.company'].create({
+            'name': 'Company B',
+            'tax_calculation_rounding_method': 'round_globally',
+            'currency_id': currency_b.id,
+        })
+        # set company_b as default company of current user
+        self.env.user.company_id = company_b
+
+        pricelist_b = self.env['product.pricelist'].with_company(company_b).create({
+            'name': 'pricelist b',
+            'currency_id': self.env.ref('base.USD').id,
+        })
+        tax_group_a = self.env['account.tax.group'].create({
+            'name': 'Tax Group',
+            'company_id': company_b.id,
+        })
+        tax = self.env['account.tax'].create({
+            'name': 'Tax A',
+            'amount': 19,
+            'company_id': company_b.id,
+            'country_id': self.env.ref('base.us').id,
+            'tax_group_id': tax_group_a.id,
+        })
+        so = self.env['sale.order'].create({
+            'partner_id': self.partner.id,
+            'company_id': company_b.id,
+            'pricelist_id': pricelist_b.id,
+            'order_line': [
+                Command.create({
+                    'product_id': self.product.id,
+                    'product_uom_qty': 1,
+                    'price_unit': 15.31,
+                    'tax_id': tax.ids,
+                }),
+            ],
+        })
+        self.assertEqual(so.amount_tax, 2.91)
+        self.assertEqual(so.amount_total, 18.22)
+        self.assertEqual(so.order_line.price_tax, 2.91)
+        self.assertEqual(so.order_line.price_total, 18.22)

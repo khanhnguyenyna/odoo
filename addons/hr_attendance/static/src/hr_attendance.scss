@@ -2,6 +2,17 @@
 .o_hr_attendance_kiosk_mode {
     @include media-breakpoint-down(md) {
         width: 100%;
+        .o_search_panel {
+                width: 100% !important;
+                max-height: 200px !important;
+            }
+        .o_kanban_renderer {
+            max-height: 400px !important;
+        }
+        .card-body {
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+        }
     }
 }
 
@@ -21,6 +32,9 @@
 
     .o_hr_attendance_PINbox_button {
         aspect-ratio: 1.8;
+        padding: 0.5rem 1rem;
+        font-size: 1.25rem;
+        border-radius: 0.3rem;
     }
 }
 

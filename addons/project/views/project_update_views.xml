@@ -49,7 +49,7 @@
                     <separator/>
                     <notebook>
                         <page string="Description" name="description">
-                            <field name="description" nolabel="1" class="o_project_update_description" options="{'resizable': false}"/>
+                            <field name="description" nolabel="1" class="o_project_update_description" options="{'resizable': false, 'collaborative': true}"/>
                         </page>
                     </notebook>
                 </sheet>
@@ -82,7 +82,7 @@
                                 </div>
                                 <div class="col-sm-2 text-sm-start col-6 align-end">
                                     <field name="color" invisible="1"/>
-                                    <b><field name="status" widget="status_with_color"/></b>
+                                    <b><field name="status" readonly="1" widget="status_with_color"/></b>
                                 </div>
                                 <div class="col-sm-2 col-6 pb-0">
                                     <b><field name="progress_percentage" widget="percentage"/></b>
@@ -93,7 +93,7 @@
                                         <field name="closed_task_count"/> / <field name="task_count"/> Tasks<span invisible="not task_count"> (<field name="closed_task_percentage"/>%)</span>
                                     </b>
                                 </div>
-                                <div class="col-sm-2 col-6 pb-0">
+                                <div class="col-sm-2 col-6 pb-0 pt-2">
                                     <b><field name="date"/></b>
                                     <div>Date</div>
                                 </div>

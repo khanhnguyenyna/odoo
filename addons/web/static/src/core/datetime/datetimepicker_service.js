@@ -42,6 +42,8 @@ const formatters = {
     datetime: formatDateTime,
 };
 
+const listenedElements = new WeakSet();
+
 const parsers = {
     date: parseDate,
     datetime: parseDateTime,
@@ -67,6 +69,10 @@ export const datetimePickerService = {
                         updateValueFromInputs();
                         apply();
                         setFocusClass(null);
+                        if (restoreTargetMargin) {
+                            restoreTargetMargin();
+                            restoreTargetMargin = null;
+                        }
                     },
                 });
                 // Hook methods
@@ -76,12 +82,10 @@ export const datetimePickerService = {
                  * value has changed, and set other internal variables accordingly.
                  */
                 const apply = () => {
-                    const serializedValue = JSON.stringify(pickerProps.value);
-                    if (areDatesEqual(lastInitialProps?.value, serializedValue)) {
+                    if (areDatesEqual(lastInitialProps?.value, deepCopy(pickerProps.value))) {
                         return;
                     }
 
-                    lastInitialProps = null; // Next pickerProps are considered final
                     inputsChanged = ensureArray(pickerProps.value).map(() => false);
 
                     hookParams.onApply?.(pickerProps.value);
@@ -89,13 +93,13 @@ export const datetimePickerService = {
 
                 const computeBasePickerProps = () => {
                     const nextInitialProps = markValuesRaw(hookParams.pickerProps);
-                    const serializedProps = deepCopy(nextInitialProps);
+                    const propsCopy = deepCopy(nextInitialProps);
 
-                    if (lastInitialProps && arePropsEqual(lastInitialProps, serializedProps)) {
+                    if (lastInitialProps && arePropsEqual(lastInitialProps, propsCopy)) {
                         return;
                     }
 
-                    lastInitialProps = serializedProps;
+                    lastInitialProps = propsCopy;
                     inputsChanged = ensureArray(lastInitialProps.value).map(() => false);
 
                     for (const [key, value] of Object.entries(nextInitialProps)) {
@@ -239,7 +243,14 @@ export const datetimePickerService = {
                     if (!popover.isOpen) {
                         const popoverTarget = getPopoverTarget();
                         if (env.isSmall) {
+                            const { marginBottom } = popoverTarget.style;
+                            // Adds enough space for the popover to be displayed below the target
+                            // even on small screens.
+                            popoverTarget.style.marginBottom = `100vh`;
                             popoverTarget.scrollIntoView(true);
+                            restoreTargetMargin = async () => {
+                                popoverTarget.style.marginBottom = marginBottom;
+                            };
                         }
                         popover.open(popoverTarget, { pickerProps });
                     }
@@ -417,17 +428,9 @@ export const datetimePickerService = {
                 /** @type {DateTimePickerProps | null} */
                 let lastInitialProps = null;
                 let lastIsRange = pickerProps.range;
+                /** @type {(() => void) | null} */
+                let restoreTargetMargin = null;
                 let shouldFocus = false;
-
-                /**
-                 * @param {HTMLElement} el
-                 * @param {string} type
-                 * @param {(ev: Event) => any} listener
-                 */
-                const addListener = (el, type, listener) => {
-                    el.addEventListener(type, listener);
-                    return () => el.removeEventListener(type, listener);
-                };
 
                 return {
                     state: pickerProps,
@@ -440,25 +443,36 @@ export const datetimePickerService = {
                     },
                     enable() {
                         let editableInputs = 0;
-                        const cleanups = [];
                         for (const [el, value] of zip(
                             getInputs(),
                             ensureArray(pickerProps.value),
                             true
                         )) {
                             updateInput(el, value);
-                            if (el && !el.disabled && !el.readOnly) {
-                                cleanups.push(addListener(el, "change", onInputChange));
-                                cleanups.push(addListener(el, "click", onInputClick));
-                                cleanups.push(addListener(el, "focus", onInputFocus));
-                                cleanups.push(addListener(el, "keydown", onInputKeydown));
+                            if (el && !el.disabled && !el.readOnly && !listenedElements.has(el)) {
+                                listenedElements.add(el);
+                                el.addEventListener("change", onInputChange);
+                                el.addEventListener("click", onInputClick);
+                                el.addEventListener("focus", onInputFocus);
+                                el.addEventListener("keydown", onInputKeydown);
                                 editableInputs++;
                             }
+                        }
+                        const calendarIconGroupEl = getInput(0)?.parentElement.querySelector(
+                            ".input-group-text .fa-calendar"
+                        )?.parentElement;
+                        if (calendarIconGroupEl && !listenedElements.has(calendarIconGroupEl)) {
+                            listenedElements.add(calendarIconGroupEl);
+                            // TODO: Remove this line and the `pe-none` class
+                            // from templates in master
+                            calendarIconGroupEl.classList.remove("pe-none");
+                            calendarIconGroupEl.classList.add("cursor-pointer");
+                            calendarIconGroupEl.addEventListener("click", () => openPicker(0));
                         }
                         if (!editableInputs && popover.isOpen) {
                             saveAndClose();
                         }
-                        return () => cleanups.forEach((cleanup) => cleanup());
+                        return () => {};
                     },
                     get isOpen() {
                         return popover.isOpen;

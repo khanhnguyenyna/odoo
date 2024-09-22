@@ -8,7 +8,12 @@ import weUtils from "@web_editor/js/common/utils";
 import options from "@web_editor/js/editor/snippets.options";
 import { NavbarLinkPopoverWidget } from "@website/js/widgets/link_popover_widget";
 import wUtils from "@website/js/utils";
-import {isImageSupportedForStyle} from "@web_editor/js/editor/image_processing";
+import {
+    applyModifications,
+    isImageCorsProtected,
+    isImageSupportedForStyle,
+    loadImageInfo,
+} from "@web_editor/js/editor/image_processing";
 import "@website/snippets/s_popup/options";
 import { range } from "@web/core/utils/numbers";
 import { _t } from "@web/core/l10n/translation";
@@ -23,10 +28,10 @@ import {
 import { renderToElement, renderToFragment } from "@web/core/utils/render";
 import { browser } from "@web/core/browser/browser";
 import {
-    applyTextHighlight,
     removeTextHighlight,
     drawTextHighlightSVG,
 } from "@website/js/text_processing";
+import { throttleForAnimation } from "@web/core/utils/timing";
 
 import { Component, markup, useRef, useState } from "@odoo/owl";
 
@@ -247,7 +252,7 @@ const FontFamilyPickerUserValueWidget = SelectUserValueWidget.extend({
             googleLocalFontsEls.forEach((el, index) => {
                 $(el).append(renderToFragment('website.delete_google_font_btn', {
                     index: index,
-                    local: true,
+                    local: "true",
                 }));
             });
         }
@@ -657,6 +662,7 @@ options.userValueWidgetsRegistry['we-gpspicker'] = GPSPicker;
 options.Class.include({
     custom_events: Object.assign({}, options.Class.prototype.custom_events || {}, {
         'google_fonts_custo_request': '_onGoogleFontsCustoRequest',
+        'request_save': '_onSaveRequest',
     }),
     specialCheckAndReloadMethodsNames: ['customizeWebsiteViews', 'customizeWebsiteVariable', 'customizeWebsiteColor'],
 
@@ -727,28 +733,10 @@ options.Class.include({
         }
         for (const widget of widgets) {
             const methodsNames = widget.getMethodsNames();
-            const specialMethodsNames = [];
-            // If it's a pageOption, it's most likely to need to reload, so check the widgets.
-            if (this.data.pageOptions) {
-                specialMethodsNames.push(methodsNames);
-            } else {
-                for (const methodName of methodsNames) {
-                    if (this.specialCheckAndReloadMethodsNames.includes(methodName)) {
-                        specialMethodsNames.push(methodName);
-                    }
-                }
-            }
-            if (!specialMethodsNames.length) {
-                continue;
-            }
-            let paramsReload = false;
-            for (const methodName of specialMethodsNames) {
-                if (widget.getMethodsParams(methodName).reload) {
-                    paramsReload = true;
-                    break;
-                }
-            }
-            if (paramsReload) {
+            const methodNamesToCheck = this.data.pageOptions
+                ? methodsNames
+                : methodsNames.filter(m => this.specialCheckAndReloadMethodsNames.includes(m));
+            if (methodNamesToCheck.some(m => widget.getMethodsParams(m).reload)) {
                 return true;
             }
         }
@@ -1030,6 +1018,22 @@ options.Class.include({
             reloadEditor: true,
         });
     },
+    /**
+     * This handler prevents reloading the page twice with a `request_save`
+     * event when a widget is already going to handle reloading the page.
+     *
+     * @param {OdooEvent} ev
+     */
+    _onSaveRequest(ev) {
+        // If a widget requires a reload, any subsequent request to save is
+        // useless, as the reload will save the page anyway. It can cause
+        // a race condition where the wysiwyg attempts to reload the page twice,
+        // so ignore the request.
+        if (this.__willReload) {
+            ev.stopPropagation();
+            return;
+        }
+    }
 });
 
 function _getLastPreFilterLayerElement($el) {
@@ -1481,8 +1485,8 @@ options.registry.OptionsTab = options.Class.extend({
      */
     async customizeButtonStyle(previewMode, widgetValue, params) {
         await this._customizeWebsiteVariables({
-            [`btn-${params.button}-outline`]: widgetValue === 'outline',
-            [`btn-${params.button}-flat`]: widgetValue === 'flat',
+            [`btn-${params.button}-outline`]: widgetValue === "outline" ? "true" : "false",
+            [`btn-${params.button}-flat`]: widgetValue === "flat" ? "true" : "false",
         }, params.nullValue);
     },
 
@@ -1566,7 +1570,7 @@ options.registry.OptionsTab = options.Class.extend({
         if (methodName === 'customizeButtonStyle') {
             const isOutline = weUtils.getCSSVariableValue(`btn-${params.button}-outline`);
             const isFlat = weUtils.getCSSVariableValue(`btn-${params.button}-flat`);
-            return isFlat === "'True'" ? 'flat' : isOutline === "'True'" ? 'outline' : 'fill';
+            return isFlat === "true" ? "flat" : isOutline === "true" ? "outline" : "fill";
         }
         return this._super(...arguments);
     },
@@ -1750,25 +1754,9 @@ options.registry.Carousel = options.registry.CarouselHandler.extend({
         // the slide overlay) + See "CarouselItem" option.
         this.$controls.addClass('o_we_no_overlay');
 
-        let _slideTimestamp;
-        this.$bsTarget.on('slide.bs.carousel.carousel_option', () => {
-            _slideTimestamp = window.performance.now();
-            setTimeout(() => this.trigger_up('hide_overlay'));
-        });
-        this.$bsTarget.on('slid.bs.carousel.carousel_option', () => {
-            // slid.bs.carousel is most of the time fired too soon by bootstrap
-            // since it emulates the transitionEnd with a setTimeout. We wait
-            // here an extra 20% of the time before retargeting edition, which
-            // should be enough...
-            const _slideDuration = (window.performance.now() - _slideTimestamp);
-            setTimeout(() => {
-                this.trigger_up('activate_snippet', {
-                    $snippet: this.$target.find('.carousel-item.active'),
-                    ifInactiveOptions: true,
-                });
-                this.$bsTarget.trigger('active_slide_targeted');
-            }, 0.2 * _slideDuration);
-        });
+        // Handle the sliding manually.
+        this.__onControlClick = throttleForAnimation(this._onControlClick.bind(this));
+        this.$controls.on("click.carousel_option", this.__onControlClick);
 
         return this._super.apply(this, arguments);
     },
@@ -1778,6 +1766,7 @@ options.registry.Carousel = options.registry.CarouselHandler.extend({
     destroy: function () {
         this._super.apply(this, arguments);
         this.$bsTarget.off('.carousel_option');
+        this.$controls.off(".carousel_option");
     },
     /**
      * @override
@@ -1794,18 +1783,12 @@ options.registry.Carousel = options.registry.CarouselHandler.extend({
     /**
      * @override
      */
-    cleanForSave: function () {
-        const $items = this.$target.find('.carousel-item');
-        $items.removeClass('next prev left right active').first().addClass('active');
-        this.$indicators.find('li').removeClass('active').empty().first().addClass('active');
-    },
-    /**
-     * @override
-     */
-    notify: function (name, data) {
+    notify(name, data) {
         this._super(...arguments);
         if (name === 'add_slide') {
-            this._addSlide();
+            this._addSlide().then(data.onSuccess);
+        } else if (name === "slide") {
+            this._slide(data.direction).then(data.onSuccess);
         }
     },
 
@@ -1817,7 +1800,7 @@ options.registry.Carousel = options.registry.CarouselHandler.extend({
      * @see this.selectClass for parameters
      */
     addSlide(previewMode, widgetValue, params) {
-        this._addSlide();
+        return this._addSlide();
     },
 
     //--------------------------------------------------------------------------
@@ -1848,20 +1831,105 @@ options.registry.Carousel = options.registry.CarouselHandler.extend({
      *
      * @private
      */
-    _addSlide() {
+    async _addSlide() {
+        this.options.wysiwyg.odooEditor.historyPauseSteps();
         const $items = this.$target.find('.carousel-item');
         this.$controls.removeClass('d-none');
         const $active = $items.filter('.active');
         this.$indicators.append($('<li>', {
             'data-bs-target': '#' + this.$target.attr('id'),
-            'data-bs-slide-to': $items.length,
         }));
         this.$indicators.append(' ');
         // Need to remove editor data from the clone so it gets its own.
         $active.clone(false)
             .removeClass('active')
             .insertAfter($active);
-        this.$bsTarget.carousel('next');
+        await this._slide("next");
+        this.options.wysiwyg.odooEditor.historyUnpauseSteps();
+    },
+    /**
+     * Slides the carousel in the given direction.
+     *
+     * @private
+     * @param {String|Number} direction the direction in which to slide:
+     *     - "prev": the previous slide;
+     *     - "next": the next slide;
+     *     - number: a slide number.
+     * @returns {Promise}
+     */
+    _slide(direction) {
+        this.trigger_up("disable_loading_effect");
+        let _slideTimestamp;
+        this.$bsTarget.one("slide.bs.carousel", () => {
+            _slideTimestamp = window.performance.now();
+            setTimeout(() => this.trigger_up('hide_overlay'));
+        });
+
+        return new Promise(resolve => {
+            this.$bsTarget.one("slid.bs.carousel", () => {
+                // slid.bs.carousel is most of the time fired too soon by bootstrap
+                // since it emulates the transitionEnd with a setTimeout. We wait
+                // here an extra 20% of the time before retargeting edition, which
+                // should be enough...
+                const _slideDuration = (window.performance.now() - _slideTimestamp);
+                setTimeout(() => {
+                    // Setting the active indicator manually, as Bootstrap could
+                    // not do it because the `data-bs-slide-to` attribute is not
+                    // here in edit mode anymore.
+                    const $activeSlide = this.$target.find(".carousel-item.active");
+                    const activeIndex = [...$activeSlide[0].parentElement.children].indexOf($activeSlide[0]);
+                    const activeIndicatorEl = [...this.$indicators[0].children][activeIndex];
+                    activeIndicatorEl.classList.add("active");
+                    activeIndicatorEl.setAttribute("aria-current", "true");
+
+                    this.trigger_up("activate_snippet", {
+                        $snippet: $activeSlide,
+                        ifInactiveOptions: true,
+                    });
+                    this.$bsTarget.trigger("active_slide_targeted"); // TODO remove in master: kept for compatibility.
+                    this.trigger_up("enable_loading_effect");
+                    resolve();
+                }, 0.2 * _slideDuration);
+            });
+
+            this.$bsTarget.carousel(direction);
+        });
+    },
+
+    //--------------------------------------------------------------------------
+    // Handlers
+    //--------------------------------------------------------------------------
+
+    /**
+     * Slides the carousel when clicking on the carousel controls. This handler
+     * allows to put the sliding in the mutex, to avoid race conditions.
+     *
+     * @private
+     * @param {Event} ev
+     */
+    _onControlClick(ev) {
+        // Compute to which slide the carousel will slide.
+        const controlEl = ev.currentTarget;
+        let direction;
+        if (controlEl.classList.contains("carousel-control-prev")) {
+            direction = "prev";
+        } else if (controlEl.classList.contains("carousel-control-next")) {
+            direction = "next";
+        } else {
+            const indicatorEl = ev.target;
+            if (!indicatorEl.matches("li") || indicatorEl.classList.contains("active")) {
+                return;
+            }
+            direction = [...controlEl.children].indexOf(indicatorEl);
+        }
+
+        // Slide the carousel.
+        this.trigger_up("snippet_edition_request", {exec: async () => {
+            this.options.wysiwyg.odooEditor.historyPauseSteps();
+            await this._slide(direction);
+            this.options.wysiwyg.odooEditor.historyUnpauseSteps();
+            this.options.wysiwyg.odooEditor.historyStep();
+        }});
     },
     /**
      * @override
@@ -1894,6 +1962,7 @@ options.registry.CarouselItem = options.Class.extend({
      */
     start: function () {
         this.$carousel = this.$bsTarget.closest('.carousel');
+        this.$targetCarousel = this.$target.closest(".carousel");
         this.$indicators = this.$carousel.find('.carousel-indicators');
         this.$controls = this.$carousel.find('.carousel-control-prev, .carousel-control-next, .carousel-indicators');
 
@@ -1908,6 +1977,14 @@ options.registry.CarouselItem = options.Class.extend({
      * @override
      */
     destroy: function () {
+        // Activate the active slide after removing a slide.
+        if (this.hasRemovedSlide) {
+            this.trigger_up("activate_snippet", {
+                $snippet: this.$targetCarousel.find(".carousel-item.active"),
+                ifInactiveOptions: true,
+            });
+            this.hasRemovedSlide = false;
+        }
         this._super(...arguments);
         this.$carousel.off('.carousel_item_option');
     },
@@ -1937,9 +2014,14 @@ options.registry.CarouselItem = options.Class.extend({
      * @see this.selectClass for parameters
      */
     addSlideItem(previewMode, widgetValue, params) {
-        this.trigger_up('option_update', {
-            optionName: 'Carousel',
-            name: 'add_slide',
+        return new Promise(resolve => {
+            this.trigger_up("option_update", {
+                optionName: "Carousel",
+                name: "add_slide",
+                data: {
+                    onSuccess: () => resolve(),
+                },
+            });
         });
     },
     /**
@@ -1947,43 +2029,56 @@ options.registry.CarouselItem = options.Class.extend({
      *
      * @see this.selectClass for parameters.
      */
-    removeSlide: function (previewMode) {
+    async removeSlide(previewMode) {
+        this.options.wysiwyg.odooEditor.historyPauseSteps();
         const $items = this.$carousel.find('.carousel-item');
         const newLength = $items.length - 1;
         if (!this.removing && newLength > 0) {
             // The active indicator is deleted to ensure that the other
             // indicators will still work after the deletion.
             const $toDelete = $items.filter('.active').add(this.$indicators.find('.active'));
-            this.$carousel.one('active_slide_targeted.carousel_item_option', () => {
-                $toDelete.remove();
-                // To ensure the proper functioning of the indicators, their
-                // attributes must reflect the position of the slides.
-                const indicatorsEls = this.$indicators[0].querySelectorAll('li');
-                for (let i = 0; i < indicatorsEls.length; i++) {
-                    indicatorsEls[i].setAttribute('data-bs-slide-to', i);
-                }
-                this.$controls.toggleClass('d-none', newLength === 1);
-                this.$carousel.trigger('content_changed');
-                this.removing = false;
+            this.removing = true; // TODO remove in master: kept for stable.
+            // Go to the previous slide.
+            await new Promise(resolve => {
+                this.trigger_up("option_update", {
+                    optionName: "Carousel",
+                    name: "slide",
+                    data: {
+                        direction: "prev",
+                        onSuccess: () => resolve(),
+                    },
+                });
             });
-            this.removing = true;
-            this.$carousel.carousel('prev');
+            // Remove the slide.
+            $toDelete.remove();
+            this.$controls.toggleClass("d-none", newLength === 1);
+            this.$carousel.trigger("content_changed");
+            this.removing = false;
         }
+        this.options.wysiwyg.odooEditor.historyUnpauseSteps();
+        this.hasRemovedSlide = true;
     },
     /**
      * Goes to next slide or previous slide.
      *
      * @see this.selectClass for parameters
      */
-    switchToSlide: function (previewMode, widgetValue, params) {
-        switch (widgetValue) {
-            case 'left':
-                this.$controls.filter('.carousel-control-prev')[0].click();
-                break;
-            case 'right':
-                this.$controls.filter('.carousel-control-next')[0].click();
-                break;
-        }
+    switchToSlide(previewMode, widgetValue, params) {
+        this.options.wysiwyg.odooEditor.historyPauseSteps();
+        const direction = widgetValue === "left" ? "prev" : "next";
+        return new Promise(resolve => {
+            this.trigger_up("option_update", {
+                optionName: "Carousel",
+                name: "slide",
+                data: {
+                    direction: direction,
+                    onSuccess: () => {
+                        this.options.wysiwyg.odooEditor.historyUnpauseSteps();
+                        resolve();
+                    },
+                },
+            });
+        });
     },
 });
 
@@ -2206,6 +2301,8 @@ options.registry.collapse = options.Class.extend({
         const panelId = setUniqueId($panel, 'myCollapseTab');
         $tab.attr('data-bs-target', '#' + panelId);
         $tab.data('bs-target', '#' + panelId);
+
+        $tab[0].setAttribute("aria-controls", panelId);
     },
 });
 
@@ -2596,8 +2693,11 @@ options.registry.DeviceVisibility = options.Class.extend({
      * @override
      */
     async onTargetShow() {
-        if (this.$target[0].classList.contains('o_snippet_mobile_invisible')
-                || this.$target[0].classList.contains('o_snippet_desktop_invisible')) {
+        const isMobilePreview = weUtils.isMobileView(this.$target[0]);
+        const isMobileHidden = this.$target[0].classList.contains("o_snippet_mobile_invisible");
+        if ((this.$target[0].classList.contains('o_snippet_mobile_invisible')
+                || this.$target[0].classList.contains('o_snippet_desktop_invisible')
+            ) && isMobilePreview === isMobileHidden) {
             this.$target[0].classList.add('o_snippet_override_invisible');
         }
     },
@@ -2946,6 +3046,7 @@ options.registry.CoverProperties = options.Class.extend({
 
         this.$image = this.$target.find('.o_record_cover_image');
         this.$filter = this.$target.find('.o_record_cover_filter');
+        this.rpc = this.bindService("rpc");
     },
     /**
      * @override
@@ -2966,10 +3067,31 @@ options.registry.CoverProperties = options.Class.extend({
      * @see this.selectClass for parameters
      */
     background: async function (previewMode, widgetValue, params) {
+        if (previewMode === false) {
+            this.$image[0].classList.remove("o_b64_image_to_save");
+        }
         if (widgetValue === '') {
             this.$image.css('background-image', '');
             this.$target.removeClass('o_record_has_cover');
         } else {
+            if (previewMode === false) {
+                const imgEl = document.createElement("img");
+                imgEl.src = widgetValue;
+                await loadImageInfo(imgEl, this.rpc);
+                if (imgEl.dataset.mimetype && ![
+                    "image/gif",
+                    "image/svg+xml",
+                    "image/webp",
+                ].includes(imgEl.dataset.mimetype)) {
+                    // Convert to webp but keep original width.
+                    imgEl.dataset.mimetype = "image/webp";
+                    const base64src = await applyModifications(imgEl, {
+                        mimetype: "image/webp",
+                    });
+                    widgetValue = base64src;
+                    this.$image[0].classList.add("o_b64_image_to_save");
+                }
+            }
             this.$image.css('background-image', `url('${widgetValue}')`);
             this.$target.addClass('o_record_has_cover');
             const $defaultSizeBtn = this.$el.find('.o_record_cover_opt_size_default');
@@ -3440,10 +3562,7 @@ options.registry.WebsiteAnimate = options.Class.extend({
         this.isAnimatedText = this.$target.hasClass('o_animated_text');
         this.$optionsSection = this.$overlay.data('$optionsSection');
         this.$scrollingElement = $().getScrollingElement(this.ownerDocument);
-        if (this.isAnimatedText) {
-            this.$overlay[0].querySelectorAll(".o_handle")
-                .forEach(handle => handle.classList.add("pe-none"));
-        }
+        this.$overlay[0].querySelector(".o_handles").classList.toggle("pe-none", this.isAnimatedText);
     },
     /**
      * @override
@@ -3557,6 +3676,10 @@ options.registry.WebsiteAnimate = options.Class.extend({
             this._toggleImagesLazyLoading(true);
         }
         if (widgetValue === "onHover") {
+            // Pause the history until the hover effect is applied in
+            // "setImgShapeHoverEffect". This prevents saving the intermediate
+            // steps done (in a tricky way) up to that point.
+            this.options.wysiwyg.odooEditor.historyPauseSteps();
             this.trigger_up("option_update", {
                 optionName: "ImageTools",
                 name: "enable_hover_effect",
@@ -3607,7 +3730,7 @@ options.registry.WebsiteAnimate = options.Class.extend({
     /**
      * @override
      */
-    _computeWidgetVisibility(widgetName, params) {
+    async _computeWidgetVisibility(widgetName, params) {
         const hasAnimateClass = this.$target[0].classList.contains("o_animate");
         switch (widgetName) {
             case 'no_animation_opt': {
@@ -3649,7 +3772,10 @@ options.registry.WebsiteAnimate = options.Class.extend({
                 if (hoverEffectOverlayWidget) {
                     const hoverEffectWidget = hoverEffectOverlayWidget.getParent();
                     const imageToolsOpt = hoverEffectWidget.getParent();
-                    return !imageToolsOpt._isDeviceShape() && !imageToolsOpt._isAnimatedShape();
+                    return (
+                        imageToolsOpt._canHaveHoverEffect() && imageToolsOpt._isImageSupportedForShapes()
+                        && !await isImageCorsProtected(this.$target[0])
+                    );
                 }
                 return false;
             }
@@ -3726,8 +3852,7 @@ options.registry.TextHighlight = options.Class.extend({
         this.leftPanelEl = this.$overlay.data("$optionsSection")[0];
         // Reduce overlay opacity for more highlight visibility on small text.
         this.$overlay[0].style.opacity = "0.25";
-        this.$overlay[0].querySelectorAll(".o_handle")
-            .forEach(handle => handle.classList.add("pe-none"));
+        this.$overlay[0].querySelector(".o_handles").classList.add("pe-none");
     },
     /**
      * Move "Text Effect" options to the editor's toolbar.
@@ -3742,6 +3867,18 @@ options.registry.TextHighlight = options.Class.extend({
      */
     onBlur() {
         this.leftPanelEl.appendChild(this.el);
+    },
+    /**
+    * @override
+    */
+    notify(name, data) {
+        // Apply the highlight effect DOM structure when added for the first time
+        // and display the highlight effects grid immediately.
+        if (name === "new_text_highlight") {
+            this._autoAdaptHighlights();
+            this._requestUserValueWidgets("text_highlight_opt")[0]?.enable();
+        }
+        this._super(...arguments);
     },
 
     //--------------------------------------------------------------------------
@@ -3782,21 +3919,19 @@ options.registry.TextHighlight = options.Class.extend({
                 svg.remove();
             });
         } else {
-            applyTextHighlight(this.$target[0], highlightID);
+            this._autoAdaptHighlights();
         }
     },
     /**
-     * @override
+     * Used to set the highlight effect DOM structure on the targeted text
+     * content.
+     *
+     * @private
      */
-    async _computeWidgetState(methodName, params) {
-        const value = await this._super(...arguments);
-        if (methodName === "selectStyle" && value === "currentColor") {
-            const style = window.getComputedStyle(this.$target[0]);
-            // The highlight default color is the text's "currentColor".
-            // This value should be handled correctly by the option.
-            return style.color;
-        }
-        return value;
+    _autoAdaptHighlights() {
+        this.trigger_up("snippet_edition_request", { exec: async () =>
+            await this._refreshPublicWidgets($(this.options.wysiwyg.odooEditor.editable))
+        });
     },
 
     //--------------------------------------------------------------------------
@@ -3883,7 +4018,7 @@ options.registry.MegaMenuLayout = options.registry.SelectTemplate.extend({
 });
 
 /**
- * Hides delete button for Mega Menu block.
+ * Hides delete and clone buttons for Mega Menu block.
  */
 options.registry.MegaMenuNoDelete = options.Class.extend({
     forceNoDeleteButton: true,
@@ -4026,19 +4161,21 @@ options.registry.GridImage = options.Class.extend({
      * @returns {?HTMLElement}
      */
     _getImageGridItem() {
-        const parentEl = this.$target[0].parentNode;
-        if (parentEl && parentEl.classList.contains('o_grid_item_image')) {
-            return parentEl;
-        }
-        return null;
+        return this.$target[0].closest(".o_grid_item_image");
     },
     /**
      * @override
      */
     _computeVisibility() {
+        // Special conditions for the hover effects.
+        const hasSquareShape = this.$target[0].dataset.shape === "web_editor/geometric/geo_square";
+        const effectAllowsOption = !["dolly_zoom", "outline", "image_mirror_blur"]
+            .includes(this.$target[0].dataset.hoverEffect);
+
         return this._super(...arguments)
             && !!this._getImageGridItem()
-            && !('shape' in this.$target[0].dataset);
+            && (!('shape' in this.$target[0].dataset)
+                || hasSquareShape && effectAllowsOption);
     },
     /**
      * @override
@@ -4081,8 +4218,15 @@ options.registry.GalleryElement = options.Class.extend({
 });
 
 options.registry.Button = options.Class.extend({
-    forceDuplicateButton: true,
-
+    /**
+     * @override
+     */
+    init() {
+        this._super(...arguments);
+        const isUnremovableButton = this.$target[0].classList.contains("oe_unremovable");
+        this.forceDuplicateButton = !isUnremovableButton;
+        this.forceNoDeleteButton = isUnremovableButton;
+    },
     /**
      * @override
      */
@@ -4101,7 +4245,7 @@ options.registry.Button = options.Class.extend({
         // Only if the button is cloned, not if a snippet containing that button
         // is cloned.
         if (options.isCurrent) {
-            this._adaptButtons();
+            this._adaptButtons(false);
         }
     },
 
@@ -4114,57 +4258,60 @@ options.registry.Button = options.Class.extend({
      * applies appropriate styling.
      *
      * @private
+     * @param {Boolean} [adaptAppearance=true]
      */
-    _adaptButtons() {
+    _adaptButtons(adaptAppearance = true) {
         const previousSiblingEl = this.$target[0].previousElementSibling;
         const nextSiblingEl = this.$target[0].nextElementSibling;
-        let buttonNeighbor = false;
+        let siblingButtonEl = null;
         // When multiple buttons follow each other, they may break on 2 lines or
         // more on mobile, so they need a margin-bottom. Also, if the button is
         // dropped next to another button add a space between them.
-        if (previousSiblingEl?.matches(".btn")) {
-            previousSiblingEl.classList.add("mb-2");
-            buttonNeighbor = true;
-            this.$target[0].before(' ');
-        }
         if (nextSiblingEl?.matches(".btn")) {
             nextSiblingEl.classList.add("mb-2");
-            buttonNeighbor = true;
             this.$target[0].after(' ');
+            // It is first the next button that we put in this variable because
+            // we want to copy as a priority the style of the previous button
+            // if it exists.
+            siblingButtonEl = nextSiblingEl;
         }
-        if (buttonNeighbor) {
-            if (this.$target[0].matches(".s_custom_button")) {
-                this.$target[0].classList.remove(".s_custom_button");
-            } else {
+        if (previousSiblingEl?.matches(".btn")) {
+            previousSiblingEl.classList.add("mb-2");
+            this.$target[0].before(' ');
+            siblingButtonEl = previousSiblingEl;
+        }
+        if (siblingButtonEl) {
+            this.$target[0].classList.add("mb-2");
+        }
+        if (adaptAppearance) {
+            if (siblingButtonEl && !this.$target[0].matches(".s_custom_button")) {
                 // If the dropped button is not a custom button then we adjust
                 // its appearance to match its sibling.
-                [previousSiblingEl, nextSiblingEl].forEach((siblingEl) => {
-                    if (siblingEl?.classList?.contains("btn-secondary")) {
-                        this.$target[0].classList.remove("btn-primary");
-                        this.$target[0].classList.add("btn-secondary");
-                    }
-                    if (siblingEl?.classList?.contains("btn-sm")) {
-                        this.$target[0].classList.add("btn-sm");
-                    } else if (siblingEl?.classList?.contains("btn-lg")) {
-                        this.$target[0].classList.add("btn-lg");
-                    }
-                });
+                if (siblingButtonEl.classList.contains("btn-secondary")) {
+                    this.$target[0].classList.remove("btn-primary");
+                    this.$target[0].classList.add("btn-secondary");
+                }
+                if (siblingButtonEl.classList.contains("btn-sm")) {
+                    this.$target[0].classList.add("btn-sm");
+                } else if (siblingButtonEl.classList.contains("btn-lg")) {
+                    this.$target[0].classList.add("btn-lg");
+                }
+            } else {
+                // To align with the editor's behavior, we need to enclose the
+                // button in a <p> tag if it's not dropped within a <p> tag. We only
+                // put the dropped button in a <p> if it's not next to another
+                // button, because some snippets have buttons that aren't inside a
+                // <p> (e.g. s_text_cover).
+                // TODO: this definitely needs to be fixed at web_editor level.
+                // Nothing should prevent adding buttons outside of a paragraph.
+                const btnContainerEl = this.$target[0].closest("p");
+                if (!btnContainerEl) {
+                    const paragraphEl = document.createElement("p");
+                    this.$target[0].parentNode.insertBefore(paragraphEl, this.$target[0]);
+                    paragraphEl.appendChild(this.$target[0]);
+                }
             }
-            this.$target[0].classList.add("mb-2");
-        } else {
-            // To align with the editor's behavior, we need to enclose the
-            // button in a <p> tag if it's not dropped within a <p> tag. We only
-            // put the dropped button in a <p> if it's not next to another
-            // button, because some snippets have buttons that aren't inside a
-            // <p> (e.g. s_text_cover).
-            // TODO: this definitely needs to be fixed at web_editor level.
-            // Nothing should prevent adding buttons outside of a paragraph.
-            const btnContainerEl = this.$target[0].closest("p");
-            if (!btnContainerEl) {
-                const paragraphEl = document.createElement("p");
-                this.$target[0].parentNode.insertBefore(paragraphEl, this.$target[0]);
-                paragraphEl.appendChild(this.$target[0]);
-            }
+            this.$target[0].classList.remove("s_custom_button");
         }
     },
 });

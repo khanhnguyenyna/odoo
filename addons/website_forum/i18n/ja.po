@@ -4,15 +4,16 @@
 # 
 # Translators:
 # Wil Odoo, 2023
-# Junko Augias, 2023
+# Ryoko Tsuda <ryoko@quartile.co>, 2023
+# Junko Augias, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Junko Augias, 2023\n"
+"Last-Translator: Junko Augias, 2024\n"
 "Language-Team: Japanese (https://app.transifex.com/odoo/teams/41243/ja/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -393,6 +394,11 @@ msgid "<br/>by"
 msgstr "<br/>次により:"
 
 #. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.new_question
+msgid "<i class=\"fa fa-angle-left me-2\"/>Back to All Posts"
+msgstr "<i class=\"fa fa-angle-left me-2\"/>全投稿に戻る"
+
+#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_votes
 msgid "<i class=\"fa fa-arrow-right\"/> Go To Forums"
 msgstr "<i class=\"fa fa-arrow-right\"/>フォーラムへ移動 "
@@ -501,7 +507,7 @@ msgstr "<i class=\"fa fa-fw fa-check me-1\"/>フォロー中"
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.forum_post_view_kanban
 msgid "<i class=\"fa fa-globe me-1\" title=\"Website\"/>"
-msgstr "<i class=\"fa fa-globe me-1\" title=\"Webサイト\"/>"
+msgstr "<i class=\"fa fa-globe me-1\" title=\"ウェブサイト\"/>"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar
@@ -623,11 +629,6 @@ msgid ""
 msgstr "<i class=\"oi oi-arrow-right display-inline-block\"/> 質問リストへ戻る"
 
 #. module: website_forum
-#: model_terms:ir.ui.view,arch_db:website_forum.new_question
-msgid "<i class=\"oi oi-chevron-left me-2\"/>Back to All Posts"
-msgstr "<i class=\"oi oi-chevron-left me-2\"/>全てのポストに戻る"
-
-#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_profile_sub_nav
 msgid "<i class=\"oi oi-chevron-left small\"/> Back"
 msgstr "<i class=\"oi oi-chevron-left small\"/> 戻る"
@@ -641,6 +642,11 @@ msgstr "<small class=\"fw-bold\">投票</small>"
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_body
 msgid "<small>View all</small>"
 msgstr "<small>全て表示</small>"
+
+#. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.forum_all_all_entries
+msgid "<span class=\"badge bg-dark me-1\">Last post:</span>"
+msgstr "<span class=\"badge bg-dark me-1\">最新ポスト:</span>"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.contact
@@ -694,6 +700,11 @@ msgstr "<span class=\"text-muted\">まだ活動がありません</span>"
 #: model_terms:ir.ui.view,arch_db:website_forum.post_description_full
 msgid "<span>Be the first to answer this question</span>"
 msgstr "<span>この質問に初めに回答しましょう</span>"
+
+#. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.forum_model_nav
+msgid "<span>Moderation</span>"
+msgstr "<span>モデレーション</span>"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.post_description_full
@@ -2291,11 +2302,6 @@ msgid "Moderate posts"
 msgstr "投稿をモデレート"
 
 #. module: website_forum
-#: model_terms:ir.ui.view,arch_db:website_forum.forum_model_nav
-msgid "Moderation"
-msgstr "モデレーション"
-
-#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_body
 msgid "Moderation tools"
 msgstr "モデレートツール"
@@ -2924,7 +2930,7 @@ msgstr "自分の質問に回答"
 #: model:ir.model.fields,help:website_forum.field_forum_forum__website_id
 #: model:ir.model.fields,help:website_forum.field_forum_post__website_id
 msgid "Restrict publishing to this website."
-msgstr "このWebサイトへの公開を制限。"
+msgstr "このウェブサイトへの公開を制限。"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.profile_access_denied
@@ -3028,6 +3034,16 @@ msgid ""
 "professional profile and become a better marketer together."
 msgstr ""
 "最高のコンテンツや新しいマーケティングのアイデアを共有し、議論することで、プロフェッショナルなプロフィールを構築して、より優れたマーケターになりましょう。"
+
+#. module: website_forum
+#. odoo-javascript
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#, python-format
+msgid "Share on #{media}"
+msgstr ""
 
 #. module: website_forum
 #. odoo-javascript
@@ -3621,7 +3637,7 @@ msgstr "検証待ち"
 #: model:ir.model.fields,field_description:website_forum.field_forum_forum__website_id
 #: model:ir.model.fields,field_description:website_forum.field_forum_post__website_id
 msgid "Website"
-msgstr "サイト"
+msgstr "ウェブサイト"
 
 #. module: website_forum
 #: model:ir.model.fields.selection,name:website_forum.selection__gamification_challenge__challenge_category__forum
@@ -3633,7 +3649,7 @@ msgstr "ウェブサイト/フォーラム"
 #: model:ir.model.fields,field_description:website_forum.field_forum_post__website_message_ids
 #: model:ir.model.fields,field_description:website_forum.field_forum_tag__website_message_ids
 msgid "Website Messages"
-msgstr "サイトメッセージ"
+msgstr "ウェブサイトメッセージ"
 
 #. module: website_forum
 #: model:ir.model.fields,field_description:website_forum.field_forum_post__website_url
@@ -3645,7 +3661,7 @@ msgstr "サイトURL"
 #: model:ir.model.fields,help:website_forum.field_forum_post__website_message_ids
 #: model:ir.model.fields,help:website_forum.field_forum_tag__website_message_ids
 msgid "Website communication history"
-msgstr "サイト通信履歴"
+msgstr "ウェブサイト通信履歴"
 
 #. module: website_forum
 #: model:ir.model.fields,field_description:website_forum.field_forum_forum__website_meta_description

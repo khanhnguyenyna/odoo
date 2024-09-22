@@ -84,9 +84,9 @@ export class DiscussSidebarCategories extends Component {
     filteredThreads(category) {
         return category.threads.filter((thread) => {
             return (
-                thread.displayToSelf &&
+                (thread.displayToSelf || thread.isLocallyPinned) &&
                 (!this.state.quickSearchVal ||
-                    cleanTerm(thread.name).includes(cleanTerm(this.state.quickSearchVal)))
+                    cleanTerm(thread.displayName).includes(cleanTerm(this.state.quickSearchVal)))
             );
         });
     }

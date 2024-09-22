@@ -94,8 +94,9 @@ class PaymentCommon(BaseCommon):
 
         cls.provider = cls.dummy_provider
         cls.payment_methods = cls.provider.payment_method_ids
-        cls.payment_method_id = cls.provider.payment_method_ids[:1].id
-        cls.payment_method_code = cls.provider.payment_method_ids[:1].code
+        cls.payment_method = cls.payment_methods[:1]
+        cls.payment_method_id = cls.payment_method.id
+        cls.payment_method_code = cls.payment_method.code
         cls.amount = 1111.11
         cls.company = cls.env.company
         cls.company_id = cls.company.id
@@ -166,6 +167,14 @@ class PaymentCommon(BaseCommon):
     @classmethod
     def _get_provider_domain(cls, code):
         return [('code', '=', code)]
+
+    @classmethod
+    def _prepare_user(cls, user, group_xmlid):
+        user.groups_id = [Command.link(cls.env.ref(group_xmlid).id)]
+        # Flush and invalidate the cache to allow checking access rights.
+        user.flush_recordset()
+        user.invalidate_recordset()
+        return user
 
     def _create_transaction(self, flow, sudo=True, **values):
         default_values = {
@@ -238,10 +247,10 @@ class PaymentCommon(BaseCommon):
         This method cannot be used with functions that make requests. Any exception raised in the
         scope of the new request will not be caught and will make the test fail.
 
-        :param class exception_class: The class of the exception to monitor
-        :param function fun: The function to call when monitoring for exceptions
-        :param list args: The positional arguments passed as-is to the called function
-        :param dict kwargs: The keyword arguments passed as-is to the called function
+        :param class exception_class: The class of the exception to monitor.
+        :param function fun: The function to call when monitoring for exceptions.
+        :param list args: The positional arguments passed as-is to the called function.
+        :param dict kwargs: The keyword arguments passed as-is to the called function.
         :return: None
         """
         try:
@@ -249,7 +258,7 @@ class PaymentCommon(BaseCommon):
         except exception_class:
             self.fail(f"{func.__name__} should not raise error of class {exception_class.__name__}")
         except Exception:
-            pass  # Any exception whose class is not monitored is caught and ignored
+            pass  # Any exception whose class is not monitored is caught and ignored.
 
     def _skip_if_account_payment_is_not_installed(self):
         """ Skip current test if `account_payment` module is not installed. """

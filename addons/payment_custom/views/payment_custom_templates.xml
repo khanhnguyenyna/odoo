@@ -2,19 +2,9 @@
 <odoo>
 
     <template id="payment_custom.token_form" inherit_id="payment.token_form">
-        <xpath expr="//p[@name='o_payment_secured_by_desktop']" position="attributes">
-            <attribute name="t-att-class"/>
-            <attribute name="class">d-none</attribute>
-        </xpath>
-        <xpath expr="//p[@name='o_payment_secured_by_mobile']" position="attributes">
-            <attribute name="class" separator=" " add="d-none"/>
-        </xpath>
     </template>
 
     <template id="payment_custom.payment_method_form" inherit_id="payment.method_form">
-        <xpath expr="//p[@name='o_payment_secured_by']" position="attributes">
-            <attribute name="class" separator=" " add="d-none"/>
-        </xpath>
     </template>
 
     <template id="redirect_form">
@@ -34,7 +24,7 @@
 
         <xpath expr="//div[@name='o_payment_status_alert']" position="inside">
             <t t-set="qr_code"
-               t-value="tx.provider_id.sudo().qr_code and tx.company_id.sudo().partner_id.bank_ids[:1].build_qr_code_base64(tx.amount, tx.reference, None, tx.currency_id, tx.partner_id)"
+               t-value="tx.provider_id.sudo().qr_code and tx.company_id.sudo().partner_id.bank_ids[:1].build_qr_code_base64(tx.amount, tx._get_communication(), None, tx.currency_id, tx.partner_id)"
             />
             <t t-if="tx.provider_id.sudo().code == 'custom' and qr_code">
                 <div class="position-relative order-2 d-flex flex-md-column justify-content-center align-items-center align-items-md-stretch w-100 w-md-auto">
@@ -74,11 +64,12 @@
                 <div class="card flex-grow-1">
                     <div class="card-body">
                         <t>$0</t>
-                        <t t-if="tx.reference">
+                        <t t-if="tx._get_communication()">
                             <hr class="w-100"/>
                             <strong class="mt-auto">Communication: </strong>
-                            <span t-out="tx.reference"/>
+                            <span t-out="tx._get_communication()"/>
                         </t>
+                        <t t-if="tx.reference"/>  <!-- Remove in master -->
                     </div>
                 </div>
             </div>

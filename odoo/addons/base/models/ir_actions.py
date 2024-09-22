@@ -15,6 +15,7 @@ import logging
 from operator import getitem
 import requests
 import json
+import contextlib
 
 from pytz import timezone
 
@@ -52,6 +53,7 @@ class IrActions(models.Model):
     _description = 'Actions'
     _table = 'ir_actions'
     _order = 'name'
+    _allow_sudo_commands = False
 
     name = fields.Char(string='Action Name', required=True, translate=True)
     type = fields.Char(string='Action Type', required=True)
@@ -85,10 +87,12 @@ class IrActions(models.Model):
         return res
 
     def unlink(self):
-        """unlink ir.action.todo which are related to actions which will be deleted.
+        """unlink ir.action.todo/ir.filters which are related to actions which will be deleted.
            NOTE: ondelete cascade will not work on ir.actions.actions so we will need to do it manually."""
         todos = self.env['ir.actions.todo'].search([('action_id', 'in', self.ids)])
         todos.unlink()
+        filters = self.env['ir.filters'].search([('action_id', 'in', self.ids)])
+        filters.unlink()
         res = super(IrActions, self).unlink()
         # self.get_bindings() depends on action records
         self.env.registry.clear_cache()
@@ -188,7 +192,7 @@ class IrActions(models.Model):
         :return: A read() view of the ir.actions.action safe for web use
         """
         record = self.env.ref(full_xml_id)
-        assert isinstance(self.env[record._name], type(self))
+        assert isinstance(self.env[record._name], self.env.registry[self._name])
         return record._get_action_dict()
 
     def _get_action_dict(self):
@@ -222,6 +226,7 @@ class IrActionsActWindow(models.Model):
     _table = 'ir_act_window'
     _inherit = 'ir.actions.actions'
     _order = 'name'
+    _allow_sudo_commands = False
 
     @api.constrains('res_model', 'binding_model_id')
     def _check_model(self):
@@ -355,6 +360,7 @@ class IrActionsActWindowView(models.Model):
     _table = 'ir_act_window_view'
     _rec_name = 'view_id'
     _order = 'sequence,id'
+    _allow_sudo_commands = False
 
     sequence = fields.Integer()
     view_id = fields.Many2one('ir.ui.view', string='View')
@@ -374,6 +380,7 @@ class IrActionsActWindowclose(models.Model):
     _description = 'Action Window Close'
     _inherit = 'ir.actions.actions'
     _table = 'ir_actions'
+    _allow_sudo_commands = False
 
     type = fields.Char(default='ir.actions.act_window_close')
 
@@ -391,6 +398,7 @@ class IrActionsActUrl(models.Model):
     _table = 'ir_act_url'
     _inherit = 'ir.actions.actions'
     _order = 'name'
+    _allow_sudo_commands = False
 
     type = fields.Char(default='ir.actions.act_url')
     url = fields.Text(string='Action URL', required=True)
@@ -446,6 +454,7 @@ class IrActionsServer(models.Model):
     _table = 'ir_act_server'
     _inherit = 'ir.actions.actions'
     _order = 'sequence,name'
+    _allow_sudo_commands = False
 
     DEFAULT_PYTHON_CODE = """# Available variables:
 #  - env: environment on which the action is triggered
@@ -468,7 +477,7 @@ class IrActionsServer(models.Model):
         model = self.env[ir_model.model]
         sensible_default_fields = ['partner_id', 'user_id', 'user_ids', 'stage_id', 'state', 'active']
         for field_name in sensible_default_fields:
-            if field_name in model._fields:
+            if field_name in model._fields and not model._fields[field_name].readonly:
                 return field_name
         return ''
 
@@ -653,8 +662,6 @@ class IrActionsServer(models.Model):
                     raise ValidationError(_("The path to the field to update contains a non-relational field (%s) that is not the last field in the path. You can't traverse non-relational fields (even in the quantum realm). Make sure only the last field in the path is non-relational.", field_name))
                 if isinstance(field, fields.Json):
                     raise ValidationError(_("I'm sorry to say that JSON fields (such as %s) are currently not supported.", field_name))
-                elif field.readonly:
-                    raise ValidationError(_("The field to update (%s) is read-only. You can't update a read-only field - even when asking nicely.", field_name))
         target_records = None
         if record is not None:
             target_records = reduce(getitem, path[:-1], record)
@@ -725,7 +732,7 @@ class IrActionsServer(models.Model):
 
     def _get_runner(self):
         multi = True
-        t = type(self)
+        t = self.env.registry[self._name]
         fn = getattr(t, f'_run_action_{self.state}_multi', None)\
           or getattr(t, f'run_action_{self.state}_multi', None)
         if not fn:
@@ -739,7 +746,7 @@ class IrActionsServer(models.Model):
     def _register_hook(self):
         super()._register_hook()
 
-        for cls in type(self).mro():
+        for cls in self.env.registry[self._name].mro():
             for symbol in vars(cls).keys():
                 if symbol.startswith('run_action_'):
                     _logger.warning(
@@ -825,16 +832,14 @@ class IrActionsServer(models.Model):
 
         If applicable, link active_id.<self.link_field_id> to the new record.
         """
-        res = {'name': self.value}
-
-        res = self.env[self.crud_model_id.model].create(res)
+        res_id, _res_name = self.env[self.crud_model_id.model].name_create(self.value)
 
         if self.link_field_id:
             record = self.env[self.model_id.model].browse(self._context.get('active_id'))
             if self.link_field_id.ttype in ['one2many', 'many2many']:
-                record.write({self.link_field_id.name: [Command.link(res.id)]})
+                record.write({self.link_field_id.name: [Command.link(res_id)]})
             else:
-                record.write({self.link_field_id.name: res.id})
+                record.write({self.link_field_id.name: res_id})
 
     def _get_eval_context(self, action=None):
         """ Prepare the context used when evaluating python code, like the
@@ -916,7 +921,9 @@ class IrActionsServer(models.Model):
             eval_context = self._get_eval_context(action)
             records = eval_context.get('record') or eval_context['model']
             records |= eval_context.get('records') or eval_context['model']
-            if records:
+            if records.ids:
+                # check access rules on real records only; base automations of
+                # type 'onchange' can run server actions on new records
                 try:
                     records.check_access_rule('write')
                 except AccessError:
@@ -1007,6 +1014,9 @@ class IrActionsServer(models.Model):
                     expr = int(action.value)
                 except Exception:
                     pass
+            elif action.update_field_id.ttype == 'float':
+                with contextlib.suppress(Exception):
+                    expr = float(action.value)
             result[action.id] = expr
         return result
 
@@ -1018,6 +1028,7 @@ class IrActionsTodo(models.Model):
     _description = "Configuration Wizards"
     _rec_name = 'action_id'
     _order = "sequence, id"
+    _allow_sudo_commands = False
 
     action_id = fields.Many2one('ir.actions.actions', string='Action', required=True, index=True)
     sequence = fields.Integer(default=10)
@@ -1094,6 +1105,7 @@ class IrActionsActClient(models.Model):
     _inherit = 'ir.actions.actions'
     _table = 'ir_act_client'
     _order = 'name'
+    _allow_sudo_commands = False
 
     type = fields.Char(default='ir.actions.client')
 

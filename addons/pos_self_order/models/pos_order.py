@@ -33,12 +33,6 @@ class PosOrderLine(models.Model):
             del vals['combo_parent_uuid']
         return super().write(vals)
 
-    def _export_for_ui(self, orderline):
-        return {
-            'note': orderline.note,
-            **super()._export_for_ui(orderline),
-        }
-
 class PosOrder(models.Model):
     _inherit = "pos.order"
 
@@ -161,10 +155,10 @@ class PosOrder(models.Model):
         return orders
 
     @api.model
-    def export_for_ui_shared_order(self, config_id):
-        orders = super().export_for_ui_shared_order(config_id)
-        self_orders = self.get_standalone_self_order().export_for_ui()
-        return orders + self_orders
+    def _get_shared_orders(self, config_id):
+        orders = super()._get_shared_orders(config_id)
+        self_orders = self.get_standalone_self_order()
+        return orders | self_orders
 
     @api.model
     def export_for_ui_table_draft(self, table_ids):

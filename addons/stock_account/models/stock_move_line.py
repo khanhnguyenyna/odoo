@@ -53,6 +53,12 @@ class StockMoveLine(models.Model):
             self.env['stock.move'].browse(analytic_move_to_recompute)._account_analytic_entry_move()
         return res
 
+    def unlink(self):
+        analytic_move_to_recompute = self.move_id
+        res = super().unlink()
+        analytic_move_to_recompute._account_analytic_entry_move()
+        return res
+
     # -------------------------------------------------------------------------
     # SVL creation helpers
     # -------------------------------------------------------------------------
@@ -72,3 +78,13 @@ class StockMoveLine(models.Model):
             stock_valuation_layers |= move._create_dropshipped_returned_svl(forced_quantity=abs(diff))
 
         stock_valuation_layers._validate_accounting_entries()
+
+    @api.model
+    def _should_exclude_for_valuation(self):
+        """
+        Determines if this move line should be excluded from valuation based on its ownership.
+        :return: True if the move line's owner is different from the company's partner (indicating
+                it should be excluded from valuation), False otherwise.
+        """
+        self.ensure_one()
+        return self.owner_id and self.owner_id != self.company_id.partner_id

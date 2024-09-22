@@ -4,16 +4,16 @@
 # 
 # Translators:
 # Bayu Indra Kusuma, 2023
-# Wil Odoo, 2023
-# Abe Manyo, 2023
+# Abe Manyo, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Abe Manyo, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Indonesian (https://app.transifex.com/odoo/teams/41243/id/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -663,6 +663,16 @@ msgid "All"
 msgstr "Semua"
 
 #. module: mrp
+#: model:ir.model.fields,field_description:mrp.field_mrp_production__all_move_ids
+msgid "All Move"
+msgstr ""
+
+#. module: mrp
+#: model:ir.model.fields,field_description:mrp.field_mrp_production__all_move_raw_ids
+msgid "All Move Raw"
+msgstr ""
+
+#. module: mrp
 #. odoo-python
 #: code:addons/mrp/controller/main.py:0
 #, python-format
@@ -801,6 +811,11 @@ msgid "Archived"
 msgstr "Diarsipkan"
 
 #. module: mrp
+#: model_terms:ir.ui.view,arch_db:mrp.mrp_production_form_view
+msgid "Are you sure you want to cancel this manufacturing order?"
+msgstr "Apakah Anda yakin ingin membatalkan manufacturing order ini?"
+
+#. module: mrp
 #: model_terms:ir.ui.view,arch_db:mrp.report_mrporder
 msgid "Assembling"
 msgstr "Perakitan"
@@ -828,8 +843,8 @@ msgid "Attachment URL"
 msgstr "URL Lampiran"
 
 #. module: mrp
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/mrp/models/mrp_bom.py:0
 #: code:addons/mrp/static/src/components/bom_overview_line/mrp_bom_overview_line.js:0
 #: code:addons/mrp/static/src/components/bom_overview_table/mrp_bom_overview_table.xml:0
@@ -1285,6 +1300,17 @@ msgstr "Batal"
 #: model_terms:ir.ui.view,arch_db:mrp.view_mrp_production_filter
 msgid "Cancelled"
 msgstr "Dibatalkan"
+
+#. module: mrp
+#. odoo-python
+#: code:addons/mrp/models/mrp_bom.py:0
+#, python-format
+msgid ""
+"Cannot compute days to prepare due to missing route info for at least 1 "
+"component or for the final product."
+msgstr ""
+"Tidak dapat menghitung hari untuk persiapan oleh karena info rute yang "
+"kurang untuk setidaknya 1 komponen atau untuk produk final."
 
 #. module: mrp
 #. odoo-python
@@ -2057,6 +2083,11 @@ msgid "Displays the consumed Lot/Serial Numbers."
 msgstr "Tampilkan Nomor Seri/Lot yang dikonsumsi."
 
 #. module: mrp
+#: model_terms:ir.ui.view,arch_db:mrp.mrp_production_form_view
+msgid "Displays the produced Lot/Serial Numbers."
+msgstr "Menampilkan Nomor Seri/Lot yang dibuat."
+
+#. module: mrp
 #: model_terms:ir.ui.view,arch_db:mrp.stock_warn_insufficient_qty_unbuild_form_view
 msgid "Do you confirm you want to unbuild"
 msgstr "Apakah Anda mengonfirmasi Anda ingin membongkar"
@@ -2401,7 +2432,7 @@ msgstr "Masalah yang Diforecast"
 #: code:addons/mrp/static/src/components/bom_overview_table/mrp_bom_overview_table.xml:0
 #, python-format
 msgid "Free to Use"
-msgstr "Bebas untuk Digunakan"
+msgstr "Gratis untuk Digunakan"
 
 #. module: mrp
 #. odoo-javascript
@@ -2409,7 +2440,7 @@ msgstr "Bebas untuk Digunakan"
 #: model_terms:ir.ui.view,arch_db:mrp.report_mrp_bom
 #, python-format
 msgid "Free to Use / On Hand"
-msgstr "Bebas Digunakan / Di Tangan"
+msgstr "Gratis Digunakan / Di Tangan"
 
 #. module: mrp
 #. odoo-javascript
@@ -2417,7 +2448,7 @@ msgstr "Bebas Digunakan / Di Tangan"
 #: model_terms:ir.ui.view,arch_db:mrp.mo_overview_content
 #, python-format
 msgid "Free to use / On Hand"
-msgstr "Bebas digunakan / Di Tangan"
+msgstr "Gratis digunakan / Di Tangan"
 
 #. module: mrp
 #: model_terms:ir.ui.view,arch_db:mrp.mrp_production_form_view
@@ -2834,6 +2865,7 @@ msgstr "Sudah dibuka blokirnya."
 
 #. module: mrp
 #. odoo-python
+#: code:addons/mrp/models/mrp_workorder.py:0
 #: code:addons/mrp/models/mrp_workorder.py:0
 #, python-format
 msgid ""
@@ -3466,8 +3498,8 @@ msgid "Minimum Inventory Rule"
 msgstr "Aturan Stok Persediaan Minimum"
 
 #. module: mrp
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/mrp/report/mrp_report_bom_structure.py:0
 #: code:addons/mrp/report/mrp_report_mo_overview.py:0
 #: code:addons/mrp/static/src/components/bom_overview_special_line/mrp_bom_overview_special_line.xml:0
@@ -3859,8 +3891,8 @@ msgid "Operation not supported"
 msgstr "Operation not supported"
 
 #. module: mrp
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/mrp/report/mrp_report_bom_structure.py:0
 #: code:addons/mrp/static/src/components/bom_overview_display_filter/mrp_bom_overview_display_filter.js:0
 #: code:addons/mrp/static/src/components/bom_overview_special_line/mrp_bom_overview_special_line.xml:0
@@ -4394,6 +4426,11 @@ msgid "Product Quantity"
 msgstr "Kuantitas Produk"
 
 #. module: mrp
+#: model:ir.model,name:mrp.model_product_replenish
+msgid "Product Replenish"
+msgstr "Pemulihan Produk"
+
+#. module: mrp
 #: model:ir.model.fields,field_description:mrp.field_mrp_bom_line__product_tmpl_id
 #: model:ir.model.fields,field_description:mrp.field_mrp_production__product_tmpl_id
 #: model:ir.model.fields,field_description:mrp.field_stock_scrap__product_template
@@ -4635,6 +4672,11 @@ msgid "Quantity that can be produced with the current stock of components"
 msgstr "Kuantitas yang dapat diproduksi dengan stok komponen saat ini"
 
 #. module: mrp
+#: model:ir.model,name:mrp.model_stock_quant
+msgid "Quants"
+msgstr "Kuant"
+
+#. module: mrp
 #: model_terms:ir.ui.view,arch_db:mrp.report_mrp_workorder
 msgid "RAM"
 msgstr "RAM"
@@ -4792,6 +4834,7 @@ msgstr "Laporan"
 #. module: mrp
 #. odoo-javascript
 #: code:addons/mrp/static/src/components/mo_overview/mrp_mo_overview.xml:0
+#: model_terms:ir.ui.view,arch_db:mrp.mo_overview_content
 #, python-format
 msgid "Reserved"
 msgstr "Reservasi"
@@ -4839,6 +4882,13 @@ msgstr "Tanggung-jawab"
 #, python-format
 msgid "Resupply lead time."
 msgstr "Lead time resupply."
+
+#. module: mrp
+#. odoo-python
+#: code:addons/mrp/models/stock_quant.py:0
+#, python-format
+msgid "Return to Inventory"
+msgstr "Kembali ke Inventaris"
 
 #. module: mrp
 #. odoo-javascript
@@ -5172,15 +5222,6 @@ msgid ""
 msgstr ""
 "Beberapa komponen Anda dilacak, Anda harus menentukan manufacturing order "
 "untuk mengambil komponen yang tepat."
-
-#. module: mrp
-#: model_terms:ir.ui.view,arch_db:mrp.mrp_production_form_view
-msgid ""
-"Some product moves have already been confirmed, this manufacturing order "
-"can't be completely cancelled. Are you still sure you want to process?"
-msgstr ""
-"Beberapa pergerakan produk sudah dikonfirmasi, manufacturing order ini tidak"
-" dapat sepenuhnya dibatalkan. Apakah Anda yakin masih Anda ingin memproses?"
 
 #. module: mrp
 #. odoo-python
@@ -6919,6 +6960,14 @@ msgstr "Anda tidak dapat memproduksi yang nomor serinya sama dua kali."
 
 #. module: mrp
 #. odoo-python
+#: code:addons/mrp/models/mrp_workorder.py:0
+#, python-format
+msgid "You cannot start a work order that is already done or cancelled"
+msgstr ""
+"Anda tidak dapat memulai pesanan kerja yang sudah selesai atau dibatalkan"
+
+#. module: mrp
+#. odoo-python
 #: code:addons/mrp/models/mrp_unbuild.py:0
 #, python-format
 msgid "You cannot unbuild a undone manufacturing order."
@@ -6957,17 +7006,6 @@ msgstr ""
 "                            <span invisible=\"mrp_production_count != 1\">manufacturing order ini</span>\n"
 "                            <span invisible=\"mrp_production_count == 1\">manufacturing order berikut</span>.\n"
 "                        </b>"
-
-#. module: mrp
-#. odoo-python
-#: code:addons/mrp/wizard/change_production_qty.py:0
-#, python-format
-msgid ""
-"You have already processed %(quantity)s. Please input a quantity higher than"
-" %(quantity)s "
-msgstr ""
-"Anda sudah memproses %(quantity)s. Mohon masukkan kuantitas lebih tinggi "
-"dari %(quantity)s"
 
 #. module: mrp
 #: model_terms:ir.ui.view,arch_db:mrp.view_assign_serial_numbers_production
@@ -7037,8 +7075,9 @@ msgstr "Anda harus menyediakan lot untuk produk jadi."
 #. odoo-python
 #: code:addons/mrp/models/mrp_production.py:0
 #, python-format
-msgid "You need to supply Lot/Serial Number for products and 'picked' them:"
-msgstr "Anda harus menyuplai Nomor Lot/Seri untuk produk dan 'pick' mereka:"
+msgid "You need to supply Lot/Serial Number for products and 'consume' them:"
+msgstr ""
+"Anda harus menyuplai Nomor Seri/Lot untuk produk dan 'konsumsi' mereka:"
 
 #. module: mrp
 #: model:ir.actions.act_window,name:mrp.action_mrp_production_backorder
@@ -7053,6 +7092,17 @@ msgid "You should provide a lot number for the final product."
 msgstr "Anda harus menyediakan nomor lot untuk produk final."
 
 #. module: mrp
+#. odoo-python
+#: code:addons/mrp/models/stock_quant.py:0
+#, python-format
+msgid ""
+"You should update the components quantity instead of directly updating the "
+"quantity of the kit product."
+msgstr ""
+"Anda harus mengupdate kuantitas komponen alih-alih langsung mengupdate "
+"kuantitas produk kit."
+
+#. module: mrp
 #: model:ir.model.fields.selection,name:mrp.selection__stock_picking_type__done_mrp_lot_label_to_print__zpl
 #: model:ir.model.fields.selection,name:mrp.selection__stock_picking_type__generated_mrp_lot_label_to_print__zpl
 #: model:ir.model.fields.selection,name:mrp.selection__stock_picking_type__mrp_product_label_to_print__zpl
@@ -7065,15 +7115,15 @@ msgid "cancelled"
 msgstr "dibatalkan"
 
 #. module: mrp
-#: model_terms:ir.ui.view,arch_db:mrp.view_assign_serial_numbers_production
-msgid "copy paste a list and/or use Generate"
-msgstr "salin tempel daftar dan/atau gunakan Buat"
-
-#. module: mrp
 #: model_terms:ir.ui.view,arch_db:mrp.mrp_bom_form_view
 #: model_terms:ir.ui.view,arch_db:mrp.res_config_settings_view_form
 msgid "days"
 msgstr "hari"
+
+#. module: mrp
+#: model_terms:ir.ui.view,arch_db:mrp.view_assign_serial_numbers_production
+msgid "e.g. SN0000001"
+msgstr "contoh SN0000001"
 
 #. module: mrp
 #: model_terms:ir.ui.view,arch_db:mrp.mrp_production_workorder_form_view_inherit
@@ -7179,3 +7229,31 @@ msgstr "pisah"
 #: model_terms:ir.ui.view,arch_db:mrp.mrp_routing_workcenter_form_view
 msgid "work orders"
 msgstr "SPK"
+
+#. module: mrp
+#. odoo-javascript
+#: code:addons/mrp/static/src/components/mo_overview_line/mrp_mo_overview_line.xml:0
+#: code:addons/mrp/static/src/components/mo_overview_line/mrp_mo_overview_line.xml:0
+#, python-format
+msgid "{{ foldButtonTitle }}"
+msgstr "{{ foldButtonTitle }}"
+
+#. module: mrp
+#. odoo-javascript
+#: code:addons/mrp/static/src/components/bom_overview_line/mrp_bom_overview_line.xml:0
+#: code:addons/mrp/static/src/components/bom_overview_line/mrp_bom_overview_line.xml:0
+#: code:addons/mrp/static/src/components/bom_overview_special_line/mrp_bom_overview_special_line.xml:0
+#: code:addons/mrp/static/src/components/bom_overview_special_line/mrp_bom_overview_special_line.xml:0
+#, python-format
+msgid "{{ props.isFolded ? 'Unfold' : 'Fold' }}"
+msgstr "{{ props.isFolded ? 'Unfold' : 'Fold' }}"
+
+#. module: mrp
+#. odoo-javascript
+#: code:addons/mrp/static/src/components/mo_overview_byproducts_block/mrp_mo_overview_byproducts_block.xml:0
+#: code:addons/mrp/static/src/components/mo_overview_byproducts_block/mrp_mo_overview_byproducts_block.xml:0
+#: code:addons/mrp/static/src/components/mo_overview_operations_block/mrp_mo_overview_operations_block.xml:0
+#: code:addons/mrp/static/src/components/mo_overview_operations_block/mrp_mo_overview_operations_block.xml:0
+#, python-format
+msgid "{{ state.isFolded ? 'Unfold' : 'Fold' }}"
+msgstr "{{ state.isFolded ? 'Unfold' : 'Fold' }}"

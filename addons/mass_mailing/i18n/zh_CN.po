@@ -3,16 +3,19 @@
 # 	* mass_mailing
 # 
 # Translators:
-# Wil Odoo, 2023
 # 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023
+# Jeffery CHEN <jeffery9@gmail.com>, 2023
+# Chloe Wang, 2024
+# 湘子 南 <1360857908@qq.com>, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Chinese (China) (https://app.transifex.com/odoo/teams/41243/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -417,8 +420,8 @@ msgid ""
 "<span class=\"fa fa-hourglass-o me-2 small my-auto\" aria-label=\"Scheduled date\"/>\n"
 "                                            <span class=\"align-self-baseline\">Next Batch</span>"
 msgstr ""
-"<span j=\"0/\">\n"
-"                                            <span class=\"align-self-baseline\">下一批</span></span>"
+"<span class=\"fa fa-hourglass-o me-2 small my-auto\" aria-label=\"Scheduled date\"/>\n"
+"                                            <span class=\"align-self-baseline\">下一批</span>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_rating_options
@@ -515,8 +518,8 @@ msgstr "<span name=\"sent\">邮件已经发出。</span>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.digest_mail_main
-msgid "<span style=\"color: #8f8f8f;\">Turn off Mailing Reports</span>"
-msgstr "<span style=\"color: #8f8f8f;\">关闭邮件报告</span>"
+msgid "<span style=\"color: #878d97;\">Turn off Mailing Reports</span>"
+msgstr "<span style=\"color: #878d97;\">关闭邮件报告</span>"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_alert
@@ -2269,9 +2272,9 @@ msgstr "页脚"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_company_team
 msgid ""
 "Founder and chief visionary, Tony is the driving force behind the company. "
-"He lovesto keep his hands full by participating in the development of the "
+"He loves to keep his hands full by participating in the development of the "
 "software, marketing, and customer experience strategies."
-msgstr "作为创始人和首席远见卓识者，托尼是公司背后的推动力。他喜欢通过参与软件、营销和客户体验策略的开发来保持自己的双手。"
+msgstr "托尼是公司的创始人和首席远见者，也是公司背后的推动力。他热衷于参与软件开发、市场营销和客户体验战略，从而让自己的工作变得更加充实。"
 
 #. module: mass_mailing
 #: model:ir.model.fields,field_description:mass_mailing.field_mailing_trace_report__email_from
@@ -2320,6 +2323,11 @@ msgstr "分组方式"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_trace_report_view_search
 msgid "Group By..."
 msgstr "分组原则......"
+
+#. module: mass_mailing
+#: model:ir.model,name:mass_mailing.model_ir_http
+msgid "HTTP Routing"
+msgstr "HTTP 路由"
 
 #. module: mass_mailing
 #: model:ir.model.fields,field_description:mass_mailing.field_mailing_contact__has_message
@@ -3402,7 +3410,7 @@ msgstr "该A/B测试活动的邮件还没有发送!先发送一个，稍后再�
 msgid ""
 "No need to import mailing lists, you can send mailings to contacts saved in "
 "other Odoo apps."
-msgstr "不需要导入邮件列表，您可以向保存在其他Odoo应用程序的联系人发送邮件。"
+msgstr "不需要导入邮件列表，您可以向保存在其他 ERP 应用程序的联系人发送广告邮件."
 
 #. module: mass_mailing
 #: model_terms:ir.actions.act_window,help:mass_mailing.mailing_filter_action
@@ -3781,6 +3789,11 @@ msgstr "处理"
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_trace_view_search
 msgid "Processing"
 msgstr "处理中"
+
+#. module: mass_mailing
+#: model_terms:ir.ui.view,arch_db:mass_mailing.view_mail_mass_mailing_kanban
+msgid "Progress bar"
+msgstr "进度条"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.email_designer_snippets
@@ -4487,7 +4500,7 @@ msgstr "技术字段，用于了解用户是否在设置中激活了发信邮件
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_features
 msgid "Tell what's the value for the customer for this feature."
-msgstr "告诉客户<br/>该功能的价值。"
+msgstr "告诉客户这个特性的价值是什么."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_masonry_block_options
@@ -4590,8 +4603,8 @@ msgstr "筛选器域对此收件人无效。"
 #: model:ir.model.fields,help:mass_mailing.field_mailing_list__is_public
 msgid ""
 "The mailing list can be accessible by recipients in the subscription "
-"management page to allows them to update their preferences."
-msgstr "收件人可以在订阅管理页面中访问邮件列表，以允许他们更新其首选项。"
+"management page to allow them to update their preferences."
+msgstr "收件人可在订阅管理页面访问邮件列表，以便更新其偏好。"
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_text_block
@@ -4599,8 +4612,8 @@ msgid ""
 "The open source model of Odoo has allowed us to leverage thousands of developers and\n"
 "                    business experts to build hundreds of apps in just a few years."
 msgstr ""
-"Odoo 的开源模式已允许我们利用数以千计的开发人员和\n"
-" 商务专家，在短短数年内打造数百款应用。"
+"ERP 的开源模型已允许我们利用数以千计的开发人员和\n"
+" 商务专家，在短短数年内打造数百款应用."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_text_image
@@ -4608,7 +4621,7 @@ msgid ""
 "The open source model of Odoo has allowed us to leverage thousands of "
 "developers and business experts to build hundreds of apps in just a few "
 "years."
-msgstr "Odoo 的开源模式已允许我们利用数以千计的开发人员和商务专家，在短短数年内打造数百款应用。"
+msgstr "ERP 的开源模型已允许我们利用数以千计的开发人员和商务专家，在短短数年内打造数百款应用."
 
 #. module: mass_mailing
 #. odoo-python
@@ -4690,7 +4703,7 @@ msgstr "如果您的市场营销活动由多个电子邮件组成，则此工具
 #: model_terms:ir.ui.view,arch_db:mass_mailing.mailing_mailing_view_form_full_width
 #: model_terms:ir.ui.view,arch_db:mass_mailing.view_mail_mass_mailing_form
 msgid "This mailing has no selected design (yet!)."
-msgstr "此邮件没有选择设计（尚未！"
+msgstr "此广告邮件没有选择设计 (尚未!)."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.res_config_settings_view_form
@@ -4862,8 +4875,8 @@ msgid ""
 "Usability improvements made on Odoo will automatically apply to all\n"
 "                    of our fully integrated apps."
 msgstr ""
-"对 Odoo 所做的可用性改进将自动应用于所有\n"
-" 完全集成的应用。"
+"对 ERP 所做的可用性改进将自动应用于所有\n"
+" 完全集成的应用."
 
 #. module: mass_mailing
 #: model:ir.model.fields,help:mass_mailing.field_mailing_mailing__mail_server_id
@@ -4873,7 +4886,7 @@ msgid ""
 "Use a specific mail server in priority. Otherwise Odoo relies on the first "
 "outgoing mail server available (based on their sequencing) as it does for "
 "normal mails."
-msgstr "优先使用指定的邮件服务器。否则，Odoo依赖于可用的第一个发信邮件服务器（基于它们的顺序），就像普通邮件一样。"
+msgstr "优先使用指定的邮件服务器。否则，ERP 依赖于可用的第一个发信邮件服务器（基于它们的顺序），就像普通邮件一样."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.ab_testing_description
@@ -4964,8 +4977,8 @@ msgid ""
 " back please accept this 20% discount on you next purchase by clicking the "
 "button."
 msgstr ""
-"我们在不断成长，迫切地想看到您成为 Odoo 的一员！我们已延长商店营业时间，并提供大量新品牌。为了欢迎您的归来，单击此按钮即可在下次购买时享受 20%"
-" 的折扣。"
+"我们在不断增长，我们迫切地想看到您成为 ERP 的一员！我们已延长商店营业时间，并提供批次可用的新品牌。为了欢迎您的归来，单击此按钮即可在下次采购时享受"
+" 20% 的折扣."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_references
@@ -5035,8 +5048,8 @@ msgid ""
 "With strong technical foundations, Odoo's framework is unique.\n"
 "                    It provides top notch usability that scales across all apps."
 msgstr ""
-"借助强大的技术基础，Odoo 独一无二的框架应运而生。\n"
-" 它能够在全部应用范围内提供最顶级的可用性。"
+"借助强大的技术基础，ERP 独一无二的框架应运而生。\n"
+" 它能够在全部应用范围内提供最顶级的可用性."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_picture
@@ -5045,8 +5058,8 @@ msgid ""
 "<span style=\"font-weight: bolder;\">top notch usability that scales across "
 "all apps</span>."
 msgstr ""
-"凭借强大的技术基础，Odoo的框架是独一无二的。它提供了 <span style=\"font-weight: "
-"bolder;\">可在所有应用程序之间扩展的一流可用性</span>。"
+"凭借强大的技术基础，ERP 的框架是独一无二的。它提供了 <span style=\"font-weight: "
+"bolder;\">可在所有应用程序之间扩展的一流可用性</span>."
 
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_cover
@@ -5068,7 +5081,7 @@ msgstr ""
 #. module: mass_mailing
 #: model_terms:ir.ui.view,arch_db:mass_mailing.s_features
 msgid "Write what the customer would like to know, not what you want to show."
-msgstr "写下客户想知道的内容, <br/>而不是您想要展示的内容。"
+msgstr "写客户想知道的，而不是你想展示的."
 
 #. module: mass_mailing
 #. odoo-python
@@ -5146,7 +5159,7 @@ msgid ""
 "                send emails<br> to any contact saved in other Odoo apps."
 msgstr ""
 "您不需要导入您的邮件列表，您可以轻松地\n"
-"               <br>向保存在其他Odoo应用程序中的任何联系人</br>发送电子邮件<br>。</br>"
+"               <br>向保存在其他 ERP 应用程序中的任何联系人发送电子广告邮件."
 
 #. module: mass_mailing
 #. odoo-python

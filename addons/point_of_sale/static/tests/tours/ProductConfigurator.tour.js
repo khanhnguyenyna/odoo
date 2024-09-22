@@ -3,7 +3,10 @@
 import * as ProductScreen from "@point_of_sale/../tests/tours/helpers/ProductScreenTourMethods";
 import * as Chrome from "@point_of_sale/../tests/tours/helpers/ChromeTourMethods";
 import * as ProductConfigurator from "@point_of_sale/../tests/tours/helpers/ProductConfiguratorTourMethods";
+import * as PaymentScreen from "@point_of_sale/../tests/tours/helpers/PaymentScreenTourMethods";
 import { registry } from "@web/core/registry";
+import * as Order from "@point_of_sale/../tests/tours/helpers/generic_components/OrderWidgetMethods";
+import { inLeftSide } from "@point_of_sale/../tests/tours/helpers/utils";
 
 registry.category("web_tour.tours").add("ProductConfiguratorTour", {
     test: true,
@@ -56,12 +59,18 @@ registry.category("web_tour.tours").add("ProductConfiguratorTour", {
             ProductConfigurator.pickRadio("Other"),
             ProductConfigurator.fillCustomAttribute("Custom Fabric"),
             ProductConfigurator.confirmAttributes(),
-            ProductScreen.selectedOrderlineHas(
-                "Configurable Chair (Red, Metal, Other: Custom Fabric)",
-                "2.0",
-                "22.0"
+            inLeftSide(Order.hasLine({
+                    withClass: ".selected",
+                    productName: "Configurable Chair",
+                    quantity: "2",
+                    price: "22.0",
+                    atts: {
+                        "Color": "Red ($ 1.00)",
+                        "Chair Legs": "Metal",
+                        "Fabrics": "Other"
+                    }
+                })
             ),
-
             // Orderlines with different attributes shouldn't be merged
             ProductScreen.clickHomeCategory(),
             ProductScreen.clickDisplayedProduct("Configurable Chair"),
@@ -70,10 +79,23 @@ registry.category("web_tour.tours").add("ProductConfiguratorTour", {
             ProductConfigurator.pickRadio("Leather"),
             ProductConfigurator.confirmAttributes(),
             ProductScreen.selectedOrderlineHas(
-                "Configurable Chair (Blue, Metal, Leather)",
+                "Configurable Chair",
                 "1.0",
                 "10.0"
             ),
+
+            // Inactive variant attributes should not be displayed
+            ProductScreen.clickHomeCategory(),
+            ProductScreen.clickDisplayedProduct('Configurable Chair'),
+            ProductConfigurator.isShown(),
+            // Active: Other and Leather, Inactive: Wool
+            ProductConfigurator.numberRadioOptions(2),
+            ProductConfigurator.confirmAttributes(),
+
+            ProductScreen.clickPayButton(),
+            PaymentScreen.clickPaymentMethod("Cash"),
+            PaymentScreen.validateButtonIsHighlighted(true),
+            PaymentScreen.clickValidate(),
             Chrome.endTour(),
         ].flat(),
 });

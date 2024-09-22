@@ -82,21 +82,31 @@ class SQL:
     @property
     def code(self) -> str:
         """ Return the combined SQL code string. """
-        return self.__code % tuple(
-            arg.code if isinstance(arg, SQL) else "%s"
-            for arg in self.__args
-        ) if self.__args else self.__code
+        stack = []  # stack of intermediate results
+        for node in self.__postfix():
+            if not isinstance(node, SQL):
+                stack.append("%s")
+            elif arity := len(node.__args):
+                stack[-arity:] = [node.__code % tuple(stack[-arity:])]
+            else:
+                stack.append(node.__code)
+        return stack[0]
 
     @property
     def params(self) -> list:
         """ Return the combined SQL code params as a list of values. """
-        result = []
-        for arg in self.__args:
-            if isinstance(arg, SQL):
-                result.extend(arg.params)
+        return [node for node in self.__postfix() if not isinstance(node, SQL)]
+
+    def __postfix(self):
+        """ Return a postfix iterator for the SQL tree ``self``. """
+        stack = [(self, False)]
+        while stack:
+            node, ispostfix = stack.pop()
+            if ispostfix or not isinstance(node, SQL):
+                yield node
             else:
-                result.append(arg)
-        return result
+                stack.append((node, True))
+                stack.extend((arg, False) for arg in reversed(node.__args))
 
     def __repr__(self):
         return f"SQL({', '.join(map(repr, [self.code, *self.params]))})"
@@ -137,10 +147,10 @@ class SQL:
     @classmethod
     def identifier(cls, name: str, subname: (str | None) = None) -> SQL:
         """ Return an SQL object that represents an identifier. """
-        assert IDENT_RE.match(name), f"{name!r} invalid for SQL.identifier()"
+        assert name.isidentifier() or IDENT_RE.match(name), f"{name!r} invalid for SQL.identifier()"
         if subname is None:
             return cls(f'"{name}"')
-        assert IDENT_RE.match(subname), f"{subname!r} invalid for SQL.identifier()"
+        assert subname.isidentifier() or IDENT_RE.match(subname), f"{subname!r} invalid for SQL.identifier()"
         return cls(f'"{name}"."{subname}"')
 
 
@@ -542,7 +552,7 @@ def drop_view_if_exists(cr, viewname):
 
 
 def escape_psql(to_escape):
-    return to_escape.replace('\\', r'\\').replace('%', '\%').replace('_', '\_')
+    return to_escape.replace('\\', r'\\').replace('%', r'\%').replace('_', r'\_')
 
 
 def pg_varchar(size=0):

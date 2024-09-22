@@ -3,10 +3,11 @@
 
 from odoo.fields import Command
 from odoo.tests import common
+from odoo.addons.base.tests.common import TransactionCaseWithUserDemo
 
 
 @common.tagged('test_m2m_read_group')
-class TestM2MGrouping(common.TransactionCase):
+class TestM2MGrouping(TransactionCaseWithUserDemo):
 
     @classmethod
     def setUpClass(cls):
@@ -107,7 +108,7 @@ class TestM2MGrouping(common.TransactionCase):
                 'user_ids': False,
                 'user_ids_count': 1,
                 'name': unordered(["Donkey Kong"]),
-                '__domain': [('user_ids', '=', False)],
+                '__domain': [('user_ids', 'not in', [self.users[0].id, self.users[1].id])],
             },
         ])
 
@@ -171,12 +172,12 @@ class TestM2MGrouping(common.TransactionCase):
                 'user_ids': False,
                 'user_ids_count': 1,
                 'name': unordered(["Donkey Kong"]),
-                '__domain': [('user_ids', '=', False)],
+                '__domain': [('user_ids', 'not in', [self.users[0].id, self.users[1].id])],
             },
         ])
 
         # as demo user, ir.rule should apply
-        tasks = self.tasks.with_user(self.browse_ref('base.user_demo'))
+        tasks = self.tasks.with_user(self.user_demo)
 
         # warming up various caches; this avoids extra queries
         tasks.read_group(domain=[], fields=['name:array_agg'], groupby=['user_ids'])
@@ -216,10 +217,51 @@ class TestM2MGrouping(common.TransactionCase):
                 'user_ids': False,
                 'user_ids_count': 2,
                 'name': unordered(["Luigi's Mansion", 'Donkey Kong']),
-                '__domain': [('user_ids', '=', False)],
+                '__domain': [('user_ids', 'not in', self.users[0].ids)],
             },
         ])
 
+        for group in as_demo:
+            self.assertEqual(
+                group['user_ids_count'],
+                tasks.search_count(group['__domain']),
+                'A search using the domain returned by the read_group should give the '
+                'same number of records as counted in the group',
+            )
+
+    def test_ordered_tasks(self):
+        """
+            Depending on the order of the group_by, you may obtain non-desired behavior.
+            In this test, we check the operation of read_group in the event that the first
+            group (defined by orderby) contains no results.
+
+            Default order is 'users_ids ASC'
+            So we reverse the order to have the spot without users in first position.
+        """
+        tasks_by_users = self.tasks.read_group(
+            domain=[],
+            fields=['name'],
+            groupby=['user_ids'],
+            orderby='user_ids DESC',
+        )
+
+        self.assertEqual(tasks_by_users, [
+            {   # tasks of no one
+                'user_ids': False,
+                'user_ids_count': 1,
+                '__domain': [('user_ids', 'not in', [self.users[1].id, self.users[0].id])],
+            },
+            {   # tasks of Luigi
+                'user_ids': (self.users[1].id, 'Luigi'),
+                'user_ids_count': 2,
+                '__domain': [('user_ids', '=', self.users[1].id)],
+            },
+            {   # tasks of Mario
+                'user_ids': (self.users[0].id, 'Mario'),
+                'user_ids_count': 2,
+                '__domain': [('user_ids', '=', self.users[0].id)],
+            },
+        ])
 
 class unordered(list):
     """ A list where equality is interpreted without ordering. """

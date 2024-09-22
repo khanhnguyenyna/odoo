@@ -4,15 +4,16 @@
 # 
 # Translators:
 # Wil Odoo, 2023
-# Daye Jeong, 2023
+# Sarah Park, 2023
+# Daye Jeong, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:56+0000\n"
+"POT-Creation-Date: 2024-08-13 10:28+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Daye Jeong, 2023\n"
+"Last-Translator: Daye Jeong, 2024\n"
 "Language-Team: Korean (https://app.transifex.com/odoo/teams/41243/ko/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -393,6 +394,11 @@ msgid "<br/>by"
 msgstr "<br/>작성자"
 
 #. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.new_question
+msgid "<i class=\"fa fa-angle-left me-2\"/>Back to All Posts"
+msgstr "<i class=\"fa fa-angle-left me-2\"/> 모든 게시물로 돌아가기"
+
+#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_votes
 msgid "<i class=\"fa fa-arrow-right\"/> Go To Forums"
 msgstr "<i class=\"fa fa-arrow-right\"/> 포럼으로 이동"
@@ -623,11 +629,6 @@ msgid ""
 msgstr "<i class=\"oi oi-arrow-right display-inline-block\"/> 질문 목록으로 돌아가기"
 
 #. module: website_forum
-#: model_terms:ir.ui.view,arch_db:website_forum.new_question
-msgid "<i class=\"oi oi-chevron-left me-2\"/>Back to All Posts"
-msgstr "<i class=\"oi oi-chevron-left me-2\"/>모든 게시물로 돌아가기"
-
-#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_profile_sub_nav
 msgid "<i class=\"oi oi-chevron-left small\"/> Back"
 msgstr "<i class=\"oi oi-chevron-left small\"/> 뒤로"
@@ -641,6 +642,11 @@ msgstr "<small class=\"fw-bold\">투표</small>"
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_body
 msgid "<small>View all</small>"
 msgstr "<small>모두 보기</small>"
+
+#. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.forum_all_all_entries
+msgid "<span class=\"badge bg-dark me-1\">Last post:</span>"
+msgstr "<span class=\"badge bg-dark me-1\">최근 게시물:</span>"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.contact
@@ -696,6 +702,11 @@ msgid "<span>Be the first to answer this question</span>"
 msgstr "<span>이 질문에 가장 먼저 답변을 남겨주세요</span>"
 
 #. module: website_forum
+#: model_terms:ir.ui.view,arch_db:website_forum.forum_model_nav
+msgid "<span>Moderation</span>"
+msgstr "<span>조정</span>"
+
+#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.post_description_full
 msgid ""
 "<span>Please wait for a moderator to validate your previous post to be "
@@ -705,7 +716,7 @@ msgstr "<span>운영자가 이전 게시물을 승인할 때까지 기다려야 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_header
 msgid "<span>You need to be registered to interact with the community.</span>"
-msgstr "<span>커뮤니티에 참여하려면 회원 가입이 필요합니다.</span>"
+msgstr "<span>커뮤니티에 참여하려면 회원 가입을 하시기 바랍니다.</span>"
 
 #. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.forum_post_template_new_answer
@@ -2293,11 +2304,6 @@ msgid "Moderate posts"
 msgstr "중재 게시물"
 
 #. module: website_forum
-#: model_terms:ir.ui.view,arch_db:website_forum.forum_model_nav
-msgid "Moderation"
-msgstr "중재중"
-
-#. module: website_forum
 #: model_terms:ir.ui.view,arch_db:website_forum.user_sidebar_body
 msgid "Moderation tools"
 msgstr "중재 도구"
@@ -3030,6 +3036,16 @@ msgid ""
 msgstr ""
 "최고의 콘텐츠와 새로운 마케팅 아이디어를 공유하고 토론하며 전문적인 프로필을 쌓아 더 나은 마케터가 될 수 있도록 함께 노력할 수 "
 "있습니다."
+
+#. module: website_forum
+#. odoo-javascript
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#: code:addons/website_forum/static/src/xml/public_templates.xml:0
+#, python-format
+msgid "Share on #{media}"
+msgstr ""
 
 #. module: website_forum
 #. odoo-javascript

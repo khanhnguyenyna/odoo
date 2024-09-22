@@ -9,7 +9,7 @@ import { makeDeferred } from "@web/../tests/helpers/utils";
 
 // should be enough to decide whether or not notifications/channel
 // subscriptions... are received.
-const TIMEOUT = 500;
+const TIMEOUT = 2000;
 const callbackRegistry = registry.category("mock_server_websocket_callbacks");
 
 /**
@@ -23,10 +23,9 @@ const callbackRegistry = registry.category("mock_server_websocket_callbacks");
 export function waitUntilSubscribe(...requiredChannels) {
     const subscribeDeferred = makeDeferred();
     const failTimeout = setTimeout(() => {
-        subscribeDeferred.reject(
-            new Error(`Waited ${TIMEOUT}ms for ${requiredChannels} subscription.`)
-        );
-        console.error(`Waited ${TIMEOUT}ms for ${requiredChannels} subscription.`);
+        const errMsg = `Subscription to ${JSON.stringify(requiredChannels)} not received.`;
+        subscribeDeferred.reject(new Error(errMsg));
+        QUnit.assert.ok(false, errMsg);
     }, TIMEOUT);
     const lastCallback = callbackRegistry.get("subscribe", () => {});
     callbackRegistry.add(
@@ -39,6 +38,10 @@ export function waitUntilSubscribe(...requiredChannels) {
             );
             if (allChannelsSubscribed) {
                 subscribeDeferred.resolve();
+                QUnit.assert.ok(
+                    true,
+                    `Subscription to ${JSON.stringify(requiredChannels)} received.`
+                );
                 clearTimeout(failTimeout);
             }
         },
@@ -57,38 +60,43 @@ export function waitUntilSubscribe(...requiredChannels) {
  *
  * @returns {import("@web/core/utils/concurrency").Deferred} */
 export function waitForChannels(channels, { operation = "add" } = {}) {
-    const successDeferred = makeDeferred();
-    const failTimeout = setTimeout(() => {
-        const failMessage = `Waited ${TIMEOUT}ms for ${channels.join(", ")} to be ${
-            operation === "add" ? "added" : "deleted"
-        }`;
+    const missingChannels = new Set(channels);
+    const deferred = makeDeferred();
+    function check({ crashOnFail = false } = {}) {
+        const success = missingChannels.size === 0;
+        if (!success && !crashOnFail) {
+            return;
+        }
         unpatch();
-        QUnit.assert.ok(false, failMessage);
-        successDeferred.resolve();
-    }, TIMEOUT);
-    const channelsSeen = new Set();
+        clearTimeout(failTimeout);
+        const msg = success
+            ? `Channel(s) [${channels.join(", ")}] ${operation === "add" ? "added" : "deleted"}.`
+            : `Waited ${TIMEOUT}ms for [${channels.join(", ")}] to be ${
+                  operation === "add" ? "added" : "deleted"
+              }`;
+        QUnit.assert.ok(success, msg);
+        if (success) {
+            deferred.resolve();
+        } else {
+            deferred.reject(new Error(msg));
+        }
+    }
+    const failTimeout = setTimeout(() => check({ crashOnFail: true }), TIMEOUT);
+    registerCleanup(() => {
+        if (missingChannels.length > 0) {
+            check({ crashOnFail: true });
+        }
+    });
     const worker = patchWebsocketWorkerWithCleanup();
+    const workerMethod = operation === "add" ? "_addChannel" : "_deleteChannel";
     const unpatch = patch(worker, {
-        async [operation === "add" ? "_addChannel" : "_deleteChannel"](client, channel) {
-            await super[operation === "add" ? "_addChannel" : "_deleteChannel"](client, channel);
-            if (channels.includes(channel)) {
-                channelsSeen.add(channel);
-            }
-            if (channelsSeen.size === channels.length) {
-                unpatch();
-                QUnit.assert.ok(
-                    true,
-                    `Channel(s) ${channels.join(", ")} ${
-                        operation === "add" ? "added" : "deleted"
-                    }.`
-                );
-                successDeferred.resolve();
-                clearTimeout(failTimeout);
-            }
+        async [workerMethod](client, channel) {
+            await super[workerMethod](client, channel);
+            missingChannels.delete(channel);
+            check();
         },
     });
-    registerCleanup(unpatch);
-    return successDeferred;
+    return deferred;
 }
 
 /**
@@ -120,11 +128,14 @@ function _waitNotification(notification) {
             if (notification.type !== type) {
                 continue;
             }
-            if (JSON.stringify(notification.payload) === JSON.stringify(payload)) {
+            if (
+                payload === undefined ||
+                JSON.stringify(notification.payload) === JSON.stringify(payload)
+            ) {
                 QUnit.assert.ok(
                     received,
                     `Notification of type "${type}" with payload ${JSON.stringify(
-                        payload
+                        notification.payload
                     )} receveived.`
                 );
                 notificationDeferred.resolve();
@@ -164,7 +175,12 @@ export function waitForBusEvent(env, eventType, { received = true } = {}) {
     const eventReceivedDeferred = makeDeferred();
     const failTimeout = setTimeout(() => {
         env.services["bus_service"].removeEventListener(eventType, callback);
-        QUnit.assert.ok(!received, `Waited ${TIMEOUT}ms for ${eventType} event.`);
+        QUnit.assert.ok(
+            !received,
+            received
+                ? `Waited ${TIMEOUT}ms for ${eventType} event.`
+                : `Event of type "${eventType}" not received.`
+        );
         eventReceivedDeferred.resolve();
     }, TIMEOUT);
     const callback = () => {

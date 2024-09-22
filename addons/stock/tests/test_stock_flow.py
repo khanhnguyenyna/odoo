@@ -11,6 +11,7 @@ class TestStockFlow(TestStockCommon):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.env.ref('base.group_user').write({'implied_ids': [(4, cls.env.ref('stock.group_production_lot').id)]})
         decimal_product_uom = cls.env.ref('product.decimal_product_uom')
         decimal_product_uom.digits = 3
         cls.partner_company2 = cls.env['res.partner'].create({
@@ -1801,7 +1802,7 @@ class TestStockFlow(TestStockCommon):
             'route_ids': [(4, route_a.id), (4, route_b.id)]
         })
 
-        replenish_wizard = self.env['product.replenish'].create({
+        replenish_wizard = self.env['product.replenish'].with_context(default_product_tmpl_id=product.product_tmpl_id.id).create({
             'product_id': product.id,
             'product_tmpl_id': product.product_tmpl_id.id,
             'product_uom_id': self.uom_unit.id,
@@ -2134,6 +2135,7 @@ class TestStockFlow(TestStockCommon):
             picking.action_confirm()
             return picking
 
+        self.env['stock.picking.type'].browse(self.picking_type_out).reservation_method = 'at_confirm'
         out01 = create_picking(self.picking_type_out, self.stock_location, self.customer_location)
         out02 = create_picking(self.picking_type_out, self.stock_location, self.customer_location, sequence=2, delay=1)
         in01 = create_picking(self.picking_type_in, self.supplier_location, self.stock_location, delay=2)
@@ -2374,8 +2376,8 @@ class TestStockFlow(TestStockCommon):
         steps), the out-move should be automatically assigned.
         """
         self.env['ir.config_parameter'].sudo().set_param('stock.picking_no_auto_reserve', False)
-
         warehouse = self.env['stock.warehouse'].search([('company_id', '=', self.env.company.id)], limit=1)
+        warehouse.out_type_id.reservation_method = 'by_date'
         warehouse.reception_steps = 'two_steps'
 
         out_move = self.env['stock.move'].create({
@@ -2410,7 +2412,7 @@ class TestStockFlow(TestStockCommon):
         in_stock_picking = in_stock_move.picking_id
         in_stock_picking.button_validate()
 
-        self.assertEqual(out_move.move_line_ids.quantity, 1.0, 'The out move should be reserved')
+        self.assertEqual(out_move.move_line_ids.quantity_product_uom, 1.0, 'The out move should be reserved')
 
     def test_assign_done_sml_and_validate_it(self):
         """
@@ -2485,28 +2487,96 @@ class TestStockFlow(TestStockCommon):
         pickings.button_validate()
         self.assertTrue(all(pickings.mapped(lambda p: p.state == 'done')), "Pickings should be set as done")
 
-    def test_pickings_on_duplicated_operation_types(self):
-        """ Ensure we can create pickings on duplicated operation types without collision in names
-            Steps:
-            - Create a picking on an operation type
-            - Duplicate the operation type
-            - Create another picking on the duplicated operation type
-        """
-        self.PickingObj.create({
+    def test_empty_picking_draft(self):
+        """ test an empty still can be reset to draft """
+        picking = self.PickingObj.create({
             'picking_type_id': self.picking_type_in,
-            'location_id': self.supplier_location,
+            'location_id': self.stock_location,
             'location_dest_id': self.stock_location,
         })
-        duplicated_picking_type = self.env['stock.picking.type'].browse(self.picking_type_in).copy()
-        picking_2 = self.PickingObj.create({
-            'picking_type_id': duplicated_picking_type.id,
-            'location_id': self.supplier_location,
-            'location_dest_id': self.stock_location,
-        })
-        # trigger SQL constraints
-        self.PickingObj.flush_model()
-        self.assertEqual(self.PickingObj.search_count([('name', '=', picking_2.name)]), 1)
+        self.assertFalse(picking.move_ids)
+        self.assertEqual(picking.state, 'draft')
 
+    def test_validate_backorder(self):
+        """ Test That a backorder can be validated:
+            - Create a picking with 2 moves (A and B)
+            - Set the quantity done of A to 2 and B to 0
+            - Validate the picking and create a backorder
+            - Check that the backorder has 2 moves (A with 8 and B with 10)
+            - Validate the backorder
+        """
+        picking = self.env['stock.picking'].create({
+            'picking_type_id': self.picking_type_in,
+            'location_id': self.customer_location,
+            'location_dest_id': self.stock_location,
+        })
+        move1 = self.env['stock.move'].create({
+            'name': self.productA.name,
+            'product_id': self.productA.id,
+            'product_uom_qty': 10,
+            'product_uom': self.productA.uom_id.id,
+            'picking_id': picking.id,
+            'location_id': self.customer_location,
+            'location_dest_id': self.stock_location,
+        })
+        move2 = self.env['stock.move'].create({
+            'name': self.productB.name,
+            'product_id': self.productB.id,
+            'product_uom_qty': 10,
+            'product_uom': self.productB.uom_id.id,
+            'picking_id': picking.id,
+            'location_id': self.customer_location,
+            'location_dest_id': self.stock_location,
+        })
+        picking.action_confirm()
+        self.assertRecordValues(picking.move_ids[0], [{'product_id': self.productA.id, 'quantity': 10}])
+        self.assertRecordValues(picking.move_ids[1], [{'product_id': self.productB.id, 'quantity': 10}])
+        # update the quantity recvied
+        move1.quantity = 2
+        move2.quantity = 0
+        res = picking.button_validate()
+        wizard = Form(self.env[res['res_model']].with_context(res['context'])).save()
+        wizard.process()
+        backorder = picking.backorder_ids
+        self.assertRecordValues(backorder.move_ids[0], [{'product_id': self.productB.id, 'quantity': 10}])
+        self.assertRecordValues(backorder.move_ids[1], [{'product_id': self.productA.id, 'quantity': 8}])
+        backorder.button_validate()
+        self.assertEqual(backorder.state, 'done')
+
+    def test_picking_mixed_tracking_with_backorder(self):
+        self.productB.tracking = 'lot'
+        picking = self.env['stock.picking'].create({
+            'location_id': self.supplier_location,
+            'location_dest_id': self.stock_location,
+            'picking_type_id': self.picking_type_in,
+            'company_id': self.env.company.id,
+        })
+        no_tracking_move = self.env['stock.move'].create({
+            'name': self.productA.name,
+            'product_id': self.productA.id,
+            'product_uom_qty': 1,
+            'product_uom': self.productA.uom_id.id,
+            'picking_id': picking.id,
+            'location_id': self.supplier_location,
+            'location_dest_id': self.stock_location,
+        })
+        self.env['stock.move'].create({
+            'name': self.productB.name,
+            'product_id': self.productB.id,
+            'product_uom_qty': 1,
+            'product_uom': self.productB.uom_id.id,
+            'picking_id': picking.id,
+            'location_id': self.supplier_location,
+            'location_dest_id': self.stock_location,
+        })
+        picking.action_confirm()
+
+        no_tracking_move.picked = True
+        action_dict = picking.button_validate()
+        backorder_wizard = Form(self.env['stock.backorder.confirmation'].with_context(action_dict['context'])).save()
+        backorder_wizard.process()
+        bo = self.env['stock.picking'].search([('backorder_id', '=', picking.id)])
+        self.assertEqual(bo.state, 'assigned')
 
 @tagged('-at_install', 'post_install')
 class TestStockFlowPostInstall(TestStockCommon):
@@ -2582,3 +2652,49 @@ class TestStockFlowPostInstall(TestStockCommon):
         backorder = picking.backorder_ids
         self.assertEqual(backorder.move_ids.product_uom_qty, 2)
         self.assertEqual(backorder.move_ids.description_picking, 'Ipsum')
+
+    def test_onchange_picking_type_id_and_name(self):
+        """
+        when changing picking_type_id of a stock.picking, should change the name too
+        """
+        picking_type_1 = self.env['stock.picking.type'].create({
+            'name': 'new_picking_type_1',
+            'code': 'internal',
+            'sequence_code': 'PT1/',
+        })
+        picking_type_2 = self.env['stock.picking.type'].create({
+            'name': 'new_picking_type_2',
+            'code': 'internal',
+            'sequence_code': 'PT2/',
+        })
+        picking = self.env['stock.picking'].create({
+            'picking_type_id': picking_type_1.id,
+            'location_id': self.supplier_location,
+            'location_dest_id': self.stock_location,
+        })
+        self.assertEqual(picking.name, "PT1/00001")
+        picking.picking_type_id = picking_type_2
+        self.assertEqual(picking.name, "PT2/00001")
+        picking.picking_type_id = picking_type_1
+        self.assertEqual(picking.name, "PT1/00002")
+        picking.picking_type_id = picking_type_1
+        self.assertEqual(picking.name, "PT1/00002")
+
+    def test_name_create_location(self):
+        """
+        e.g., from .csv/.xlsx import:
+            If name str has a parent location prefix we try to create as child location
+            else ignore prefixes
+        """
+        parent_location = self.env['stock.location'].create({'name': 'ParentLocation'})
+        new_location_id = self.env['stock.location'].name_create('ParentLocation/TestLocation1')[0]
+        new_location = self.env['stock.location'].browse(new_location_id)
+        self.assertEqual(new_location.name, 'TestLocation1')
+        self.assertEqual(new_location.complete_name, 'ParentLocation/TestLocation1')
+        self.assertEqual(new_location.location_id, parent_location)
+
+        new_location_complete_name = self.env['stock.location'].name_create('FauxParentLocation/TestLocation2')[1]
+        self.assertEqual(new_location_complete_name, 'TestLocation2')
+
+        new_location_complete_name = self.env['stock.location'].name_create('NoPrefixLocation')[1]
+        self.assertEqual(new_location_complete_name, 'NoPrefixLocation')

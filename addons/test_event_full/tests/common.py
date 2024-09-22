@@ -36,6 +36,7 @@ class TestEventFullCommon(EventCrmCase, TestSalesCommon, MockVisitor):
         # set country in order to format Belgian numbers
         cls.company_admin.write({
             'country_id': cls.env.ref('base.be').id,
+            'email': 'info@yourcompany.com',
         })
         cls.event_user = mail_new_test_user(
             cls.env,
@@ -226,14 +227,15 @@ class TestEventFullCommon(EventCrmCase, TestSalesCommon, MockVisitor):
             'is_published': True,
         }
 
-        cls.test_event = cls.env['event.event'].create({
-            'name': 'Test Event',
-            'date_begin': datetime.now() + timedelta(days=1),
-            'date_end': datetime.now() + timedelta(days=5),
-            'date_tz': 'Europe/Brussels',
-            'event_type_id': cls.test_event_type.id,
-            'is_published': True,
-        })
+        with cls.mock_datetime_and_now(cls, cls.reference_now):
+            cls.test_event = cls.env['event.event'].create({
+                'name': 'Test Event',
+                'date_begin': datetime.now() + timedelta(days=1),
+                'date_end': datetime.now() + timedelta(days=5),
+                'date_tz': 'Europe/Brussels',
+                'event_type_id': cls.test_event_type.id,
+                'is_published': True,
+            })
         # update post-synchronize data
         ticket_1 = cls.test_event.event_ticket_ids.filtered(lambda t: t.name == 'Ticket1')
         ticket_2 = cls.test_event.event_ticket_ids.filtered(lambda t: t.name == 'Ticket2')

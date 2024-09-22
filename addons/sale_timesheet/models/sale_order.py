@@ -15,7 +15,7 @@ class SaleOrder(models.Model):
     timesheet_count = fields.Float(string='Timesheet activities', compute='_compute_timesheet_count', groups="hr_timesheet.group_hr_timesheet_user")
 
     # override domain
-    project_id = fields.Many2one(domain="[('pricing_type', '!=', 'employee_rate'), ('analytic_account_id', '!=', False), ('company_id', '=', company_id)]")
+    project_id = fields.Many2one(domain="[('pricing_type', '!=', 'employee_rate'), ('analytic_account_id', '!=', False)]", check_company=True)
     timesheet_encode_uom_id = fields.Many2one('uom.uom', related='company_id.timesheet_encode_uom_id')
     timesheet_total_duration = fields.Integer("Timesheet Total Duration", compute='_compute_timesheet_total_duration',
         help="Total recorded duration, expressed in the encoding UoM, and rounded to the unit", compute_sudo=True,
@@ -44,7 +44,11 @@ class SaleOrder(models.Model):
         timesheet_unit_amount_dict = defaultdict(float)
         timesheet_unit_amount_dict.update({order.id: unit_amount for order, unit_amount in group_data})
         for sale_order in self:
-            total_time = sale_order.company_id.project_time_mode_id._compute_quantity(timesheet_unit_amount_dict[sale_order.id], sale_order.timesheet_encode_uom_id)
+            total_time = sale_order.company_id.project_time_mode_id._compute_quantity(
+                timesheet_unit_amount_dict[sale_order.id],
+                sale_order.timesheet_encode_uom_id,
+                rounding_method='HALF-UP',
+            )
             sale_order.timesheet_total_duration = round(total_time)
 
     def _compute_field_value(self, field):
@@ -154,7 +158,7 @@ class SaleOrderLine(models.Model):
     analytic_line_ids = fields.One2many(domain=[('project_id', '=', False)])  # only analytic lines, not timesheets (since this field determine if SO line came from expense)
     remaining_hours_available = fields.Boolean(compute='_compute_remaining_hours_available', compute_sudo=True)
     remaining_hours = fields.Float('Remaining Hours on SO', compute='_compute_remaining_hours', compute_sudo=True, store=True)
-    has_displayed_warning_upsell = fields.Boolean('Has Displayed Warning Upsell')
+    has_displayed_warning_upsell = fields.Boolean('Has Displayed Warning Upsell', copy=False)
     timesheet_ids = fields.One2many('account.analytic.line', 'so_line', domain=[('project_id', '!=', False)], string='Timesheets')
 
     @api.depends('remaining_hours_available', 'remaining_hours')
@@ -263,25 +267,29 @@ class SaleOrderLine(models.Model):
 
     def _timesheet_create_project(self):
         project = super()._timesheet_create_project()
-        project_uom = project.timesheet_encode_uom_id
-        timesheet_uom = self.company_id.timesheet_encode_uom_id
-        uom_ids = set(project_uom + self.order_id.order_line.mapped('product_uom'))
+        project_uom = self.company_id.project_time_mode_id
         uom_unit = self.env.ref('uom.product_uom_unit')
         uom_hour = self.env.ref('uom.product_uom_hour')
 
-        uom_per_id = {}
-        for uom in uom_ids:
-            if uom == uom_unit:
-                uom = uom_hour
-            if uom.category_id == project_uom.category_id:
-                uom_per_id[uom.id] = uom
+        # dict of inverse factors for each relevant UoM found in SO
+        factor_inv_per_id = {
+            uom.id: uom.factor_inv
+            for uom in self.order_id.order_line.product_uom
+            if uom.category_id == project_uom.category_id
+        }
+        # if sold as units, assume hours for time allocation
+        factor_inv_per_id[uom_unit.id] = uom_hour.factor_inv
 
         allocated_hours = 0.0
+        # method only called once per project, so also allocate hours for
+        # all lines in SO that will share the same project
         for line in self.order_id.order_line:
-            product_type = line.product_id.service_tracking
-            if line.is_service and (product_type == 'task_in_project' or product_type == 'project_only') and line.product_id.project_template_id == self.product_id.project_template_id:
-                if uom_per_id.get(line.product_uom.id) or line.product_uom.id == uom_unit.id:
-                    allocated_hours += line.product_uom_qty * uom_per_id.get(line.product_uom.id, project_uom).factor_inv * timesheet_uom.factor
+            if line.is_service \
+                    and line.product_id.service_tracking in ['task_in_project', 'project_only'] \
+                    and line.product_id.project_template_id == self.product_id.project_template_id \
+                    and line.product_uom.id in factor_inv_per_id:
+                uom_factor = project_uom.factor * factor_inv_per_id[line.product_uom.id]
+                allocated_hours += line.product_uom_qty * uom_factor
 
         project.write({
             'allocated_hours': allocated_hours,

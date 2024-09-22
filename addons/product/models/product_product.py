@@ -18,6 +18,7 @@ class ProductProduct(models.Model):
     _inherits = {'product.template': 'product_tmpl_id'}
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'priority desc, default_code, name, id'
+    _check_company_domain = models.check_company_domain_parent_of
 
     # price_extra: catalog extra value only, sum of variant extra attributes
     price_extra = fields.Float(
@@ -149,7 +150,7 @@ class ProductProduct(models.Model):
         works as intended :-)
         """
         for record in self:
-            record.write_date = max(record.write_date, record.product_tmpl_id.write_date)
+            record.write_date = max(record.write_date or self.env.cr.now(), record.product_tmpl_id.write_date)
 
     def _compute_image_1920(self):
         """Get the image from the template if no image is set on the variant."""
@@ -187,7 +188,7 @@ class ProductProduct(models.Model):
     def _get_placeholder_filename(self, field):
         image_fields = ['image_%s' % size for size in [1920, 1024, 512, 256, 128]]
         if field in image_fields:
-            return 'product/static/img/placeholder.png'
+            return 'product/static/img/placeholder_thumbnail.png'
         return super()._get_placeholder_filename(field)
 
     def init(self):
@@ -304,9 +305,12 @@ class ProductProduct(models.Model):
 
     def _compute_variant_item_count(self):
         for product in self:
-            domain = ['|',
-                '&', ('product_tmpl_id', '=', product.product_tmpl_id.id), ('applied_on', '=', '1_product'),
-                '&', ('product_id', '=', product.id), ('applied_on', '=', '0_product_variant')]
+            domain = [
+                ('pricelist_id.active', '=', True),
+                '|',
+                    '&', ('product_tmpl_id', '=', product.product_tmpl_id.id), ('applied_on', '=', '1_product'),
+                    '&', ('product_id', '=', product.id), ('applied_on', '=', '0_product_variant'),
+            ]
             product.pricelist_item_count = self.env['product.pricelist.item'].search_count(domain)
 
     def _compute_product_document_count(self):
@@ -461,7 +465,7 @@ class ProductProduct(models.Model):
         return super()._search(domain, offset, limit, order, access_rights_uid)
 
     @api.depends('name', 'default_code', 'product_tmpl_id')
-    @api.depends_context('display_default_code', 'seller_id', 'company_id', 'partner_id')
+    @api.depends_context('display_default_code', 'seller_id', 'company_id', 'partner_id', 'use_partner_name')
     def _compute_display_name(self):
 
         def get_display_name(name, code):
@@ -469,7 +473,7 @@ class ProductProduct(models.Model):
                 return f'[{code}] {name}'
             return name
 
-        partner_id = self._context.get('partner_id')
+        partner_id = self._context.get('partner_id') if self.env.context.get('use_partner_name', True) else self.env['res.partner']
         if partner_id:
             partner_ids = [partner_id, self.env['res.partner'].browse(partner_id).commercial_partner_id.id]
         else:
@@ -551,7 +555,7 @@ class ProductProduct(models.Model):
                 domain2 = expression.AND([domain, domain2])
                 product_ids = list(self._search(domain2, limit=limit, order=order))
             if not product_ids and operator in positive_operators:
-                ptrn = re.compile('(\[(.*?)\])')
+                ptrn = re.compile(r'(\[(.*?)\])')
                 res = ptrn.search(name)
                 if res:
                     product_ids = list(self._search([('default_code', '=', res.group(2))] + domain, limit=limit, order=order))
@@ -616,38 +620,19 @@ class ProductProduct(models.Model):
         }
 
     def action_open_documents(self):
-        self.ensure_one()
-        return {
-            'name': _('Documents'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'product.document',
-            'view_mode': 'kanban,tree,form',
-            'context': {
-                'default_res_model': self._name,
-                'default_res_id': self.id,
-                'default_company_id': self.company_id.id,
-            },
-            'domain': [('res_id', 'in', self.ids), ('res_model', '=', self._name)],
-            'target': 'current',
-            'help': """
-                <p class="o_view_nocontent_smiling_face">
-                    %s
-                </p><p>
-                    %s
-                    <br/>
-                    %s
-                </p>
-            """ % (
-                _("Upload files to your product"),
-                _("Use this feature to store any files you would like to share with your customers."),
-                _("E.G: product description, ebook, legal notice, ..."),
-            )
-        }
+        res = self.product_tmpl_id.action_open_documents()
+        res['context'].update({
+            'default_res_model': self._name,
+            'default_res_id': self.id,
+            'search_default_context_variant': True,
+        })
+        return res
 
     #=== BUSINESS METHODS ===#
 
     def _prepare_sellers(self, params=False):
-        return self.seller_ids.filtered(lambda s: s.partner_id.active).sorted(lambda s: (s.sequence, -s.min_qty, s.price, s.id))
+        sellers = self.seller_ids.filtered(lambda s: s.partner_id.active and (not s.product_id or s.product_id == self))
+        return sellers.sorted(lambda s: (s.sequence, -s.min_qty, s.price, s.id))
 
     def _get_filtered_sellers(self, partner_id=False, quantity=0.0, date=None, uom_id=False, params=False):
         self.ensure_one()

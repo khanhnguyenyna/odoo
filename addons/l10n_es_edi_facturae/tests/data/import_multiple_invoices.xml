@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes'?>
-<fac:Facturae xmlns:fac="http://www.facturae.es/Facturae/2014/v3.2.1/Facturae">
+<fac:Facturae xmlns:fac="http://www.facturae.gob.es/formato/Versiones/Facturaev3_2_2.xml">
   <FileHeader>
-    <SchemaVersion>3.2.1</SchemaVersion>
+    <SchemaVersion>3.2.2</SchemaVersion>
     <Modality>I</Modality>
     <InvoiceIssuerType>EM</InvoiceIssuerType>
     <Batch>
@@ -44,21 +44,21 @@
       <TaxIdentification>
         <PersonTypeCode>J</PersonTypeCode>
         <ResidenceTypeCode>E</ResidenceTypeCode>
-        <TaxIdentificationNumber>US12345677</TaxIdentificationNumber>
+        <TaxIdentificationNumber>US77654321</TaxIdentificationNumber>
       </TaxIdentification>
       <LegalEntity>
-        <CorporateName>Azure Interior</CorporateName>
-        <TradeName>Azure Interior</TradeName>
+        <CorporateName>Indigo Exterior</CorporateName>
+        <TradeName>Indigo Exterior</TradeName>
         <OverseasAddress>
-          <Address>4557 De Silva St</Address>
+          <Address>4558 De Silva St</Address>
           <PostCodeAndTown>94538 Fremont</PostCodeAndTown>
           <Province>California</Province>
           <CountryCode>USA</CountryCode>
         </OverseasAddress>
         <ContactDetails>
-          <Telephone>8709310505</Telephone>
-          <WebAddress>http://www.azure-interior.com</WebAddress>
-          <ElectronicMail>azure.Interior24@example.com</ElectronicMail>
+          <Telephone>8709310506</Telephone>
+          <WebAddress>http://www.indigo-exterior.com</WebAddress>
+          <ElectronicMail>indigo.exterior@example.com</ElectronicMail>
         </ContactDetails>
       </LegalEntity>
     </BuyerParty>
@@ -309,8 +309,8 @@ Up0EYDg28axZXH0h89oUqsVgF1uPx3ufeBm8PQ==
                 <xades:Description>Política de firma electrónica para facturación electrónica con formato Facturae</xades:Description>
               </xades:SigPolicyId>
               <xades:SigPolicyHash>
-                <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-                <ds:DigestValue>a/vDoueJq9zxWGCFwdsXdlXtkFSEek4XVtmlQCEDaE8=</ds:DigestValue>
+                <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+                <ds:DigestValue>Ohixl6upD6av8N7pEvDABhEL6hM=</ds:DigestValue>
               </xades:SigPolicyHash>
               <xades:SigPolicyQualifiers>
                 <xades:SigPolicyQualifier>

@@ -3,23 +3,16 @@
 }
 
 .receipt-screen .default-view .pos-receipt-container {
-    flex: 0 1 400px;
-}
-
-@include media-breakpoint-down(md) {
-    .receipt-screen .default-view .pos-receipt-container {
-        flex: 1;
-        overflow: visible;
-    }
+    flex-basis: 400px;
 }
 
 @page {
-    margin: 0;
+    padding: 15px;
 }
 
 @media print {
     body {
-        background: white;
+        background-color: transparent;
     }
     body * {
         visibility: hidden;
@@ -27,17 +20,12 @@
     .pos, .pos * {
         position: static !important;
     }
-    .pos .receipt-screen .pos-receipt-container {
-        position: absolute !important;
-        top: 0;
-        left: 0;
-    }
-    .pos .receipt-screen .pos-receipt-container, .pos .receipt-screen .pos-receipt-container  *, .render-container * {
+    .render-container .pos-receipt * {
         visibility: visible;
-        background: white !important;
+        background-color: transparent !important;
         color: black !important;
     }
-    .pos .pos-receipt {
+    .render-container .pos-receipt {
         margin: 0 !important;
         margin-left: auto !important;
         margin-right: auto !important;
@@ -49,5 +37,10 @@
         position: absolute !important;
         top: 10px;
         left: 10px;
+    }
+    .o-main-components-container  {
+        position: absolute !important;
+        top: 0;
+        left: 0;
     }
 }

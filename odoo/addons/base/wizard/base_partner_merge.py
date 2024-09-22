@@ -328,10 +328,6 @@ class MergePartnerAutomatic(models.TransientModel):
             src_partners = ordered_partners[:-1]
         _logger.info("dst_partner: %s", dst_partner.id)
 
-        # FIXME: is it still required to make and exception for account.move.line since accounting v9.0 ?
-        if extra_checks and 'account.move.line' in self.env and self.env['account.move.line'].sudo().search([('partner_id', 'in', [partner.id for partner in src_partners])]):
-            raise UserError(_("Only the destination contact may be linked to existing Journal Items. Please ask the Administrator if you need to merge several contacts linked to existing Journal Items."))
-
         # Make the company of all related users consistent with destination partner company
         if dst_partner.company_id:
             partner_ids.mapped('user_ids').sudo().write({
@@ -343,6 +339,8 @@ class MergePartnerAutomatic(models.TransientModel):
         self._update_foreign_keys(src_partners, dst_partner)
         self._update_reference_fields(src_partners, dst_partner)
         self._update_values(src_partners, dst_partner)
+
+        self.env.add_to_compute(dst_partner._fields['partner_share'], dst_partner)
 
         self._log_merge_operation(src_partners, dst_partner)
 
@@ -410,7 +408,7 @@ class MergePartnerAutomatic(models.TransientModel):
 
         for field_name in self._fields:
             if field_name.startswith(group_by_prefix):
-                if getattr(self, field_name, False):
+                if field_name in self and self[field_name]:
                     groups.append(field_name[len(group_by_prefix):])
 
         if not groups:

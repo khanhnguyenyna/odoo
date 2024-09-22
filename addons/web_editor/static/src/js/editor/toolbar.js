@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { isMobileOS } from "@web/core/browser/feature_detection";
+import { utils as uiUtils } from "@web/core/ui/ui_service";
 import { ColorPalette } from "@web_editor/js/wysiwyg/widgets/color_palette";
 
 import {
@@ -18,6 +18,7 @@ export class Toolbar extends Component {
         showChecklist: { type: Boolean, optional: true },
         showColors: { type: Boolean, optional: true },
         showFontSize: { type: Boolean, optional: true },
+        useFontSizeInput: { type: Boolean, optional: true },
         showHistory: { type: Boolean, optional: true },
 
         showStyle: { type: Boolean, optional: true },
@@ -50,6 +51,7 @@ export class Toolbar extends Component {
         showChecklist: true,
         showColors: true,
         showFontSize: true,
+        useFontSizeInput: false,
         showHistory: false,
 
         showStyle: true,
@@ -97,6 +99,6 @@ export class Toolbar extends Component {
     }
 
     isMobile() {
-        return isMobileOS();
+        return uiUtils.isSmall();
     }
 }

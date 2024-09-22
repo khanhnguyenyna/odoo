@@ -379,7 +379,8 @@
                 @include o-grab-cursor;
 
                 .oe_snippet_thumbnail_title {
-                    display: block;
+                    @include o-text-overflow(block);
+                    white-space: normal;
                     padding: $o-we-sidebar-blocks-content-spacing / 2;
                     text-align: center;
                 }
@@ -421,7 +422,7 @@
                 min-width: 0; // Ensure text-overflow on flex children
             }
             .oe_snippet_thumbnail_title {
-                @include o-text-overflow(block);
+                white-space: nowrap;
             }
             .oe_snippet_thumbnail_img {
                 flex-shrink: 0;
@@ -491,7 +492,7 @@
             @extend %we-generic-button;
         }
 
-        #removeFormat, #oe-table-delete-table, .o_we_highlight_animated_text {
+        #removeFormat, #oe-table-delete-table {
             @extend %we-generic-link;
         }
 
@@ -521,6 +522,10 @@
 
             &::before {
                 display: none; // remove ballon
+            }
+
+            .fa {
+                font-size: $o-we-sidebar-font-size;
             }
 
             .btn {
@@ -604,11 +609,11 @@
                 }
                 .dropdown {
                     position: unset;
-                    width: -webkit-fill-available;
+                    width: 100%;
 
                     .dropdown-toggle {
                         padding: 0;
-                        width: inherit;
+                        width: 100%;
 
                         &::after {
                             display: none;
@@ -617,8 +622,17 @@
                     .dropdown-menu.show {
                         position: absolute !important;
                         padding: 0;
+                        width: 100%;
+                        border-color: $o-we-dropdown-border-color;
+
+                        &[data-popper-placement$="start"] {
+                            left: -$o-we-sidebar-content-padding-base !important;
+                        }
 
                         we-button:not(.fa) {
+                            display: flex;
+                            align-items: center;
+                            height: $o-we-sidebar-content-field-dropdown-item-height;
                             text-align: left;
                             font-family: $o-we-font-family;
                             font-size: 12px;
@@ -627,6 +641,10 @@
                             div {
                                 width: 100%;
                             }
+                        }
+
+                        .dropdown-item::before {
+                            display: none;
                         }
                     }
                 }
@@ -854,8 +872,15 @@
 
         we-title {
             display: block;
-            text-transform: capitalize;
             text-align: left;
+        }
+
+        // TODO in master, remove the text-transform rule entirely and rely on
+        // developers writing their label with the intended "design". The
+        // "where" change here was added as a way to minimize the impact of this
+        // fix in stable. That CSS style was breaking translations.
+        we-title:where(:lang(en)) {
+            text-transform: capitalize;
         }
 
         we-customizeblock-options {
@@ -906,6 +931,22 @@
                             text-align: center;
                             justify-content: center;
                         }
+                    }
+                }
+            }
+
+            &.o_we_outdated_block_options {
+                // Outdated block options
+                padding: 0 !important;
+
+                > we-customizeblock-option {
+                    &:not(.snippet-option-VersionControl) {
+                        display: none !important;
+                    }
+
+                    &.snippet-option-VersionControl {
+                        // Outdated snippet alert
+                        padding: 0 !important;
                     }
                 }
             }
@@ -1389,13 +1430,6 @@
 
         // Color Pickers
         .o_we_so_color_palette.o_we_user_value_widget {
-            // Add a margin between color pickers and button groups / widgets
-            // when next to another without impacting the margin of sibling
-            // color pickers
-            + .o_we_user_value_widget:not(.o_we_so_color_palette) {
-                margin-left: $o-we-sidebar-content-field-multi-spacing * 4 !important;
-            }
-
             .o_we_color_preview {
                 @extend %o-preview-alpha-background;
                 flex: 0 0 auto;
@@ -1795,6 +1829,13 @@
                 we-title {
                     font-weight: 600;
                 }
+            }
+
+            // Add a margin between color pickers and button groups / widgets
+            // when next to another without impacting the margin of sibling
+            // color pickers
+            .o_we_so_color_palette.o_we_user_value_widget + .o_we_user_value_widget:not(.o_we_so_color_palette) {
+                margin-left: $o-we-sidebar-content-field-multi-spacing * 4 !important;
             }
         }
 
@@ -2236,7 +2277,7 @@ we-select.o_we_border_preview_aligned_select {
         transition: opacity 400ms linear 0s;
 
         &.o_overlay_hidden {
-            opacity: 0;
+            opacity: 0 !important;
             transition: none;
         }
         &.oe_active {
@@ -2396,6 +2437,7 @@ we-select.o_we_border_preview_aligned_select {
 
                 &.readonly {
                     cursor: default;
+                    pointer-events: none;
 
                     &.o_column_handle.o_side_y {
                         border: none;
@@ -2505,6 +2547,7 @@ we-select.o_we_border_preview_aligned_select {
                 transform: none !important;
                 max-width: unset !important;
                 max-height: unset !important;
+                z-index: 0 !important;
             }
         }
 

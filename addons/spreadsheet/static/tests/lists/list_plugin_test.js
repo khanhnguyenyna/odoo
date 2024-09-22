@@ -228,17 +228,12 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
             mockRPC: async function (route, args, performRPC) {
                 if (
                     spreadsheetLoaded &&
-                    args.method === "search_read" &&
+                    args.method === "web_search_read" &&
                     args.model === "partner" &&
-                    args.kwargs.fields &&
-                    args.kwargs.fields.includes(forbiddenFieldName)
+                    args.kwargs.specification[forbiddenFieldName]
                 ) {
                     // We should not go through this condition if the forbidden fields is properly filtered
                     assert.ok(false, `${forbiddenFieldName} should have been ignored`);
-                }
-                if (this) {
-                    // @ts-ignore
-                    return this._super.apply(this, arguments);
                 }
             },
         });
@@ -294,7 +289,7 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
         assert.equal(getCellValue(model, "A1"), "Loading...");
         await nextTick();
         assert.equal(getCellValue(model, "A1"), 12);
-        assert.verifySteps(["partner/fields_get", "partner/search_read"]);
+        assert.verifySteps(["partner/fields_get", "partner/web_search_read"]);
     });
 
     QUnit.test("user context is combined with list context to fetch data", async function (assert) {
@@ -358,8 +353,8 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
                     return;
                 }
                 switch (method) {
-                    case "search_read":
-                        assert.step("search_read");
+                    case "web_search_read":
+                        assert.step("web_search_read");
                         assert.deepEqual(
                             kwargs.context,
                             expectedFetchContext,
@@ -370,7 +365,7 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
             },
         });
         await waitForDataSourcesLoaded(model);
-        assert.verifySteps(["search_read"]);
+        assert.verifySteps(["web_search_read"]);
     });
 
     QUnit.test("rename list with empty name is refused", async (assert) => {
@@ -449,6 +444,11 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
         assert.deepEqual(model.getters.getListDefinition(listId).domain, [["foo", "in", [55]]]);
         await waitForDataSourcesLoaded(model);
         assert.strictEqual(getCellValue(model, "B2"), "");
+        const result = model.dispatch("UPDATE_ODOO_LIST_DOMAIN", {
+            listId: "invalid",
+            domain: [],
+        });
+        assert.deepEqual(result.reasons, [CommandResult.ListIdNotFound]);
     });
 
     QUnit.test("edited domain is exported", async (assert) => {
@@ -537,13 +537,88 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
         await createSpreadsheetWithList({
             columns: ["pognon"],
             mockRPC: async function (route, args, performRPC) {
-                if (args.method === "search_read" && args.model === "partner") {
-                    assert.strictEqual(args.kwargs.fields.length, 2);
-                    assert.strictEqual(args.kwargs.fields[0], "pognon");
-                    assert.strictEqual(args.kwargs.fields[1], "currency_id");
+                if (args.method === "web_search_read" && args.model === "partner") {
+                    const spec = args.kwargs.specification;
+                    assert.strictEqual(Object.keys(spec).length, 2);
+                    assert.deepEqual(spec.currency_id, {
+                        fields: {
+                            name: {},
+                            symbol: {},
+                            decimal_places: {},
+                            position: {},
+                        },
+                    });
+                    assert.deepEqual(spec.pognon, {});
                 }
             },
         });
+    });
+
+    QUnit.test(
+        "list with both a monetary field and the related currency field",
+        async function (assert) {
+            const { model } = await createSpreadsheetWithList({
+                columns: ["pognon", "currency_id"],
+            });
+            setCellContent(model, "A1", '=ODOO.LIST(1, 1, "pognon")');
+            setCellContent(model, "A2", '=ODOO.LIST(1, 1, "currency_id")');
+            await waitForDataSourcesLoaded(model);
+            assert.strictEqual(getEvaluatedCell(model, "A1").formattedValue, "74.40€");
+            assert.strictEqual(getEvaluatedCell(model, "A2").value, "EUR");
+        }
+    );
+
+    QUnit.test(
+        "list with both a monetary field and the related currency field",
+        async function (assert) {
+            const { model } = await createSpreadsheetWithList({
+                columns: ["currency_id", "pognon"],
+            });
+            setCellContent(model, "A1", '=ODOO.LIST(1, 1, "pognon")');
+            setCellContent(model, "A2", '=ODOO.LIST(1, 1, "currency_id")');
+            await waitForDataSourcesLoaded(model);
+            assert.strictEqual(getEvaluatedCell(model, "A1").formattedValue, "74.40€");
+            assert.strictEqual(getEvaluatedCell(model, "A2").value, "EUR");
+        }
+    );
+
+    QUnit.test("Spec of web_search_read is minimal", async function (assert) {
+        const spreadsheetData = {
+            lists: {
+                1: {
+                    id: 1,
+                    columns: ["currency_id", "pognon", "foo"],
+                    model: "partner",
+                    orderBy: [],
+                },
+            },
+        };
+        const model = await createModelWithDataSource({
+            spreadsheetData,
+            mockRPC: function (route, args) {
+                if (args.method === "web_search_read") {
+                    assert.deepEqual(args.kwargs.specification, {
+                        pognon: {},
+                        currency_id: {
+                            fields: {
+                                name: {},
+                                symbol: {},
+                                decimal_places: {},
+                                display_name: {},
+                                position: {},
+                            },
+                        },
+                        foo: {},
+                    });
+                    assert.step("web_search_read");
+                }
+            },
+        });
+        setCellContent(model, "A1", '=ODOO.LIST(1, 1, "pognon")');
+        setCellContent(model, "A2", '=ODOO.LIST(1, 1, "currency_id")');
+        setCellContent(model, "A3", '=ODOO.LIST(1, 1, "foo")');
+        await waitForDataSourcesLoaded(model);
+        assert.verifySteps(["web_search_read"]);
     });
 
     QUnit.test(
@@ -598,9 +673,9 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
         const model = await createModelWithDataSource({
             spreadsheetData,
             mockRPC: function (route, args) {
-                if (args.method === "search_read") {
+                if (args.method === "web_search_read") {
                     assert.deepEqual(args.kwargs.domain, [["foo", "=", uid]]);
-                    assert.step("search_read");
+                    assert.step("web_search_read");
                 }
             },
         });
@@ -611,7 +686,7 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
             '[("foo", "=", uid)]',
             "the domain is exported with the dynamic parts"
         );
-        assert.verifySteps(["search_read"]);
+        assert.verifySteps(["web_search_read"]);
     });
 
     QUnit.test(
@@ -622,7 +697,7 @@ QUnit.module("spreadsheet > list plugin", {}, () => {
                 mockRPC: async function (route, args) {
                     if (
                         args.model === "partner" &&
-                        args.method === "search_read" &&
+                        args.method === "web_search_read" &&
                         !hasAccessRights
                     ) {
                         throw makeServerError({ description: "ya done!" });

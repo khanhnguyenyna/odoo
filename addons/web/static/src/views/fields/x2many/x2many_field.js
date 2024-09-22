@@ -67,6 +67,7 @@ export class X2ManyField extends Component {
         this.activeActions = useActiveActions({
             crudOptions: Object.assign({}, this.props.crudOptions, {
                 onDelete: removeRecord,
+                edit: this.props.record.isInEdition,
             }),
             fieldType: this.isMany2Many ? "many2many" : "one2many",
             subViewActiveActions,
@@ -222,12 +223,13 @@ export class X2ManyField extends Component {
                 !this.props.readonly && ("editable" in params ? params.editable : editable);
             this.onAdd(params);
         };
-        const openFormView = props.editable ? archInfo.openFormView : false;
+        const openFormView = archInfo.editable ? archInfo.openFormView : false;
         props.onOpenFormView = openFormView ? this.switchToForm.bind(this) : undefined;
         return props;
     }
 
-    switchToForm(record) {
+    async switchToForm(record) {
+        await this.props.record.save();
         this.action.doAction(
             {
                 type: "ir.actions.act_window",
@@ -267,7 +269,11 @@ export class X2ManyField extends Component {
 
     async openRecord(record) {
         if (this.canOpenRecord) {
-            return this._openRecord({ record, mode: this.props.readonly ? "readonly" : "edit" });
+            return this._openRecord({
+                record,
+                context: this.props.context,
+                mode: this.props.readonly ? "readonly" : "edit",
+            });
         }
     }
 }

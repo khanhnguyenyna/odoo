@@ -39,18 +39,20 @@
                                         <input type="hidden" name="code" t-att-value="coupon.code"/>
                                         <div class="alert alert-success text-start mt16" role="alert">
                                             <div class="d-flex flex-row">
-                                                <div class="flex-grow-1">
+                                                <div class="flex-grow-1 text-break">
                                                     <t t-set="program" t-value="reward.program_id"/>
-                                                    <t t-set="points" t-value="website_sale_order._get_real_points_for_coupon(coupon)"/>
-                                                    <t t-if="program.program_type != 'ewallet' and (program.trigger == 'with_code' or (program.trigger == 'auto' and program.applies_on == 'future'))">
+                                                    <t t-set="points" t-value="coupon._format_points(website_sale_order._get_real_points_for_coupon(coupon))"/>
+                                                    <t t-if="program.program_type not in ['ewallet', 'promo_code'] and (program.trigger == 'with_code' or (program.trigger == 'auto' and program.applies_on == 'future'))">
                                                         <t t-if="program.program_type == 'gift_card'">
                                                             <strong t-esc="reward.description"/>
                                                             <strong> - </strong>
                                                             <strong t-esc="points"/>
-                                                            <strong t-esc="reward.point_name"/>
                                                         </t>
                                                         <t t-elif="program.program_type == 'coupons'">
                                                             <strong>Coupons - </strong><strong t-esc="reward.description"/>
+                                                        </t>
+                                                        <t t-elif="program.trigger == 'auto' and program.applies_on == 'future'">
+                                                            <strong t-esc="reward.description"/>
                                                         </t>
                                                         <div class="text-muted d-md-block small">
                                                             <span t-if="coupon and not coupon.program_id.is_nominative">
@@ -66,29 +68,45 @@
                                                             </t>
                                                         </div>
                                                     </t>
+                                                    <t t-elif="program.program_type == 'promo_code'">
+                                                        <strong t-esc="reward.description"/>
+                                                    </t>
                                                     <t t-else="">
                                                         <strong t-esc="reward.description"/>
                                                         <div t-if="program.portal_visible">
                                                             <t t-if="not program.is_nominative">
-                                                                <span t-out="points"/> <span t-out="reward.point_name"/>
+                                                                <span t-out="points"/>
                                                             </t>
                                                             <t t-else="">
-                                                                <span>You have <t t-out="points"/></span> <span t-out="reward.point_name"/>
+                                                                <span>You have <t t-out="points"/></span>
                                                                 <span t-if="program.program_type == 'ewallet'"> in your ewallet</span>
                                                                 <t t-else="">
                                                                     <br/>
-                                                                    <span>Costs <t t-out="reward.required_points"/></span> <span t-out="reward.point_name"/>
+                                                                    <span>Costs <t t-out="coupon._format_points(reward.required_points)"/></span>
                                                                 </t>
                                                             </t>
                                                         </div>
                                                     </t>
+                                                    <select
+                                                        t-if="reward.multi_product"
+                                                        class="o_select w-100 form-select form-select-sm css_attribute_select"
+                                                        name="product_id"
+                                                    >
+                                                        <option
+                                                            t-foreach="reward.reward_product_ids"
+                                                            t-as="product"
+                                                            t-att-value="product.id"
+                                                        >
+                                                            <t t-out="product.display_name"/>
+                                                        </option>
+                                                    </select>
                                                 </div>
                                                 <div class="justify-content-end">
                                                     <a class="btn btn-primary a-submit" href="#" role="button">
                                                         <t t-if="reward.program_id.program_type == 'ewallet'">
                                                             Pay with eWallet
                                                         </t>
-                                                        <t t-elif="reward.program_id.trigger == 'with_code' or (reward.program_id.trigger == 'auto' and reward.program_id.applies_on == 'future')">
+                                                        <t t-elif="(reward.program_id.trigger == 'with_code' and reward.program_id.program_type != 'promo_code') or (reward.program_id.trigger == 'auto' and reward.program_id.applies_on == 'future')">
                                                             Use
                                                         </t>
                                                         <t t-else="">Claim</t>
@@ -146,15 +164,14 @@
     </template>
 
     <template id="reduction_coupon_code" inherit_id="website_sale.reduction_code">
-        <xpath expr="//t[@t-set='force_coupon']" position="replace">
-            <t t-set='force_coupon' t-value="website_sale_order.pricelist_id.code or request.params.get('code_not_available') or website_sale_order.get_promo_code_error(delete=False)"/>
+        <xpath expr="//t[@t-set='force_coupon']" position="after">
             <t t-set="_placeholder" t-value="'Discount code or gift card'"/>
         </xpath>
     </template>
 
     <template id="cart_summary" name="Payment" inherit_id="website_sale.checkout_layout">
         <xpath expr="//td[@name='website_sale_cart_summary_line_price']/child::*" position="attributes">
-            <attribute name="t-att-style">'display: None;' if line.reward_id.reward_type == 'shipping' else ''</attribute>
+            <attribute name="t-att-data-reward-type">line.reward_id.reward_type</attribute>
         </xpath>
     </template>
 

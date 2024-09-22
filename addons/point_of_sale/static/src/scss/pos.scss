@@ -58,7 +58,7 @@ button {
     width: $left-pane-width;
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 992px) {
     .order,
     .leftpane {
         max-width: inherit;
@@ -66,12 +66,16 @@ button {
     }
 }
 
+.pos .numpad {
+    /*rtl:ignore*/
+    direction: ltr;
+}
 
 .pos .button.validation.load-order-button {
     height: calc(var(--btn-height-size) * 2);
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (max-width: 992px) {
     .pos .button.validation.load-order-button {
         height: 70px;
     }
@@ -91,6 +95,33 @@ button {
     background: rgb(168,168,168);
     background: #393939;
     min-height: 30px;
+}
+
+.pos.big-scrollbars *::-webkit-scrollbar{
+    width:  40px;
+    height: 40px;
+}
+.pos.big-scrollbars *::-webkit-scrollbar-track{
+    background: $gray-200;
+    border-left: none;
+}
+.pos.big-scrollbars *::-webkit-scrollbar-thumb{
+    background: rgb(168,168,168);
+    min-height: 40px;
+    border-radius: 3px;
+}
+.pos.big-scrollbars *::-webkit-scrollbar-button{
+    width:  40px;
+    height: 40px;
+    border-radius: 3px;
+    background: rgb(210,210,210);
+    background-size: cover;
+}
+.pos.big-scrollbars *::-webkit-scrollbar-button:decrement{
+    background-image: url('../img/scroll-up.png');
+}
+.pos.big-scrollbars *::-webkit-scrollbar-button:increment{
+    background-image: url('../img/scroll-down.png');
 }
 
 /* Fade */

@@ -14,8 +14,6 @@ class AccountChartTemplate(models.AbstractModel):
             'property_account_payable_id': 'ch_coa_2000',
             'property_account_expense_categ_id': 'ch_coa_4200',
             'property_account_income_categ_id': 'ch_coa_3200',
-            'property_tax_payable_account_id': 'ch_coa_2201',
-            'property_tax_receivable_account_id': 'ch_coa_1176',
         }
 
     @template('ch', 'res.company')
@@ -33,9 +31,9 @@ class AccountChartTemplate(models.AbstractModel):
                 'account_journal_early_pay_discount_gain_account_id': 'ch_coa_3801',
                 'default_cash_difference_expense_account_id': 'ch_coa_4991',
                 'default_cash_difference_income_account_id': 'ch_coa_4992',
+                'account_sale_tax_id': 'vat_sale_81',
+                'account_purchase_tax_id': 'vat_purchase_81',
                 'external_report_layout_id': 'l10n_din5008.external_layout_din5008',
                 'paperformat_id': 'l10n_din5008.paperformat_euro_din',
-                'account_sale_tax_id': 'vat_77',
-                'account_purchase_tax_id': 'vat_77_purchase',
             },
         }

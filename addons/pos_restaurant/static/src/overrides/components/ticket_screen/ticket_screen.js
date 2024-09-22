@@ -52,6 +52,17 @@ patch(TicketScreen.prototype, {
         await this.pos.setTable(orderTable, order.uid);
         this.closeTicketScreen();
     },
+    async onDeleteOrder(order) {
+        const confirmed = await super.onDeleteOrder(...arguments);
+        if (
+            confirmed &&
+            this.pos.config.module_pos_restaurant &&
+            this.pos.table &&
+            !this.pos.orders.some((order) => order.tableId === this.pos.table.id)
+        ) {
+            return this.pos.showScreen("FloorScreen");
+        }
+    },
     get allowNewOrders() {
         return this.pos.config.module_pos_restaurant
             ? Boolean(this.pos.table)
@@ -60,7 +71,9 @@ patch(TicketScreen.prototype, {
     async settleTips() {
         // set tip in each order
         for (const order of this.getFilteredOrderList()) {
-            const tipAmount = parseFloat(order.uiState.TipScreen.inputTipAmount || "0");
+            const tipAmount = this.env.utils.isValidFloat(order.uiState.TipScreen.inputTipAmount)
+                ? parseFloat(order.uiState.TipScreen.inputTipAmount)
+                : 0;
             const serverId = this.pos.validated_orders_name_server_id_map[order.name];
             if (!serverId) {
                 console.warn(
@@ -143,7 +156,11 @@ export class TipCell extends Component {
         useAutofocus();
     }
     get tipAmountStr() {
-        return this.env.utils.formatCurrency(parseFloat(this.orderUiState.inputTipAmount || "0"));
+        return this.env.utils.formatCurrency(
+            this.env.utils.isValidFloat(this.orderUiState.inputTipAmount)
+                ? parseFloat(this.orderUiState.inputTipAmount)
+                : 0
+        );
     }
     onBlur() {
         this.state.isEditing = false;

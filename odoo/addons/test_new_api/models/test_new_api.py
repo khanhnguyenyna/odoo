@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
+import datetime
 import logging
 
 from odoo.tools.float_utils import float_round
@@ -149,16 +150,23 @@ class Message(models.Model):
     label = fields.Char(translate=True)
     priority = fields.Integer()
     active = fields.Boolean(default=True)
+    has_important_sibling = fields.Boolean(compute='_compute_has_important_sibling')
 
     attributes = fields.Properties(
         string='Properties',
         definition='discussion.attributes_definition',
     )
 
+    @api.depends('discussion.messages.important')
+    def _compute_has_important_sibling(self):
+        for record in self:
+            siblings = record.discussion.with_context(active_test=False).messages - record
+            record.has_important_sibling = any(siblings.mapped('important'))
+
     @api.constrains('author', 'discussion')
     def _check_author(self):
         for message in self.with_context(active_test=False):
-            if message.discussion and message.author not in message.discussion.participants:
+            if message.discussion and message.author not in message.discussion.sudo().participants:
                 raise ValidationError(_("Author must be among the discussion participants."))
 
     @api.depends('author.name', 'discussion.name')
@@ -923,6 +931,7 @@ class ModelImage(models.Model):
     image_512 = fields.Image("Image 512", related='image', max_width=512, max_height=512, store=True, readonly=False)
     image_256 = fields.Image("Image 256", related='image', max_width=256, max_height=256, store=False, readonly=False)
     image_128 = fields.Image("Image 128", max_width=128, max_height=128)
+    image_64 = fields.Image("Image 64", related='image', max_width=64, max_height=64, store=True, attachment=False, readonly=False)
 
 
 class BinarySvg(models.Model):
@@ -932,7 +941,10 @@ class BinarySvg(models.Model):
     name = fields.Char(required=True)
     image_attachment = fields.Binary(attachment=True)
     image_wo_attachment = fields.Binary(attachment=False)
-
+    image_wo_attachment_related = fields.Binary(
+        "image wo attachment", related="image_wo_attachment",
+        store=True, attachment=False,
+    )
 
 class MonetaryBase(models.Model):
     _name = 'test_new_api.monetary_base'
@@ -1449,7 +1461,9 @@ class ComputeMember(models.Model):
 
 class User(models.Model):
     _name = _description = 'test_new_api.user'
+    _allow_sudo_commands = False
 
+    name = fields.Char()
     group_ids = fields.Many2many('test_new_api.group')
     group_count = fields.Integer(compute='_compute_group_count', store=True)
 
@@ -1461,7 +1475,9 @@ class User(models.Model):
 
 class Group(models.Model):
     _name = _description = 'test_new_api.group'
+    _allow_sudo_commands = False
 
+    name = fields.Char()
     user_ids = fields.Many2many('test_new_api.user')
 
 
@@ -1914,3 +1930,13 @@ class AnyTag(models.Model):
 
     name = fields.Char()
     child_ids = fields.Many2many('test_new_api.any.child')
+
+
+class ModelAutovacuumed(models.Model):
+    _name = _description = 'test_new_api.autovacuumed'
+
+    expire_at = fields.Datetime('Expires at')
+
+    @api.autovacuum
+    def _gc(self):
+        self.search([('expire_at', '<', datetime.datetime.now() - datetime.timedelta(days=1))]).unlink()

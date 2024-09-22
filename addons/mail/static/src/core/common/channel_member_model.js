@@ -1,6 +1,7 @@
 /* @odoo-module */
 
 import { Record } from "@mail/core/common/record";
+import { deserializeDateTime } from "@web/core/l10n/dates";
 
 /**
  * @class ChannelMember
@@ -22,17 +23,32 @@ export class ChannelMember extends Record {
         return super.insert(...arguments);
     }
 
+    /** @type {string} */
+    create_date;
     /** @type {number} */
     id;
     persona = Record.one("Persona", { inverse: "channelMembers" });
     rtcSession = Record.one("RtcSession");
     thread = Record.one("Thread", { inverse: "channelMembers" });
+    threadAsSelf = Record.one("Thread", {
+        compute() {
+            if (this._store.self?.eq(this.persona)) {
+                return this.thread;
+            }
+        },
+    });
+    lastFetchedMessage = Record.one("Message");
+    lastSeenMessage = Record.one("Message");
 
     /**
      * @returns {string}
      */
     getLangName() {
         return this.persona.lang_name;
+    }
+
+    get memberSince() {
+        return this.create_date ? deserializeDateTime(this.create_date) : undefined;
     }
 }
 

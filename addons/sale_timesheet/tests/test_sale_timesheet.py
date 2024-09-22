@@ -2,6 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 from datetime import date, timedelta
 
+from odoo import Command
 from odoo.fields import Date
 from odoo.tools import float_is_zero
 from odoo.exceptions import UserError
@@ -693,6 +694,119 @@ class TestSaleTimesheet(TestCommonSaleTimesheet):
         ])
         self.assertEqual(len(message_sent), 1, 'Sale Timesheet: An email should only be sent to the saleperson when the state of the sale order change to upselling')
 
+    def test_timesheet_upsell_copied_so(self):
+        """ Test that copying a SO which had an upsell activity still create an upsell activity on the copy. """
+
+        sale_order = self.env['sale.order'].with_context(mail_notrack=True, mail_create_nolog=True).create({
+            'partner_id': self.partner_a.id,
+            'partner_invoice_id': self.partner_a.id,
+            'partner_shipping_id': self.partner_a.id,
+            'user_id': self.user_employee_company_B.id,
+        })
+        # create SO and confirm it
+        uom_days = self.env.ref('uom.product_uom_day')
+        sale_order_line = self.env['sale.order.line'].create({
+            'order_id': sale_order.id,
+            'product_id': self.product_order_timesheet3.id,
+            'product_uom': uom_days.id,
+        })
+        sale_order.action_confirm()
+        task = sale_order_line.task_id
+
+        # let's log some timesheets
+        self.env['account.analytic.line'].create({
+            'name': 'Test Line',
+            'project_id': task.project_id.id,
+            'task_id': task.id,
+            'unit_amount': 8,
+            'employee_id': self.employee_manager.id,
+        })
+
+        sale_order._create_invoices()
+        last_message_id = self.env['mail.message'].search([('model', '=', 'sale.order'), ('res_id', '=', sale_order.id)], limit=1).id or 0
+        self.env['account.analytic.line'].create({
+            'name': 'Test Line',
+            'project_id': task.project_id.id,
+            'task_id': task.id,
+            'unit_amount': 5,
+            'employee_id': self.employee_user.id,
+        })
+
+        self.assertEqual(sale_order.invoice_status, 'upselling', 'Sale Timesheet: "invoice on delivery" timesheets should not modify the invoice_status of the so')
+        message_sent = self.env['mail.message'].search([
+            ('id', '>', last_message_id),
+            ('subject', 'like', 'Upsell'),
+            ('model', '=', 'sale.order'),
+            ('res_id', '=', sale_order.id),
+        ])
+
+        self.assertEqual(len(message_sent), 1, 'Sale Timesheet: An email should always be sent to the saleperson when the state of the sale order change to upselling')
+
+        self.env['account.analytic.line'].create({
+            'name': 'Test Line',
+            'project_id': task.project_id.id,
+            'task_id': task.id,
+            'unit_amount': 5,
+            'employee_id': self.employee_user.id,
+        })
+
+        message_sent = self.env['mail.message'].search([
+            ('id', '>', last_message_id),
+            ('subject', 'like', 'Upsell'),
+            ('model', '=', 'sale.order'),
+            ('res_id', '=', sale_order.id),
+        ])
+        self.assertEqual(len(message_sent), 1, 'Sale Timesheet: An email should only be sent to the saleperson when the state of the sale order change to upselling')
+
+        sale_order = sale_order.copy()
+        sale_order.action_confirm()
+        task = sale_order.order_line.task_id
+
+        # let's log some timesheets
+        self.env['account.analytic.line'].create({
+            'name': 'Test Line',
+            'project_id': task.project_id.id,
+            'task_id': task.id,
+            'unit_amount': 8,
+            'employee_id': self.employee_manager.id,
+        })
+
+        sale_order._create_invoices()
+        last_message_id = self.env['mail.message'].search([('model', '=', 'sale.order'), ('res_id', '=', sale_order.id)], limit=1).id or 0
+        self.env['account.analytic.line'].create({
+            'name': 'Test Line',
+            'project_id': task.project_id.id,
+            'task_id': task.id,
+            'unit_amount': 5,
+            'employee_id': self.employee_user.id,
+        })
+
+        self.assertEqual(sale_order.invoice_status, 'upselling', 'Sale Timesheet: "invoice on delivery" timesheets should not modify the invoice_status of the so')
+        message_sent = self.env['mail.message'].search([
+            ('id', '>', last_message_id),
+            ('subject', 'like', 'Upsell'),
+            ('model', '=', 'sale.order'),
+            ('res_id', '=', sale_order.id),
+        ])
+
+        self.assertEqual(len(message_sent), 1, 'Sale Timesheet: An email should always be sent to the saleperson when the state of the sale order change to upselling')
+
+        self.env['account.analytic.line'].create({
+            'name': 'Test Line',
+            'project_id': task.project_id.id,
+            'task_id': task.id,
+            'unit_amount': 5,
+            'employee_id': self.employee_user.id,
+        })
+
+        message_sent = self.env['mail.message'].search([
+            ('id', '>', last_message_id),
+            ('subject', 'like', 'Upsell'),
+            ('model', '=', 'sale.order'),
+            ('res_id', '=', sale_order.id),
+        ])
+        self.assertEqual(len(message_sent), 1, 'Sale Timesheet: An email should only be sent to the saleperson when the state of the sale order change to upselling')
+
     def test_unlink_timesheet(self):
         sale_order = self.env['sale.order'].create({
             'partner_id': self.partner_a.id,
@@ -855,6 +969,42 @@ class TestSaleTimesheet(TestCommonSaleTimesheet):
                 self.assertEqual(product_form.uom_id.id, self.uom_hour.id)
                 product_form.detailed_type = 'consu'
                 self.assertEqual(product_form.uom_id.id, uom_kg.id)
+
+    def test_non_consolidated_billing_service_timesheet(self):
+        """
+        When consolidated_billing is set to False, an invoice is created for each sale order
+        Makes sure it works with sales orders linked to timesheets
+        """
+
+        sale_orders = self.env['sale.order'].create([{
+            'partner_id': self.partner_a.id,
+            'order_line': [Command.create({
+                'product_id': self.product_delivery_timesheet2.id,
+            })],
+        }, {
+            'partner_id': self.partner_a.id,
+            'order_line': [Command.create({
+                'product_id': self.product_delivery_timesheet2.id,
+            })],
+        }])
+        sale_orders.action_confirm()
+
+        self.env['account.analytic.line'].create([{
+            'name': 'Timesheet',
+            'task_id': task.id,
+            'project_id': task.project_id.id,
+            'unit_amount': 2,
+            'employee_id': self.employee_user.id,
+        } for task in sale_orders.tasks_ids])
+
+        advance_payment = self.env['sale.advance.payment.inv'].with_context(active_ids=sale_orders.ids).create({
+            'consolidated_billing': False,
+        })
+
+        invoices = advance_payment._create_invoices(sale_orders)
+
+        self.assertEqual(len(invoices), 2, "The number of invoices created should be equal to the number of sales orders.")
+
 
 class TestSaleTimesheetView(TestCommonTimesheet):
     def test_get_view_timesheet_encode_uom(self):

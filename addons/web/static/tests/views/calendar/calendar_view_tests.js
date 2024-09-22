@@ -8,6 +8,7 @@ import {
     editSelect,
     getFixture,
     makeDeferred,
+    mockTimeout,
     nextTick,
     patchDate,
     patchTimeZone,
@@ -29,6 +30,7 @@ import {
     navigate,
     pickDate,
     resizeEventToTime,
+    resizeEventToDate,
     selectAllDayRange,
     selectDateRange,
     selectTimeRange,
@@ -43,6 +45,7 @@ import { dialogService } from "@web/core/dialog/dialog_service";
 import { localization } from "@web/core/l10n/localization";
 import { registry } from "@web/core/registry";
 import { userService } from "@web/core/user_service";
+import { CalendarYearRenderer } from "@web/views/calendar/calendar_year/calendar_year_renderer";
 import { actionService } from "@web/webclient/actions/action_service";
 import { getTimePickers } from "../../core/datetime/datetime_test_helpers";
 import { CalendarController } from "@web/views/calendar/calendar_controller";
@@ -459,7 +462,7 @@ QUnit.module("Views", ({ beforeEach }) => {
             "should display 7 events ('event 5' counts for 2 because it spans two weeks and thus generate two fc-event elements)"
         );
         await click(target.querySelectorAll(".o_calendar_filter input[type=checkbox]")[1]); // click on partner 2
-        assert.containsN(target, ".fc-event", 5, "should now only display 5 event");
+        assert.containsN(target, ".fc-event", 6, "should now only display 6 event");
         await click(target.querySelectorAll(".o_calendar_filter input[type=checkbox]")[2]);
         assert.containsNone(target, ".fc-event", "should not display any event anymore");
         // test search bar in filter
@@ -576,7 +579,7 @@ QUnit.module("Views", ({ beforeEach }) => {
             [...section.querySelectorAll(".o_calendar_filter_item")].map((el) =>
                 el.textContent.trim()
             ),
-            ["partner 2", "partner 1", "Everything"]
+            ["partner 1", "partner 2", "Everything"]
         );
 
         // Open the autocomplete dropdown
@@ -658,7 +661,7 @@ QUnit.module("Views", ({ beforeEach }) => {
             [...section.querySelectorAll(".o_calendar_filter_item")].map((el) =>
                 el.textContent.trim()
             ),
-            ["partner 2", "partner 1", "foo partner 5", "Everything"]
+            ["foo partner 5", "partner 1", "partner 2", "Everything"]
         );
         assert.strictEqual(input.value, "");
 
@@ -739,7 +742,7 @@ QUnit.module("Views", ({ beforeEach }) => {
             [...section.querySelectorAll(".o_calendar_filter_item")].map((el) =>
                 el.textContent.trim()
             ),
-            ["partner 2", "partner 1", "foo partner 5", "Everything"]
+            ["foo partner 5", "partner 1", "partner 2", "Everything"]
         );
         assert.strictEqual(input.value, "");
     });
@@ -1240,8 +1243,8 @@ QUnit.module("Views", ({ beforeEach }) => {
     });
 
     QUnit.test(`week numbering`, async (assert) => {
-        // The week is now calculated by FullCalendar (ISO week). If it's start a sunday it
-        // returns the week of the monday.
+        // Using ISO week calculation, get the ISO week number of
+        // the Monday nearest to the start of the week.
 
         patchWithCleanup(localization, { weekStart: 7 });
 
@@ -1270,12 +1273,12 @@ QUnit.module("Views", ({ beforeEach }) => {
             `,
         });
 
-        await clickEvent(target, 4);
+        await clickEvent(target, 2);
         assert.containsOnce(target, ".o_cw_popover", "should open a popover clicking on event");
         assert.strictEqual(
             target.querySelector(".o_cw_popover .popover-header").textContent,
-            "event 4",
-            "popover should have a title 'event 4'"
+            "event 2",
+            "popover should have a title 'event 2'"
         );
         assert.containsOnce(
             target,
@@ -1293,9 +1296,13 @@ QUnit.module("Views", ({ beforeEach }) => {
             "popover should have a close button"
         );
         assert.strictEqual(
-            target.querySelector(".o_cw_popover .list-group-item span.fw-bold").textContent,
-            "December 14, 2016",
+            target.querySelectorAll(".o_cw_popover .list-group-item")[0].textContent.trim(),
+            "December 12, 2016",
             "should display date 'December 14, 2016'"
+        );
+        assert.strictEqual(
+            target.querySelectorAll(".o_cw_popover .list-group-item")[1].textContent.trim(),
+            "11:55 - 15:55 (4 hours)"
         );
         assert.containsN(
             target,
@@ -1315,8 +1322,8 @@ QUnit.module("Views", ({ beforeEach }) => {
         );
         assert.strictEqual(
             groups[0].querySelector(".o_field_char").textContent,
-            "event 4",
-            "value should be a 'event 4'"
+            "event 2",
+            "value should be a 'event 2'"
         );
         assert.containsOnce(groups[1], ".o_form_uri", "should apply m20 widget");
         assert.strictEqual(
@@ -2332,7 +2339,7 @@ QUnit.module("Views", ({ beforeEach }) => {
         await click(target, ".o-calendar-quick-create--edit-btn");
     });
 
-    QUnit.test(`show start time of single day event for month mode`, async (assert) => {
+    QUnit.test(`show start time of single day event`, async (assert) => {
         patchTimeZone(-240);
 
         await makeView({
@@ -2362,11 +2369,7 @@ QUnit.module("Views", ({ beforeEach }) => {
 
         // switch to week mode
         await changeScale(target, "week");
-        assert.containsNone(
-            findEvent(target, 2),
-            ".fc-content .fc-time",
-            "should not show time in week mode as week mode already have time on y-axis"
-        );
+        assert.containsOnce(findEvent(target, 2), ".fc-content .fc-time");
     });
 
     QUnit.test(`start time should not shown for date type field`, async (assert) => {
@@ -2388,9 +2391,15 @@ QUnit.module("Views", ({ beforeEach }) => {
             ".fc-content .fc-time",
             "should not show time for date type field"
         );
+
+        await changeScale(target, "week");
+        assert.containsNone(findEvent(target, 2), ".fc-content .fc-time");
+
+        await changeScale(target, "day");
+        assert.containsNone(findEvent(target, 2), ".fc-content .fc-time");
     });
 
-    QUnit.test(`start time should not shown in month mode if hide_time is true`, async (assert) => {
+    QUnit.test(`start time should not shown if hide_time is true`, async (assert) => {
         patchTimeZone(-240);
 
         await makeView({
@@ -2407,6 +2416,12 @@ QUnit.module("Views", ({ beforeEach }) => {
             ".fc-content .fc-time",
             "should not show time for hide_time attribute"
         );
+
+        await changeScale(target, "week");
+        assert.containsNone(findEvent(target, 2), ".fc-content .fc-time");
+
+        await changeScale(target, "day");
+        assert.containsNone(findEvent(target, 2), ".fc-content .fc-time");
     });
 
     QUnit.test(`readonly date_start field`, async (assert) => {
@@ -2603,7 +2618,7 @@ QUnit.module("Views", ({ beforeEach }) => {
             [...section.querySelectorAll(".o_calendar_filter_item")].map((el) =>
                 el.textContent.trim()
             ),
-            ["Forest", "Desert", "Undefined"]
+            ["Desert", "Forest", "Undefined"]
         );
     });
 
@@ -2670,7 +2685,6 @@ QUnit.module("Views", ({ beforeEach }) => {
                 </calendar>
             `,
         });
-
         const colorClass = Array.from(findEvent(target, 1).classList).find((className) =>
             className.startsWith("o_calendar_color_")
         );
@@ -3435,7 +3449,7 @@ QUnit.module("Views", ({ beforeEach }) => {
         await click(target, ".o-calendar-quick-create--create-btn");
         assert.strictEqual(
             findEvent(target, 8).textContent,
-            "new event in quick create",
+            "00:00 new event in quick create",
             "should display the new record after quick create dialog"
         );
     });
@@ -3487,6 +3501,23 @@ QUnit.module("Views", ({ beforeEach }) => {
                 `,
             });
 
+            assert.containsOnce(
+                target,
+                ".fc-day-grid .fc-event-container",
+                "should be one event in the all day row"
+            );
+        }
+    );
+
+    QUnit.test(
+        `set event as all day when field is datetime (without all_day mapping)`,
+        async (assert) => {
+            await makeView({
+                serverData,
+                resModel: "event",
+                type: "calendar",
+                arch: `<calendar date_start="start" date_stop="stop" mode="week"/>`,
+            });
             assert.containsOnce(
                 target,
                 ".fc-day-grid .fc-event-container",
@@ -4121,7 +4152,7 @@ QUnit.module("Views", ({ beforeEach }) => {
     });
 
     QUnit.test(`Monday week start week mode`, async (assert) => {
-        assert.expect(3);
+        assert.expect(5);
 
         patchDate(2019, 8, 15, 8, 0, 0); // 2019-09-15 08:00:00
         // the week start depends on the locale
@@ -4147,6 +4178,7 @@ QUnit.module("Views", ({ beforeEach }) => {
                 }
             },
         });
+        assert.containsOnce(target, ".fc-timeGridWeek-view .fc-day-grid");
 
         const dayNameHeaders = target.querySelectorAll(".fc-day-header .o_cw_day_name");
         const dayNumberHeaders = target.querySelectorAll(".fc-day-header .o_cw_day_number");
@@ -4162,10 +4194,15 @@ QUnit.module("Views", ({ beforeEach }) => {
             "Sun 15",
             "The last day of the week should be Sunday the 15th"
         );
+        assert.strictEqual(
+            target.querySelector(".fc-head .fc-week-number").textContent,
+            "Week 37",
+            "The number of the week should be correct"
+        );
     });
 
     QUnit.test(`Saturday week start week mode`, async (assert) => {
-        assert.expect(3);
+        assert.expect(5);
 
         patchDate(2019, 8, 12, 8, 0, 0); // 2019-09-12 08:00:00
 
@@ -4192,6 +4229,7 @@ QUnit.module("Views", ({ beforeEach }) => {
                 }
             },
         });
+        assert.containsOnce(target, ".fc-timeGridWeek-view .fc-day-grid");
 
         const dayNameHeaders = target.querySelectorAll(".fc-day-header .o_cw_day_name");
         const dayNumberHeaders = target.querySelectorAll(".fc-day-header .o_cw_day_number");
@@ -4206,6 +4244,118 @@ QUnit.module("Views", ({ beforeEach }) => {
             }`,
             "Fri 13",
             "The last day of the week should be Friday the 13th"
+        );
+        assert.strictEqual(
+            target.querySelector(".fc-head .fc-week-number").textContent,
+            "Week 37",
+            "The number of the week should be correct"
+        );
+    });
+
+    QUnit.test(`Monday week start year mode`, async (assert) => {
+        assert.expect(4);
+
+        patchDate(2019, 8, 15, 8, 0, 0); // 2019-09-15 08:00:00
+        // the week start depends on the locale
+        patchWithCleanup(localization, { weekStart: 1 });
+
+        patchWithCleanup(CalendarYearRenderer.prototype, {
+            get options() {
+                return { ...super.options, weekNumbers: true };
+            },
+        });
+
+        await makeView({
+            type: "calendar",
+            resModel: "event",
+            serverData,
+            arch: `
+                <calendar date_start="start" date_stop="stop" mode="year" />
+            `,
+            mockRPC(route, { method, model, kwargs }) {
+                if (model === "event" && method === "search_read") {
+                    assert.deepEqual(
+                        kwargs.domain,
+                        [
+                            ["start", "<=", "2019-12-31 22:59:59"],
+                            ["stop", ">=", "2018-12-31 23:00:00"],
+                        ],
+                        "The domain to search events in should be correct"
+                    );
+                }
+            },
+        });
+
+        const weekRow = target.querySelector(".fc-day-top.fc-today").closest("tr");
+        const weekDays = weekRow.querySelectorAll(".fc-day-top");
+        assert.strictEqual(
+            weekDays[0].textContent,
+            "9",
+            "The first day of the week should be Monday the 9th"
+        );
+        assert.strictEqual(
+            weekDays[weekDays.length - 1].textContent,
+            "15",
+            "The last day of the week should be Sunday the 15th"
+        );
+        assert.strictEqual(
+            weekRow.querySelector(".fc-week-number").textContent,
+            "37",
+            "The number of the week should be correct"
+        );
+    });
+
+    QUnit.test(`Sunday week start year mode`, async (assert) => {
+        assert.expect(4);
+
+        patchDate(2019, 8, 15, 8, 0, 0); // 2019-09-15 08:00:00
+        // the week start depends on the locale
+        // the localization presents a python-like 1 to 7 weekStart value
+        patchWithCleanup(localization, { weekStart: 7 });
+
+        patchWithCleanup(CalendarYearRenderer.prototype, {
+            get options() {
+                return { ...super.options, weekNumbers: true };
+            },
+        });
+
+        await makeView({
+            type: "calendar",
+            resModel: "event",
+            serverData,
+            arch: `
+                <calendar date_start="start" date_stop="stop" mode="year" />
+            `,
+            mockRPC(route, { method, model, kwargs }) {
+                if (model === "event" && method === "search_read") {
+                    assert.deepEqual(
+                        kwargs.domain,
+                        [
+                            ["start", "<=", "2019-12-31 22:59:59"],
+                            ["stop", ">=", "2018-12-31 23:00:00"],
+                        ],
+                        "The domain to search events in should be correct"
+                    );
+                }
+            },
+        });
+
+        const weekRow = target.querySelector(".fc-day-top.fc-today").closest("tr");
+        const weekDays = weekRow.querySelectorAll(".fc-day-top");
+        assert.strictEqual(
+            weekDays[0].textContent,
+            "15",
+            "The first day of the week should be Sunday the 15th"
+        );
+        assert.strictEqual(
+            weekDays[weekDays.length - 1].textContent,
+            "21",
+            "The last day of the week should be Saturday the 21st"
+        );
+        assert.strictEqual(
+            weekRow.querySelector(".fc-week-number").textContent,
+            "38",
+            "The number of the week should be correct"
         );
     });
 
@@ -4871,9 +5021,9 @@ QUnit.module("Views", ({ beforeEach }) => {
 
         await clickEvent(target, 1);
         assert.deepEqual(
-            [...target.querySelectorAll(".o_popover [name='properties'] .o_card_property_field")].map(
-                (el) => el.textContent
-            ),
+            [
+                ...target.querySelectorAll(".o_popover [name='properties'] .o_card_property_field"),
+            ].map((el) => el.textContent),
             ["hello", "B"]
         );
     });
@@ -5256,5 +5406,305 @@ QUnit.module("Views", ({ beforeEach }) => {
             assert.equal(target.querySelector(".scale_button_selection").textContent, "Year");
             assert.verifySteps(["scale_year"]);
         });
+    });
+
+    QUnit.test("calendar sidebar filters are ASC sorted (not valued @end)", async (assert) => {
+        patchDate(2023, 11, 14, 9, 0, 0);
+        serverData.models.event.records = [];
+        for (let i = 1; i <= 18; i++) {
+            serverData.models.event.records.push({
+                user_id: i,
+                name: `event ${i}`,
+                start: "2023-12-11 00:00:00",
+                stop: "2023-12-11 00:00:00",
+            });
+        }
+        serverData.models.event.records.push({
+            name: `event X`,
+            start: "2023-12-11 00:00:00",
+            stop: "2023-12-11 00:00:00",
+        });
+        serverData.models.user.records = [
+            { id: 1, display_name: "Zoooro" },
+            { id: 2, display_name: "Jean-Paul 1" },
+            { id: 3, display_name: "Jean-Paul 2" },
+            { id: 4, display_name: "Jeremy" },
+            { id: 5, display_name: "Kévin" },
+            { id: 6, display_name: "Romelü" },
+            { id: 7, display_name: "Edên" },
+            { id: 8, display_name: "Thibaùlt" },
+            { id: 9, display_name: "1 - brol" },
+            { id: 10, display_name: "10 - machin" },
+            { id: 11, display_name: "11 - chose" },
+            { id: 12, display_name: "101" },
+            { id: 13, display_name: "100 - bidule" },
+            { id: 14, display_name: "1000 - truc" },
+            { id: 15, display_name: "00 - bazar" },
+            { id: 16, display_name: "0 - chouette" },
+            { id: 17, display_name: "@Hello" },
+            { id: 18, display_name: "#Hello" },
+        ];
+        await makeView({
+            type: "calendar",
+            resModel: "event",
+            serverData,
+            arch: `
+                <calendar date_start="start" mode="month">
+                    <field name="user_id" filters="1"/>
+                </calendar>
+            `,
+        });
+        assert.strictEqual(
+            target.querySelector(".o_calendar_filter_items").textContent,
+            "00 - bazar0 - chouette1 - brol10 - machin11 - chose100 - bidule1011000 - trucEdên@Hello#HelloJean-Paul 1Jean-Paul 2JeremyKévinRomelüThibaùltZoooroUndefined"
+        );
+    });
+
+    QUnit.test("save selected date during view switching", async function (assert) {
+        serverData.models.event.records = [];
+        serverData.actions = {
+            1: {
+                id: 1,
+                name: "Partners",
+                res_model: "event",
+                type: "ir.actions.act_window",
+                views: [
+                    [false, "list"],
+                    [false, "calendar"],
+                ],
+            },
+        };
+
+        serverData.views = {
+            "event,false,calendar": `<calendar date_start="start" date_stop="stop" mode="week"/>`,
+            "event,false,list": `<tree sample="1">
+                    <field name="start"/>
+                    <field name="stop"/>
+                </tree>`,
+
+            "event,false,search": `<search />`,
+        };
+
+        const webClient = await createWebClient({
+            serverData,
+            async mockRPC(route) {
+                if (route.endsWith("/has_group")) {
+                    return true;
+                }
+            },
+        });
+
+        await doAction(webClient, 1);
+
+        await click(target, ".o_cp_switch_buttons .o_calendar");
+        await click(target, ".o_calendar_button_next");
+        const weekNumber = target.querySelector(".fc-week-number").textContent;
+        await click(target, ".o_cp_switch_buttons .o_list");
+        await click(target, ".o_cp_switch_buttons .o_calendar");
+        assert.equal(weekNumber, target.querySelector(".fc-week-number").textContent);
+    });
+
+    QUnit.test(
+        "sample data are not removed when switching back from calendar view",
+        async function (assert) {
+            serverData.models.event.records = [];
+            serverData.actions = {
+                1: {
+                    id: 1,
+                    name: "Partners",
+                    res_model: "event",
+                    type: "ir.actions.act_window",
+                    views: [
+                        [false, "list"],
+                        [false, "calendar"],
+                    ],
+                },
+            };
+
+            serverData.views = {
+                "event,false,calendar": `<calendar date_start="start" date_stop="stop" mode="day"/>`,
+                "event,false,list": `<tree sample="1">
+                    <field name="start"/>
+                    <field name="stop"/>
+                </tree>`,
+
+                "event,false,search": `<search />`,
+            };
+
+            const webClient = await createWebClient({
+                serverData,
+                async mockRPC(route, args) {
+                    if (args.method === "check_access_rights") {
+                        return true;
+                    }
+                    if (route.endsWith("/has_group")) {
+                        return true;
+                    }
+                },
+            });
+
+            await doAction(webClient, 1);
+
+            assert.containsOnce(target, ".o_list_view", "should have rendered a list view");
+            assert.containsOnce(target, ".o_view_sample_data", "should have sample data");
+
+            await click(target, ".o_cp_switch_buttons .o_calendar");
+            assert.containsOnce(
+                target,
+                ".o_calendar_container",
+                "should have rendered a calendar view"
+            );
+
+            await click(target, ".o_cp_switch_buttons .o_list");
+
+            assert.containsOnce(target, ".o_list_view", "should have rendered a list view");
+            assert.containsOnce(target, ".o_view_sample_data", "should have sample data");
+        }
+    );
+
+    QUnit.test("Retaining the 'all' filter value on re-rendering", async (assert) => {
+        serverData.actions = {
+            1: {
+                id: 1,
+                name: "Partners",
+                res_model: "event",
+                type: "ir.actions.act_window",
+                views: [
+                    [false, "calendar"],
+                    [false, "list"],
+                ],
+            },
+        };
+
+        serverData.views = {
+            "event,false,calendar": `<calendar date_start="start" date_stop="stop" all_day="allday" mode="week" event_open_popup="1" attendee="partner_ids" color="partner_id">
+                <filter name="user_id" avatar_field="image" />
+                <field name="partner_ids" write_model="filter_partner" write_field="partner_id" />
+                <field name="partner_id" filters="1" invisible="1" />
+            </calendar>`,
+            "event,false,list": `<tree sample="1">
+                <field name="start"/>
+                <field name="stop"/>
+            </tree>`,
+            "event,false,search": `<search />`,
+        };
+
+        const webClient = await createWebClient({
+            serverData,
+            async mockRPC(route, args) {
+                if (args.method === "check_access_rights") {
+                    return true;
+                }
+                if (route.endsWith("/has_group")) {
+                    return true;
+                }
+            },
+        });
+
+        await doAction(webClient, 1);
+
+        await click(target, ".o_calendar_filter_item[data-value='all'] input");
+        assert.ok(
+            document.querySelector(".o_calendar_filter_item[data-value='all'] input").checked,
+            "Check if the value of the 'all' filter is set to true"
+        );
+
+        await click(target, ".o_cp_switch_buttons .o_list");
+        await click(target, ".o_cp_switch_buttons .o_calendar");
+
+        assert.ok(
+            document.querySelector(".o_calendar_filter_item[data-value='all'] input").checked,
+            "The value of the 'all' filter should remain the same as it was before re-rendering"
+        );
+    });
+
+    QUnit.test(`Resizing Pill of Multiple Days(Allday)`, async (assert) => {
+        const { advanceTime } = mockTimeout();
+        await makeView({
+            type: "calendar",
+            resModel: "event",
+            serverData,
+            arch: `
+                <calendar event_open_popup="1" date_start="start" date_stop="stop" all_day="allday" delete="0" mode="month" >
+                    <field name="stop"/>
+                </calendar>`,
+            mockRPC(route, { args, method }) {
+                if (method === "create") {
+                    assert.deepEqual(
+                        args[0],
+                        [
+                            {
+                                allday: true,
+                                name: "new event",
+                                start: "2016-12-25",
+                                stop: "2016-12-28",
+                            },
+                        ],
+                        "should send the correct data to create events"
+                    );
+                } else if (method === "write") {
+                    assert.deepEqual(args[1], {
+                        allday: true,
+                        start: "2016-12-25",
+                        stop: "2016-12-31",
+                    });
+                }
+            },
+        });
+
+        await selectAllDayRange(target, "2016-12-25", "2016-12-28");
+        await editInput(target, ".o-calendar-quick-create--input", "new event");
+        await click(target, ".o-calendar-quick-create--create-btn");
+        await resizeEventToDate(target, 8, "2016-12-31");
+        await clickEvent(target, 8);
+        await advanceTime(300);
+        assert.strictEqual(
+            target
+                .querySelector(
+                    ".o_cw_popover .o_cw_popover_fields_secondary .list-group-item .o_field_datetime"
+                )
+                .textContent.split(" ")[0],
+            "12/31/2016",
+            "should have correct stop date"
+        );
+    });
+
+    QUnit.test(`update time while drag and drop on month mode`, async (assert) => {
+        assert.expect(2);
+        await makeView({
+            type: "calendar",
+            resModel: "event",
+            serverData,
+            arch: `
+                <calendar date_start="start" date_stop="stop" mode="month" event_open_popup="1" quick_create="0">
+                    <field name="name" />
+                </calendar>
+            `,
+        });
+
+        // Create event (on 20 december)
+        await clickDate(target, "2016-12-20");
+        await editInput(target, ".modal-body .o_field_widget[name=name] input", "An event");
+        await click(target, ".form-check-input");
+        await editInput(
+            target,
+            ".modal-body .o_field_widget[name=start] input",
+            "2016-12-20 08:00:00"
+        );
+        await editInput(
+            target,
+            ".modal-body .o_field_widget[name=stop] input",
+            "2016-12-22 10:00:00"
+        );
+        await click(target, ".modal .o_form_button_save");
+
+        await moveEventToDate(target, 8, "2016-12-29");
+        await clickEvent(target, 8);
+        await click(target, ".o_cw_popover .o_cw_popover_edit");
+
+        const input_start = target.querySelector(".o_field_widget[name='start'] input");
+        assert.strictEqual(input_start.value, "12/28/2016 08:00:00", "should display the datetime");
+        const input_stop = target.querySelector(".o_field_widget[name='stop'] input");
+        assert.strictEqual(input_stop.value, "12/30/2016 10:00:00", "should display the datetime");
     });
 });

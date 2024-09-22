@@ -8,6 +8,8 @@ import {
 
 let editableWindow = window;
 const _setEditableWindow = (ew) => editableWindow = ew;
+let editableDocument = document;
+const _setEditableDocument = (ed) => editableDocument = ed;
 
 const COLOR_PALETTE_COMPATIBILITY_COLOR_NAMES = ['primary', 'secondary', 'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'success', 'info', 'warning', 'danger'];
 
@@ -100,11 +102,11 @@ const BACKGROUND_IMAGE_ATTRIBUTES = new Set([
  *                  - the inverse otherwise
  */
 function _computePxByRem(toRem) {
-    if (_computePxByRem.PX_BY_REM === undefined) {
-        const htmlStyle = editableWindow.getComputedStyle(editableWindow.document.documentElement);
-        _computePxByRem.PX_BY_REM = parseFloat(htmlStyle['font-size']);
+    if (editableDocument.PX_BY_REM === undefined) {
+        const htmlStyle = editableWindow.getComputedStyle(editableDocument.documentElement);
+        editableDocument.PX_BY_REM = parseFloat(htmlStyle['font-size']);
     }
-    return toRem ? (1 / _computePxByRem.PX_BY_REM) : _computePxByRem.PX_BY_REM;
+    return toRem ? (1 / editableDocument.PX_BY_REM) : editableDocument.PX_BY_REM;
 }
 /**
  * Converts the given (value + unit) string to a numeric value expressed in
@@ -475,6 +477,33 @@ function _isMobileView(targetEl) {
         targetEl.ownerDocument.documentElement.clientWidth;
     return clientWidth && clientWidth < mobileViewThreshold;
 }
+/**
+ * Returns the label of a link element.
+ *
+ * @param {HTMLElement} linkEl
+ * @returns {string}
+ */
+function _getLinkLabel(linkEl) {
+    return linkEl.textContent.replaceAll("\u200B", "").replaceAll("\uFEFF", "");
+}
+/**
+ * Forwards an image source to its carousel thumbnail.
+ * @param {HTMLElement} imgEl
+ */
+function _forwardToThumbnail(imgEl) {
+    const carouselEl = imgEl.closest(".carousel");
+    if (carouselEl) {
+        const carouselInnerEl = imgEl.closest(".carousel-inner");
+        const carouselItemEl = imgEl.closest(".carousel-item");
+        if (carouselInnerEl && carouselItemEl) {
+            const imageIndex = [...carouselInnerEl.children].indexOf(carouselItemEl);
+            const miniatureEl = carouselEl.querySelector(`.carousel-indicators [data-bs-slide-to="${imageIndex}"]`);
+            if (miniatureEl && miniatureEl.style.backgroundImage) {
+                miniatureEl.style.backgroundImage = `url(${imgEl.getAttribute("src")})`;
+            }
+        }
+    }
+}
 
 export default {
     COLOR_PALETTE_COMPATIBILITY_COLOR_NAMES: COLOR_PALETTE_COMPATIBILITY_COLOR_NAMES,
@@ -498,8 +527,11 @@ export default {
     generateHTMLId: _generateHTMLId,
     getColorClass: _getColorClass,
     setEditableWindow: _setEditableWindow,
+    setEditableDocument: _setEditableDocument,
     addBackgroundImageAttributes: _addBackgroundImageAttributes,
     isBackgroundImageAttribute: _isBackgroundImageAttribute,
     shouldEditableMediaBeEditable: _shouldEditableMediaBeEditable,
     isMobileView: _isMobileView,
+    getLinkLabel: _getLinkLabel,
+    forwardToThumbnail: _forwardToThumbnail,
 };

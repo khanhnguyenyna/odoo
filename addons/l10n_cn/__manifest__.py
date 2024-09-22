@@ -8,7 +8,7 @@
     'author': 'openerp-china',
     'maintainer': 'jeff@osbzr.com',
     'website': 'https://www.odoo.com/documentation/17.0/applications/finance/fiscal_localizations.html',
-    'description': """
+    'description': r"""
 Includes the following data for the Chinese localization
 ========================================================
 
@@ -25,6 +25,8 @@ State Data/省份数据
     修改小企业会计科目表
 
     修改小企业会计税率
+
+    增加大企业会计科目表
 
 We added the option to print a voucher which will also
 print the amount in words (special Chinese characters for numbers)

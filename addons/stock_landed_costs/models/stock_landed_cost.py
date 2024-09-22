@@ -62,6 +62,7 @@ class StockLandedCost(models.Model):
         copy=False, readonly=True, tracking=True)
     account_move_id = fields.Many2one(
         'account.move', 'Journal Entry',
+        index='btree_not_null',
         copy=False, readonly=True)
     account_journal_id = fields.Many2one(
         'account.journal', 'Account Journal',
@@ -163,10 +164,10 @@ class StockLandedCost(models.Model):
                 move_vals['line_ids'] += line._create_accounting_entries(move, qty_out)
 
             # batch standard price computation avoid recompute quantity_svl at each iteration
-            products = self.env['product.product'].browse(p.id for p in cost_to_add_byproduct.keys())
+            products = self.env['product.product'].browse(p.id for p in cost_to_add_byproduct.keys()).with_company(cost.company_id)
             for product in products:  # iterate on recordset to prefetch efficiently quantity_svl
                 if not float_is_zero(product.quantity_svl, precision_rounding=product.uom_id.rounding):
-                    product.with_company(cost.company_id).sudo().with_context(disable_auto_svl=True).standard_price += cost_to_add_byproduct[product] / product.quantity_svl
+                    product.sudo().with_context(disable_auto_svl=True).standard_price += cost_to_add_byproduct[product] / product.quantity_svl
 
             move_vals['stock_valuation_layer_ids'] = [(6, None, valuation_layer_ids)]
             # We will only create the accounting entry when there are defined lines (the lines will be those linked to products of real_time valuation category).
@@ -187,7 +188,8 @@ class StockLandedCost(models.Model):
                 for product in cost.cost_lines.product_id:
                     accounts = product.product_tmpl_id.get_product_accounts()
                     input_account = accounts['stock_input']
-                    all_amls.filtered(lambda aml: aml.account_id == input_account and not aml.reconciled).reconcile()
+                    all_amls.filtered(lambda aml: aml.account_id == input_account and not aml.reconciled\
+                         and not aml.display_type in ('line_section', 'line_note')).reconcile()
 
     def get_valuation_lines(self):
         self.ensure_one()
@@ -195,15 +197,16 @@ class StockLandedCost(models.Model):
 
         for move in self._get_targeted_move_ids():
             # it doesn't make sense to make a landed cost for a product that isn't set as being valuated in real time at real cost
-            if move.product_id.cost_method not in ('fifo', 'average') or move.state == 'cancel' or not move.product_qty:
+            if move.product_id.cost_method not in ('fifo', 'average') or move.state == 'cancel' or not move.quantity:
                 continue
+            qty = move.product_uom._compute_quantity(move.quantity, move.product_id.uom_id)
             vals = {
                 'product_id': move.product_id.id,
                 'move_id': move.id,
-                'quantity': move.product_qty,
+                'quantity': qty,
                 'former_cost': sum(move.stock_valuation_layer_ids.mapped('value')),
-                'weight': move.product_id.weight * move.product_qty,
-                'volume': move.product_id.volume * move.product_qty
+                'weight': move.product_id.weight * qty,
+                'volume': move.product_id.volume * qty
             }
             lines.append(vals)
 
@@ -218,6 +221,7 @@ class StockLandedCost(models.Model):
 
         towrite_dict = {}
         for cost in self.filtered(lambda cost: cost._get_targeted_move_ids()):
+            cost = cost.with_company(cost.company_id)
             rounding = cost.currency_id.rounding
             total_qty = 0.0
             total_cost = 0.0

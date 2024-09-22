@@ -5,6 +5,7 @@ import * as ProductScreen from "@point_of_sale/../tests/tours/helpers/ProductScr
 import * as TicketScreen from "@point_of_sale/../tests/tours/helpers/TicketScreenTourMethods";
 import * as Chrome from "@point_of_sale/../tests/tours/helpers/ChromeTourMethods";
 import * as PartnerListScreen from "@point_of_sale/../tests/tours/helpers/PartnerListScreenTourMethods";
+import * as ErrorPopup from "@point_of_sale/../tests/tours/helpers/ErrorPopupTourMethods";
 import { registry } from "@web/core/registry";
 
 //#region EWalletProgramTour1
@@ -105,3 +106,39 @@ registry.category("web_tour.tours").add("EWalletProgramTour2", {
 });
 
 //#endregion
+
+registry
+    .category("web_tour.tours")
+    .add('ExpiredEWalletProgramTour', {
+        test: true,
+        url: '/pos/ui',
+        steps: () => [
+            ProductScreen.confirmOpeningPopup(),
+            ProductScreen.clickHomeCategory(),
+            ProductScreen.clickPartnerButton(),
+            ProductScreen.clickCustomer('AAAA'),
+            ProductScreen.addOrderline('Whiteboard Pen', '2', '6', '12.00'),
+            PosLoyalty.eWalletButtonState({ highlighted: false }),
+            PosLoyalty.clickEWalletButton(),
+            ErrorPopup.isShown(),
+            ErrorPopup.clickConfirm()
+        ].flat(),
+});
+
+registry.category("web_tour.tours").add("PosLoyaltyPointsEwallet", {
+    test: true,
+    url: "/pos/ui",
+    steps: () =>
+        [
+            ProductScreen.confirmOpeningPopup(),
+            ProductScreen.clickHomeCategory(),
+            ProductScreen.clickPartnerButton(),
+            ProductScreen.clickCustomer("AAAA"),
+            PosLoyalty.eWalletButtonState({ highlighted: false }),
+            ProductScreen.addOrderline("product_a", "1"),
+            PosLoyalty.eWalletButtonState({ highlighted: true, text: getEWalletText("Pay") }),
+            PosLoyalty.clickEWalletButton(getEWalletText("Pay")),
+            PosLoyalty.pointsAwardedAre("100"),
+            PosLoyalty.finalizeOrder("Cash", "90.00"),
+        ].flat(),
+});

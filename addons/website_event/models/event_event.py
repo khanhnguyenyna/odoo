@@ -65,7 +65,7 @@ class Event(models.Model):
         readonly=False, store=True)
     location_menu_ids = fields.One2many(
         "website.event.menu", "event_id", string="Location Menus",
-        domain=[("menu_type", "=", "location_menu")])
+        domain=[("menu_type", "=", "location")])
     address_name = fields.Char(related='address_id.name')
     register_menu = fields.Boolean(
         "Register Menu", compute="_compute_website_menu_data",
@@ -208,7 +208,7 @@ class Event(models.Model):
 
         When synchronizing questions:
 
-          * lines that no answer are removed;
+          * lines with no registered answers are removed;
           * type lines are added;
         """
         if self._origin.question_ids:
@@ -229,21 +229,11 @@ class Event(models.Model):
                 command = [(3, question.id) for question in questions_toremove]
             else:
                 command = [(5, 0)]
-            if event.event_type_id.question_ids:
-                command += [
-                    (0, 0, {
-                        'answer_ids': [(0, 0, {
-                            'name': answer.name,
-                            'sequence': answer.sequence
-                        }) for answer in question.answer_ids],
-                        'is_mandatory_answer': question.is_mandatory_answer,
-                        'once_per_order': question.once_per_order,
-                        'question_type': question.question_type,
-                        'sequence': question.sequence,
-                        'title': question.title,
-                    }) for question in event.event_type_id.question_ids
-                ]
             event.question_ids = command
+
+            # copy questions so changes in the event don't affect the event type
+            for question in event.event_type_id.question_ids:
+                event.question_ids += question.copy({'event_type_id': False})
 
     # -------------------------------------------------------------------------
     # CONSTRAINT METHODS
@@ -430,8 +420,9 @@ class Event(models.Model):
             page_result = self.env['website'].sudo().new_page(
                 name=f'{name} {self.name}', template=xml_id,
                 add_menu=False, ispage=False)
-            url = f"/event/{slug(self)}/page{page_result['url']}"  # url contains starting "/"
             view_id = page_result['view_id']
+            view = self.env["ir.ui.view"].browse(view_id)
+            url = f"/event/{slug(self)}/page/{view.key.split('.')[-1]}"  # url contains starting "/"
 
         website_menu = self.env['website.menu'].sudo().create({
             'name': name,
@@ -464,10 +455,10 @@ class Event(models.Model):
 
     def _track_subtype(self, init_values):
         self.ensure_one()
-        if 'is_published' in init_values and self.is_published:
-            return self.env.ref('website_event.mt_event_published')
-        elif 'is_published' in init_values and not self.is_published:
-            return self.env.ref('website_event.mt_event_unpublished')
+        if init_values.keys() & {'is_published', 'website_published'}:
+            if self.is_published:
+                return self.env.ref('website_event.mt_event_published', raise_if_not_found=False)
+            return self.env.ref('website_event.mt_event_unpublished', raise_if_not_found=False)
         return super(Event, self)._track_subtype(init_values)
 
     def _get_event_resource_urls(self):

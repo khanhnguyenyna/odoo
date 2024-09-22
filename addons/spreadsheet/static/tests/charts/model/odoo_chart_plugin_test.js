@@ -12,6 +12,7 @@ import { THIS_YEAR_GLOBAL_FILTER } from "../../utils/global_filter";
 import * as spreadsheet from "@odoo/o-spreadsheet";
 import { makeServerError } from "@web/../tests/helpers/mock_server";
 import { session } from "@web/session";
+import { getBasicServerData } from "../../utils/data";
 
 const { toZone } = spreadsheet.helpers;
 
@@ -523,6 +524,52 @@ QUnit.module("spreadsheet > odoo chart plugin", {}, () => {
         );
     });
 
+    QUnit.test("cumulative line chart with past data before domain period", async (assert) => {
+        const serverData = getBasicServerData();
+        serverData.models.partner.records = [
+            { date: "2020-01-01", probability: 10 },
+            { date: "2021-01-01", probability: 2 },
+            { date: "2022-01-01", probability: 3 },
+            { date: "2022-03-01", probability: 4 },
+            { date: "2022-06-01", probability: 5 },
+        ];
+        const { model } = await createSpreadsheetWithChart({
+            type: "odoo_line",
+            serverData,
+            definition: {
+                type: "odoo_line",
+                metaData: {
+                    groupBy: ["date"],
+                    measure: "probability",
+                    order: null,
+                    resModel: "partner",
+                },
+                searchParams: {
+                    comparison: null,
+                    context: {},
+                    domain: [
+                        ["date", ">=", "2022-01-01"],
+                        ["date", "<=", "2022-12-31"],
+                    ],
+                    groupBy: [],
+                    orderBy: [],
+                },
+                cumulative: true,
+                title: "Partners",
+                dataSourceId: "42",
+                id: "42",
+            },
+        });
+        const sheetId = model.getters.getActiveSheetId();
+        const chartId = model.getters.getChartIds(sheetId)[0];
+        await waitForDataSourcesLoaded(model);
+
+        assert.deepEqual(
+            model.getters.getChartRuntime(chartId).chartJsConfig.data.datasets[0].data,
+            [15, 19, 24]
+        );
+    });
+
     QUnit.test("Can insert odoo chart from a different model", async (assert) => {
         const model = await createModelWithDataSource();
         insertListInSpreadsheet(model, { model: "product", columns: ["name"] });
@@ -531,5 +578,39 @@ QUnit.module("spreadsheet > odoo chart plugin", {}, () => {
         assert.strictEqual(model.getters.getChartIds(sheetId).length, 0);
         insertChartInSpreadsheet(model);
         assert.strictEqual(model.getters.getChartIds(sheetId).length, 1);
+    });
+
+    QUnit.test("Remove odoo chart when sheet is deleted", async (assert) => {
+        const { model } = await createSpreadsheetWithChart({ type: "odoo_line" });
+        const sheetId = model.getters.getActiveSheetId();
+        model.dispatch("CREATE_SHEET", {
+            sheetId: model.uuidGenerator.uuidv4(),
+            position: model.getters.getSheetIds().length,
+        });
+        assert.strictEqual(model.getters.getOdooChartIds().length, 1);
+        model.dispatch("DELETE_SHEET", { sheetId });
+        assert.strictEqual(model.getters.getOdooChartIds().length, 0);
+    });
+
+    QUnit.test("Odoo chart legend color changes with background color update", async (assert) => {
+        const { model } = await createSpreadsheetWithChart({ type: "odoo_bar" });
+        const sheetId = model.getters.getActiveSheetId();
+        const chartId = model.getters.getChartIds(sheetId)[0];
+        const definition = model.getters.getChartDefinition(chartId);
+        const runtime = model.getters.getChartRuntime(chartId);
+        assert.strictEqual(runtime.chartJsConfig.options.plugins.legend.labels.color, "#000000");
+        model.dispatch("UPDATE_CHART", {
+            definition: {
+                ...definition,
+                background: "#000000",
+            },
+            id: chartId,
+            sheetId,
+        });
+        assert.strictEqual(
+            model.getters.getChartRuntime(chartId).chartJsConfig.options.plugins.legend.labels
+                .color,
+            "#FFFFFF"
+        );
     });
 });

@@ -3,17 +3,19 @@
 # 	* im_livechat
 # 
 # Translators:
-# Wil Odoo, 2023
 # 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023
-# Chloe Wang, 2023
+# Jeffery CHEN <jeffery9@gmail.com>, 2023
+# Chloe Wang, 2024
+# 湘子 南 <1360857908@qq.com>, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Chloe Wang, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Chinese (China) (https://app.transifex.com/odoo/teams/41243/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -64,6 +66,15 @@ msgstr "% 高兴"
 #: model:ir.model.fields,field_description:im_livechat.field_digest_digest__kpi_livechat_rating
 msgid "% of Happiness"
 msgstr "% 开心"
+
+#. module: im_livechat
+#. odoo-python
+#: code:addons/im_livechat/models/discuss_channel.py:0
+#, python-format
+msgid ""
+"%(new_line)sType %(bold_start)s:shortcut%(bold_end)s to insert a canned "
+"response in your message."
+msgstr "%(new_line)s输入 %(bold_start)s:shortcut%(bold_end)s 以插入预设回应至您的信息中。"
 
 #. module: im_livechat
 #. odoo-python
@@ -758,7 +769,7 @@ msgid ""
 "For websites built with the Odoo CMS, go to Website &gt; Configuration &gt; "
 "Settings and select the Website Live Chat Channel you want to add to your "
 "website."
-msgstr "对于用Odoo CMS建立的网站，进入网站&gt;配置&gt;设置，选择您想添加到网站的网站即时聊天频道。"
+msgstr "对于用ERP CMS建立的网站，进入网站&gt;配置&gt;设置，选择您想添加到网站的网站即时在线聊天频道."
 
 #. module: im_livechat
 #: model:ir.model.fields.selection,name:im_livechat.selection__chatbot_script_step__step_type__forward_operator
@@ -792,7 +803,7 @@ msgstr "好评"
 #: model_terms:ir.ui.view,arch_db:im_livechat.im_livechat_report_channel_view_search
 #: model_terms:ir.ui.view,arch_db:im_livechat.im_livechat_report_operator_view_search
 msgid "Group By..."
-msgstr "分组原则......"
+msgstr "分组......"
 
 #. module: im_livechat
 #: model:ir.model.fields,field_description:im_livechat.field_discuss_channel__has_message
@@ -1181,7 +1192,7 @@ msgstr "结束的对话"
 #. module: im_livechat
 #: model_terms:ir.ui.view,arch_db:im_livechat.discuss_channel_view_search
 msgid "My Sessions"
-msgstr "我的营业区间"
+msgstr "我的会话"
 
 #. module: im_livechat
 #: model:ir.model.fields,field_description:im_livechat.field_chatbot_script__name
@@ -1221,7 +1232,7 @@ msgstr "通知文本"
 #. module: im_livechat
 #: model:ir.model.fields,field_description:im_livechat.field_discuss_channel__message_needaction_counter
 msgid "Number of Actions"
-msgstr "操作数量"
+msgstr "动作数量"
 
 #. module: im_livechat
 #: model:ir.model.fields,field_description:im_livechat.field_im_livechat_channel__chatbot_script_count
@@ -1283,7 +1294,7 @@ msgstr "线上聊天名称"
 #. module: im_livechat
 #: model:ir.model.fields,field_description:im_livechat.field_chatbot_script_step__triggering_answer_ids
 msgid "Only If"
-msgstr "(只有"
+msgstr "只要"
 
 #. module: im_livechat
 #: model:ir.model.fields.selection,name:im_livechat.selection__im_livechat_channel_rule__action__auto_popup
@@ -1321,7 +1332,7 @@ msgstr "操作员"
 msgid ""
 "Operators that do not show any activity In Odoo for more than 30 minutes "
 "will be considered as disconnected."
-msgstr "在 Odoo 中，超过 30 分钟未进行任何活动的操作人员将被断开连接。"
+msgstr "在 ERP 中，超过 30 分钟未进行任何活动的操作人员将被断开连接."
 
 #. module: im_livechat
 #: model_terms:ir.ui.view,arch_db:im_livechat.chatbot_script_answer_view_tree
@@ -1822,13 +1833,6 @@ msgid "Treated sessions"
 msgstr "已处理的会话"
 
 #. module: im_livechat
-#. odoo-python
-#: code:addons/im_livechat/models/discuss_channel.py:0
-#, python-format
-msgid "Type <b>:shortcut</b> to insert a canned response in your message.<br>"
-msgstr "键入<b>:快捷键</b>，在您的信息中插入一个预制的回应。<br>"
-
-#. module: im_livechat
 #: model:ir.model.fields,field_description:im_livechat.field_im_livechat_channel_rule__regex_url
 msgid "URL Regex"
 msgstr "URL的正则表达式"
@@ -1887,8 +1891,8 @@ msgid "User's raw answer"
 msgstr "用户的原始答案"
 
 #. module: im_livechat
-#. odoo-python
 #. odoo-javascript
+#. odoo-python
 #: code:addons/im_livechat/controllers/main.py:0
 #: code:addons/im_livechat/controllers/main.py:0
 #: code:addons/im_livechat/models/im_livechat_channel.py:0
@@ -1959,6 +1963,11 @@ msgstr "小工具"
 msgid ""
 "Would you mind leaving your email address so that we can reach you back?"
 msgstr "您是否介意留下您的电子邮件地址，以便我们可以与您联系？"
+
+#. module: im_livechat
+#: model_terms:ir.ui.view,arch_db:im_livechat.livechat_email_template
+msgid "You"
+msgstr "您"
 
 #. module: im_livechat
 #. odoo-python

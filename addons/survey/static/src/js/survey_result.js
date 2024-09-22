@@ -1,7 +1,7 @@
 /** @odoo-module **/
 
 import { _t } from "@web/core/l10n/translation";
-import { loadBundle, loadJS } from "@web/core/assets";
+import { loadBundle } from "@web/core/assets";
 import { SurveyImageZoomer } from "@survey/js/survey_image_zoomer";
 import publicWidget from "@web/legacy/js/public/public_widget";
 
@@ -136,6 +136,11 @@ publicWidget.registry.SurveyResultChart = publicWidget.Widget.extend({
         await loadBundle("web.chartjs_lib");
     },
 
+    destroy: function () {
+        window.removeEventListener("afterprint", this._onAfterPrint);
+        window.removeEventListener("beforeprint", this._onBeforePrint);
+    },
+
     // -------------------------------------------------------------------------
     // Handlers
     // -------------------------------------------------------------------------
@@ -145,8 +150,7 @@ publicWidget.registry.SurveyResultChart = publicWidget.Widget.extend({
      * @private
      */
     _onBeforePrint: function () {
-        const printWidth = 630; // Value to fit any graphic into the width of an A4 portrait page
-        this.chart.resize(printWidth, Math.floor(printWidth / this.chart.aspectRatio));
+        // Kept in case someone hooked something here
     },
 
     /**
@@ -154,7 +158,7 @@ publicWidget.registry.SurveyResultChart = publicWidget.Widget.extend({
      * @private
      */
     _onAfterPrint: function () {
-        this.chart.resize();
+        // Kept in case someone hooked something here
     },
 
     // -------------------------------------------------------------------------
@@ -481,15 +485,6 @@ publicWidget.registry.SurveyResultWidget = publicWidget.Widget.extend({
     //--------------------------------------------------------------------------
     // Widget
     //--------------------------------------------------------------------------
-
-    /**
-    * @override
-    */
-    willStart: function () {
-        var url = '/web/webclient/locale/' + (document.documentElement.getAttribute('lang') || 'en_US').replace('-', '_');
-        var localeReady = loadJS(url);
-        return Promise.all([this._super.apply(this, arguments), localeReady]);
-    },
 
     /**
     * @override

@@ -1,7 +1,10 @@
 /** @odoo-module **/
+import { Component, xml, useState, onError } from "@odoo/owl";
 
 import { browser } from "@web/core/browser/browser";
+import { useRecordObserver } from "@web/model/relational_model/utils";
 import { Field } from "@web/views/fields/field";
+import { CharField } from "@web/views/fields/char/char_field";
 import { Many2OneField } from "@web/views/fields/many2one/many2one_field";
 import { Many2ManyTagsField } from "@web/views/fields/many2many_tags/many2many_tags_field";
 import { Record } from "@web/model/record";
@@ -16,8 +19,6 @@ import {
     patchWithCleanup,
 } from "@web/../tests/helpers/utils";
 import { setupViewRegistries } from "@web/../tests/views/helpers";
-
-import { Component, xml, useState } from "@odoo/owl";
 
 let serverData;
 let target;
@@ -606,5 +607,111 @@ QUnit.module("Record Component", (hooks) => {
         assert.verifySteps([`web_read : [5] - {"foo":{}}`]);
         assert.strictEqual(increment.textContent, "2");
         assert.strictEqual(field.textContent, "blop");
+    });
+
+    QUnit.test("can switch records with values", async (assert) => {
+        class Parent extends Component {
+            setup() {
+                this.fields = {
+                    foo: {
+                        name: "foo",
+                        type: "char",
+                    },
+                    bar: {
+                        name: "bar",
+                        type: "boolean",
+                    },
+                };
+                this.values = {
+                    foo: "abc",
+                    bar: true,
+                };
+                this.state = useState({ currentId: 99 });
+            }
+
+            next() {
+                this.state.currentId = 100;
+                this.values = {
+                    foo: "def",
+                    bar: false,
+                };
+            }
+        }
+        Parent.components = { Record, Field };
+        Parent.template = xml`
+            <a id="next" t-on-click="next">NEXT</a>
+            <Record resId="state.currentId" resModel="'partner'" fieldNames="['foo']" fields="fields" values="values" t-slot-scope="data">
+                <Field name="'foo'" record="data.record"/>
+            </Record>
+        `;
+        let _record;
+        patchWithCleanup(Record.components._Record.prototype, {
+            setup() {
+                super.setup();
+                _record = this;
+            },
+        });
+
+        await mount(Parent, target, {
+            env: await makeTestEnv({
+                serverData,
+                mockRPC(route) {
+                    assert.step(route);
+                },
+            }),
+        });
+        // No load since the values are provided to the record
+        assert.verifySteps([]);
+        const field = target.querySelector("div[name='foo']");
+        // First values are loaded
+        assert.strictEqual(field.textContent, "abc");
+        // Verify that the underlying _Record Model root has the specified resId
+        assert.strictEqual(_record.model.root.resId, 99);
+
+        await click(target.querySelector("#next"));
+        // Still no load.
+        assert.verifySteps([]);
+        // Second values are loaded
+        assert.strictEqual(field.textContent, "def");
+        // Verify that the underlying _Record Model root has the updated resId
+        assert.strictEqual(_record.model.root.resId, 100);
+    });
+
+    QUnit.test("faulty useRecordObserver in widget", async (assert) => {
+        patchWithCleanup(CharField.prototype, {
+            setup() {
+                super.setup();
+                useRecordObserver((record, props) => {
+                    throw new Error("faulty record observer");
+                });
+            },
+        });
+
+        class Parent extends Component {
+            static components = { Record, Field };
+            static template = xml`
+            <t t-if="!state.error">
+                <Record resId="1" resModel="'partner'" fieldNames="['foo']" fields="fields" values="values" t-slot-scope="data">
+                    <Field name="'foo'" record="data.record"/>
+                </Record>
+            </t>
+            <div t-else="" class="error" t-esc="state.error.message" />`;
+            setup() {
+                this.state = useState({ error: false });
+                onError((error) => {
+                    this.state.error = error;
+                });
+            }
+        }
+
+        await mount(Parent, target, {
+            env: await makeTestEnv({
+                serverData,
+            }),
+        });
+        assert.strictEqual(
+            target.querySelector(".error").textContent,
+            `The following error occurred in onWillStart: "faulty record observer"`
+        );
     });
 });

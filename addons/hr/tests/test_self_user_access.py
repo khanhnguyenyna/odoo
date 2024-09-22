@@ -179,7 +179,7 @@ class TestSelfAccessRights(TestHrCommon):
         self.env['ir.config_parameter'].set_param('hr.hr_employee_self_edit', False)
         # should not raise
         vals = [
-            {'tz': "Australia/ACT"},
+            {'tz': "Australia/Sydney"},
             {'email': "new@example.com"},
             {'signature': "<p>I'm Richard!</p>"},
             {'notification_type': "email"},
@@ -193,7 +193,7 @@ class TestSelfAccessRights(TestHrCommon):
         # they are in SELF_READABLE_FIELDS
         self.env['ir.config_parameter'].set_param('hr.hr_employee_self_edit', False)
         vals = [
-            {'tz': "Australia/ACT"},
+            {'tz': "Australia/Sydney"},
             {'email': "new@example.com"},
             {'signature': "<p>I'm Richard!</p>"},
             {'notification_type': "email"},
@@ -216,3 +216,17 @@ class TestSelfAccessRights(TestHrCommon):
     def testSearchUserEMployee(self):
         # Searching user based on employee_id field should not raise bad query error
         self.env['res.users'].with_user(self.richard).search([('employee_id', 'ilike', 'Hubert')])
+
+    def test_onchange_readable_fields_with_no_access(self):
+        """
+            The purpose is to test that the onchange logic takes into account `SELF_READABLE_FIELDS`.
+
+            The view contains fields that are in `SELF_READABLE_FIELDS` (example: `private_street`).
+            Even if the user does not have read access to the employee,
+            it should not cause an access error if these fields are in `SELF_READABLE_FIELDS`.
+        """
+        self.env['res.lang']._activate_lang("fr_FR")
+        with Form(self.richard.with_user(self.richard), view='hr.res_users_view_form_profile') as form:
+            # triggering an onchange should not trigger some access error
+            form.lang = "fr_FR"
+            form.tz = "Europe/Brussels"

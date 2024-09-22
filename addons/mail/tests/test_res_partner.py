@@ -74,6 +74,7 @@ class TestPartner(MailCommon):
         return partner
 
     def test_address_tracking(self):
+        self.env.company.name = 'YourCompany'
         company_partner = self.env.company.partner_id
         # use some wacky formatting to check inlining
         company_partner.country_id.address_format = """%(street)s
@@ -85,6 +86,9 @@ class TestPartner(MailCommon):
             'city': 'Some City Name',
             'street': 'Some Street Name',
             'type': 'contact',
+            'zip': '94134',
+            'state_id': self.env.ref('base.state_us_5').id,
+            'country_id': self.env.ref('base.us').id,
         })
         child_partner = self.env['res.partner'].create({
             'name': 'Some Guy',
@@ -481,6 +485,8 @@ class TestPartner(MailCommon):
             'False',
             # (simili) void values
             '', ' ', False, None,
+            # email only
+            'lenny.bar@gmail.com',
         ]
         expected = [
             ('Raoul', 'raoul@grosbedon.fr'),
@@ -489,6 +495,8 @@ class TestPartner(MailCommon):
             ('False', False),
             # (simili) void values: always False
             ('', False), ('', False), ('', False), ('', False),
+            # email only: email used as both name and email
+            ('lenny.bar@gmail.com', 'lenny.bar@gmail.com')
         ]
         for (expected_name, expected_email), sample in zip(expected, samples):
             with self.subTest(sample=sample):

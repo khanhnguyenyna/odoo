@@ -3,16 +3,16 @@
 # 	* base_import_module
 # 
 # Translators:
-# Wil Odoo, 2023
-# Marianna Ciofani, 2023
+# Wil Odoo, 2024
+# Marianna Ciofani, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Marianna Ciofani, 2023\n"
+"Last-Translator: Marianna Ciofani, 2024\n"
 "Language-Team: Italian (https://app.transifex.com/odoo/teams/41243/it/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -21,6 +21,20 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=n == 1 ? 0 : n != 0 && n % 1000000 == 0 ? 1 : 2;\n"
 
 #. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid ""
+"\n"
+"You may need the Enterprise version to install the data module. Please visit https://www.odoo.com/pricing-plan for more information.\n"
+"If you need Website themes, it can be downloaded from https://github.com/odoo/design-themes.\n"
+msgstr ""
+"\n"
+"Potrebbe essere necessaria la versione Enterprise per installare il modulo dati. Visita il sito https://www.odoo.com/pricing-plan per maggiorni informazioni.\n"
+"Se hai bisogno di temi per siti web, è possibile scaricarli da https://github.com/odoo/design-themes.\n"
+
+#. module: base_import_module
+#: model_terms:ir.ui.view,arch_db:base_import_module.module_form_apps_inherit
 #: model_terms:ir.ui.view,arch_db:base_import_module.module_view_kanban_apps_inherit
 msgid "Activate"
 msgstr "Attiva"
@@ -78,6 +92,15 @@ msgid "Created on"
 msgstr "Data creazione"
 
 #. module: base_import_module
+#: model_terms:ir.ui.view,arch_db:base_import_module.view_base_module_import
+msgid ""
+"Demo data should only be used on test databases. Once they are loaded, they "
+"cannot be entirely removed!"
+msgstr ""
+"I dati dimostrativi devono essere utilizzati solo su database di prova. Una "
+"volta caricati, non possono essere eliminati!"
+
+#. module: base_import_module
 #: model:ir.model.fields,field_description:base_import_module.field_base_import_module__display_name
 msgid "Display Name"
 msgstr "Nome visualizzato"
@@ -86,8 +109,24 @@ msgstr "Nome visualizzato"
 #. odoo-python
 #: code:addons/base_import_module/models/ir_module.py:0
 #, python-format
+msgid ""
+"Error while importing module '%(module)s'.\n"
+"\n"
+" %(error_message)s \n"
+"\n"
+msgstr ""
+"Errore durante l'importazione del modulo '%(module)s'.\n"
+"\n"
+" %(error_message)s \n"
+"\n"
+
+#. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
 msgid "File '%s' exceed maximum allowed file size"
-msgstr "Il file '%s' eccese la dimensione massima permessa"
+msgstr "Il file '%s' supera la dimensione massima consentita"
 
 #. module: base_import_module
 #: model:ir.model.fields,field_description:base_import_module.field_base_import_module__force
@@ -143,6 +182,13 @@ msgstr "Settori"
 #: model_terms:ir.ui.view,arch_db:base_import_module.view_base_module_import
 msgid "Install"
 msgstr "Installa"
+
+#. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid "Install an Industry"
+msgstr "Installa un settore"
 
 #. module: base_import_module
 #: model_terms:ir.ui.view,arch_db:base_import_module.view_base_module_import
@@ -204,6 +250,13 @@ msgstr "App ufficiali"
 
 #. module: base_import_module
 #. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid "Only administrators can install data modules."
+msgstr "Solo gli amministratori psosono installare i moduli dati."
+
+#. module: base_import_module
+#. odoo-python
 #: code:addons/base_import_module/controllers/main.py:0
 #, python-format
 msgid "Only administrators can upload a module"
@@ -239,8 +292,19 @@ msgstr "La costumizzazione richiede l'applicazione Odoo Studio"
 #. odoo-python
 #: code:addons/base_import_module/models/ir_module.py:0
 #, python-format
-msgid "The following modules will be also installed:\n"
+msgid "The following modules will also be installed:\n"
 msgstr "Verranno installati anche i seguenti moduli:\n"
+
+#. module: base_import_module
+#. odoo-python
+#: code:addons/base_import_module/models/ir_module.py:0
+#, python-format
+msgid ""
+"The installation of the data module would fail as the following dependencies"
+" can't be found in the addons-path:\n"
+msgstr ""
+"L'installazione del modulo dati potrebbe fallire perché non è stato "
+"possibile trovare le seguenti dipendenze nel percorso addons:\n"
 
 #. module: base_import_module
 #. odoo-python
@@ -260,6 +324,7 @@ msgid "The module %s cannot be downloaded"
 msgstr "Non è stato possibile scaricare il modulo %s"
 
 #. module: base_import_module
+#: model_terms:ir.ui.view,arch_db:base_import_module.module_form_apps_inherit
 #: model_terms:ir.ui.view,arch_db:base_import_module.module_view_kanban_apps_inherit
 msgid "Upgrade"
 msgstr "Aggiorna"

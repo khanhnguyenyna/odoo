@@ -4,7 +4,7 @@ export function pickRadio(name) {
     return [
         {
             content: `picking radio attribute with name ${name}`,
-            trigger: `.product-configurator-popup .attribute-name-cell label[name='${name}']`,
+            trigger: `.product-configurator-popup div.attribute-name-cell:contains('${name}') input`,
         },
     ];
 }
@@ -56,6 +56,30 @@ export function isShown() {
         {
             content: "product configurator is shown",
             trigger: ".product-configurator-popup:not(:has(.d-none))",
+            run: () => {},
+        },
+    ];
+}
+
+export function numberRadioOptions(number) {
+    return [
+        {
+            trigger: `.product-configurator-popup .attribute-name-cell`,
+            run: () => {
+                const radio_options = $('.product-configurator-popup .attribute-name-cell').length;
+                if (radio_options !== number) {
+                    throw new Error(`Expected ${number} radio options, got ${radio_options}`);
+                }
+            }
+        },
+    ];
+}
+
+export function isOptionShown(option) {
+    return [
+        {
+            content: `option ${option} is shown`,
+            trigger: `.form-check-label:contains('${option}')`,
             run: () => {},
         },
     ];

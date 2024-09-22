@@ -44,9 +44,6 @@ export class FloorScreen extends Component {
             floorMapScrollTop: 0,
             isColorPicker: false,
         });
-        const ui = useState(useService("ui"));
-        const mode = localStorage.getItem("floorPlanStyle");
-        this.pos.floorPlanStyle = ui.isSmall || mode == "kanban" ? "kanban" : "default";
         this.floorMapRef = useRef("floor-map-ref");
         this.addFloorRef = useRef("add-floor-ref");
         this.map = useRef("map");
@@ -65,6 +62,7 @@ export class FloorScreen extends Component {
         this.state.floorMapScrollTop = this.floorMapRef.el.getBoundingClientRect().top;
     }
     async onWillStart() {
+        this.pos.searchProductWord = "";
         const table = this.pos.table;
         if (table) {
             const orders = this.pos.get_order_list();
@@ -357,6 +355,20 @@ export class FloorScreen extends Component {
                 this.state.selectedTableIds.push(table.id);
             }
         } else {
+            if (this.pos.orderToTransfer && table.order_count > 0) {
+                const { confirmed } = await this.popup.add(ConfirmPopup, {
+                    title: _t("Table is not empty"),
+                    body: _t(
+                        "The table already contains an order. Do you want to proceed and transfer the order here?"
+                    ),
+                    confirmText: _t("Yes"),
+                });
+                if (!confirmed) {
+                    // We don't want to change the table if the transfer is not done.
+                    table = this.pos.tables_by_id[this.pos.orderToTransfer.tableId];
+                    this.pos.orderToTransfer = null;
+                }
+            }
             if (this.pos.orderToTransfer) {
                 await this.pos.transferTable(table);
             } else {

@@ -3,17 +3,17 @@
 # 	* pos_self_order
 # 
 # Translators:
-# Daye Jeong, 2023
-# Wil Odoo, 2023
 # Sarah Park, 2023
+# Daye Jeong, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Sarah Park, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Korean (https://app.transifex.com/odoo/teams/41243/ko/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -34,6 +34,13 @@ msgid ""
 "%s is not available anymore, it has thus been removed from your order. "
 "Please review your order and validate it again."
 msgstr "%s 항목은 더 이상 사용할 수 없습니다 주문에서 삭제되었습니다. 주문을 검토 후 다시 확인하시기 바랍니다."
+
+#. module: pos_self_order
+#. odoo-javascript
+#: code:addons/pos_self_order/static/src/app/store/order_change_receipt_template.xml:0
+#, python-format
+msgid "/ Tracker number:"
+msgstr "/  배송 조회 번호:"
 
 #. module: pos_self_order
 #: model_terms:ir.ui.view,arch_db:pos_self_order.qr_codes_page
@@ -179,11 +186,6 @@ msgid "Back"
 msgstr "뒤로"
 
 #. module: pos_self_order
-#: model_terms:ir.ui.view,arch_db:pos_self_order.pos_self_order_menu_item
-msgid "CLOSE SESSION"
-msgstr "세션 종료"
-
-#. module: pos_self_order
 #. odoo-javascript
 #: code:addons/pos_self_order/static/src/app/components/order_widget/order_widget.js:0
 #, python-format
@@ -245,6 +247,11 @@ msgstr "식사 장소를 선택하세요."
 #, python-format
 msgid "Close"
 msgstr "닫기"
+
+#. module: pos_self_order
+#: model_terms:ir.ui.view,arch_db:pos_self_order.pos_self_order_menu_item
+msgid "Close Session"
+msgstr "세션 종료"
 
 #. module: pos_self_order
 #. odoo-javascript
@@ -657,6 +664,20 @@ msgid "My Orders"
 msgstr "내 주문"
 
 #. module: pos_self_order
+#. odoo-javascript
+#: code:addons/pos_self_order/static/src/app/store/order_change_receipt_template.xml:0
+#, python-format
+msgid "NEW"
+msgstr "신규"
+
+#. module: pos_self_order
+#. odoo-javascript
+#: code:addons/pos_self_order/static/src/app/store/order_change_receipt_template.xml:0
+#, python-format
+msgid "NOTE"
+msgstr "노트"
+
+#. module: pos_self_order
 #: model:ir.model.fields,help:pos_self_order.field_pos_config__self_ordering_image_brand_name
 #: model:ir.model.fields,help:pos_self_order.field_res_config_settings__pos_self_ordering_image_brand_name
 msgid "Name of the image to display on the self order screen"
@@ -726,7 +747,6 @@ msgstr "새 탭에서 열기"
 
 #. module: pos_self_order
 #. odoo-javascript
-#: code:addons/pos_self_order/static/src/app/components/order_widget/order_widget.js:0
 #: code:addons/pos_self_order/static/src/app/components/order_widget/order_widget.js:0
 #: code:addons/pos_self_order/static/src/app/components/order_widget/order_widget.js:0
 #: code:addons/pos_self_order/static/src/app/components/order_widget/order_widget.js:0
@@ -915,6 +935,20 @@ msgstr "품목 세부선택"
 #, python-format
 msgid "Product image"
 msgstr "품목 이미지"
+
+#. module: pos_self_order
+#. odoo-javascript
+#: code:addons/pos_self_order/static/src/app/self_order_service.js:0
+#, python-format
+msgid "Product is not available"
+msgstr "사용할 수 없는 품목"
+
+#. module: pos_self_order
+#. odoo-javascript
+#: code:addons/pos_self_order/static/src/app/self_order_service.js:0
+#, python-format
+msgid "Product not found"
+msgstr "품목을 찾을 수 없음"
 
 #. module: pos_self_order
 #: model:ir.actions.report,name:pos_self_order.report_self_order_qr_codes_page
@@ -1227,6 +1261,13 @@ msgstr "경고"
 
 #. module: pos_self_order
 #. odoo-javascript
+#: code:addons/pos_self_order/static/src/app/self_order_service.js:0
+#, python-format
+msgid "We're currently closed"
+msgstr "지금은 영업 시간이 아닙니다."
+
+#. module: pos_self_order
+#. odoo-javascript
 #: code:addons/pos_self_order/static/src/app/self_order_index.xml:0
 #, python-format
 msgid "We're currently closed."
@@ -1250,13 +1291,6 @@ msgstr "예"
 #, python-format
 msgid "You cannot edit a posted orderline !"
 msgstr "주문 내역이 전달되면 수정할 수 없습니다!"
-
-#. module: pos_self_order
-#. odoo-javascript
-#: code:addons/pos_self_order/static/src/app/pages/order_history_page/order_history_page.js:0
-#, python-format
-msgid "You cannot edit an posted order!"
-msgstr "이미 게시된 주문은 수정할 수 없습니다!"
 
 #. module: pos_self_order
 #. odoo-javascript
@@ -1312,6 +1346,13 @@ msgstr "주문 상태가 변경되었습니다."
 #: model_terms:ir.ui.view,arch_db:pos_self_order.custom_link_tree
 msgid "empty = all points of sale"
 msgstr "비워 두기 = 전체 POS 적용"
+
+#. module: pos_self_order
+#. odoo-javascript
+#: code:addons/pos_self_order/static/src/app/components/popup_table/popup_table.xml:0
+#, python-format
+msgid "floor"
+msgstr "바닥"
 
 #. module: pos_self_order
 #: model_terms:ir.ui.view,arch_db:pos_self_order.custom_link_tree

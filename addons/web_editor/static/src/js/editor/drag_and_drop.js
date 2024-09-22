@@ -3,7 +3,7 @@ import { makeDraggableHook } from "@web/core/utils/draggable_hook_builder";
 import { pick } from "@web/core/utils/objects";
 import { reactive } from "@odoo/owl";
 import { throttleForAnimation } from "@web/core/utils/timing";
-import { touching } from "@web/core/utils/ui";
+import { closest, touching } from "@web/core/utils/ui";
 
 /** @typedef {import("@web/core/utils/draggable_hook_builder").DraggableHandlerParams} DraggableHandlerParams */
 /** @typedef {import("@web/core/utils/draggable_hook_builder").DraggableBuilderParams} DraggableBuilderParams */
@@ -69,6 +69,10 @@ export function useNativeDraggable(hookParams, initialParams) {
     };
     // Compatibility for tests
     const el = initialParams.ref.el;
+    // TODO this is probably to be removed in master: the received params
+    // contain the selector that should be checked and it will be transferred
+    // to the makeDraggableHook function. There should not be any need to add
+    // the default selector class here.
     el.classList.add("o_draggable");
     cleanupFunctions.push(() => el.classList.remove("o_draggable"));
 
@@ -150,7 +154,7 @@ const dragAndDropHookParams = {
             width: helperRect.width,
             height: helperRect.height,
         };
-        const dropzoneEl = touching(ctx.getDropZones(), helperRect)[0];
+        const dropzoneEl = closest(touching(ctx.getDropZones(), helperRect), helperRect);
         // Update the drop zone if it's in grid mode
         if (ctx.current.dropzone?.el && ctx.current.dropzone.el.classList.contains("oe_grid_zone")) {
             ctx.current.dropzone.rect = ctx.current.dropzone.el.getBoundingClientRect();
@@ -158,8 +162,11 @@ const dragAndDropHookParams = {
         if (
             ctx.current.dropzone &&
             (
-                ctx.current.dropzone.el === dropzoneEl ||
-                touching([ctx.current.helper], ctx.current.dropzone.rect).length > 0
+                ctx.current.dropzone.el === dropzoneEl
+                || (
+                    !dropzoneEl
+                    && touching([ctx.current.helper], ctx.current.dropzone.rect).length > 0
+                )
             )
         ) {
             // If no new dropzone but old one is still valid, return early.

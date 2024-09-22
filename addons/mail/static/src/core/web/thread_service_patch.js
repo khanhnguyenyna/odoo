@@ -5,6 +5,8 @@ import { parseEmail } from "@mail/js/utils";
 
 import { _t } from "@web/core/l10n/translation";
 import { patch } from "@web/core/utils/patch";
+import { Record } from "@mail/core/common/record";
+import { assignDefined, compareDatetime } from "@mail/utils/common/misc";
 
 let nextId = 1;
 
@@ -75,15 +77,17 @@ patch(ThreadService.prototype, {
                 thread.selfFollower = { followedThread: thread, ...result.selfFollower };
             }
             thread.followersCount = result.followersCount;
-            for (const followerData of result.followers) {
-                const follower = this.store.Follower.insert({
-                    followedThread: thread,
-                    ...followerData,
-                });
-                if (follower.notEq(thread.selfFollower)) {
-                    thread.followers.add(follower);
+            Record.MAKE_UPDATE(() => {
+                for (const followerData of result.followers) {
+                    const follower = this.store.Follower.insert({
+                        followedThread: thread,
+                        ...followerData,
+                    });
+                    if (follower.notEq(thread.selfFollower)) {
+                        thread.followers.add(follower);
+                    }
                 }
-            }
+            });
             thread.recipientsCount = result.recipientsCount;
             for (const recipientData of result.recipients) {
                 thread.recipients.add({ followedThread: thread, ...recipientData });
@@ -107,7 +111,7 @@ patch(ThreadService.prototype, {
         if (id === false) {
             thread.messages.push({
                 id: this.messageService.getNextTemporaryId(),
-                author: { id: this.store.self.id },
+                author: this.store.self,
                 body: _t("Creating a new record..."),
                 message_type: "notification",
                 trackingValues: [],
@@ -124,10 +128,10 @@ patch(ThreadService.prototype, {
     async insertSuggestedRecipients(thread, dataList) {
         const recipients = [];
         for (const data of dataList) {
-            const [partner_id, emailInfo, lang, reason, customerInfo] = data;
+            const [partner_id, emailInfo, lang, reason, defaultCreateValues] = data;
             let [name, email] = emailInfo ? parseEmail(emailInfo) : [];
-            if ((!name || name === email) && customerInfo?.name) {
-                name = customerInfo.name;
+            if ((!name || name === email) && defaultCreateValues?.name) {
+                name = defaultCreateValues.name;
             }
             recipients.push({
                 id: nextId++,
@@ -137,6 +141,7 @@ patch(ThreadService.prototype, {
                 reason,
                 persona: partner_id ? { type: "partner", id: partner_id } : false,
                 checked: true,
+                defaultCreateValues,
             });
         }
         thread.suggestedRecipients = recipients;
@@ -157,15 +162,17 @@ patch(ThreadService.prototype, {
             [thread.id],
             thread.followers.at(-1).id,
         ]);
-        for (const data of followers) {
-            const follower = this.store.Follower.insert({
-                followedThread: thread,
-                ...data,
-            });
-            if (follower.notEq(thread.selfFollower)) {
-                thread.followers.add(follower);
+        Record.MAKE_UPDATE(() => {
+            for (const data of followers) {
+                const follower = this.store.Follower.insert({
+                    followedThread: thread,
+                    ...data,
+                });
+                if (follower.notEq(thread.selfFollower)) {
+                    thread.followers.add(follower);
+                }
             }
-        }
+        });
     },
     async loadMoreRecipients(thread) {
         const recipients = await this.orm.call(
@@ -174,17 +181,20 @@ patch(ThreadService.prototype, {
             [[thread.id], thread.recipients.at(-1).id],
             { filter_recipients: true }
         );
-        for (const data of recipients) {
-            thread.recipients.add({ followedThread: thread, ...data });
-        }
+        Record.MAKE_UPDATE(() => {
+            for (const data of recipients) {
+                thread.recipients.add({ followedThread: thread, ...data });
+            }
+        });
     },
-    open(thread, replaceNewMessageChatWindow) {
+    /** @override */
+    open(thread, replaceNewMessageChatWindow, options) {
         if (!this.store.discuss.isActive && !this.ui.isSmall) {
-            this._openChatWindow(thread, replaceNewMessageChatWindow);
+            this._openChatWindow(thread, replaceNewMessageChatWindow, options);
             return;
         }
         if (this.ui.isSmall && thread.model === "discuss.channel") {
-            this._openChatWindow(thread, replaceNewMessageChatWindow);
+            this._openChatWindow(thread, replaceNewMessageChatWindow, options);
             return;
         }
         if (thread.model !== "discuss.channel") {
@@ -219,13 +229,22 @@ patch(ThreadService.prototype, {
         }
         super.unpin(...arguments);
     },
-    _openChatWindow(thread, replaceNewMessageChatWindow) {
-        const chatWindow = this.store.ChatWindow.insert({
-            folded: false,
-            thread,
-            replaceNewMessageChatWindow,
-        });
-        chatWindow.autofocus++;
+    _openChatWindow(thread, replaceNewMessageChatWindow, { autofocus = true, openMessagingMenuOnClose } = {}) {
+        const chatWindow = this.store.ChatWindow.insert(
+            assignDefined(
+                {
+                    folded: false,
+                    replaceNewMessageChatWindow,
+                    thread,
+                },
+                {
+                    openMessagingMenuOnClose,
+                }
+            )
+        );
+        if (autofocus) {
+            chatWindow.autofocus++;
+        }
         if (thread) {
             thread.state = "open";
         }
@@ -234,18 +253,10 @@ patch(ThreadService.prototype, {
     getRecentChannels() {
         return Object.values(this.store.Thread.records)
             .filter((thread) => thread.model === "discuss.channel")
-            .sort((a, b) => {
-                if (!a.lastInterestDateTime && !b.lastInterestDateTime) {
-                    return 0;
-                }
-                if (a.lastInterestDateTime && !b.lastInterestDateTime) {
-                    return -1;
-                }
-                if (!a.lastInterestDateTime && b.lastInterestDateTime) {
-                    return 1;
-                }
-                return b.lastInterestDateTime.ts - a.lastInterestDateTime.ts;
-            });
+            .sort(
+                (a, b) =>
+                    compareDatetime(b.lastInterestDateTime, a.lastInterestDateTime) || b.id - a.id
+            );
     },
     getNeedactionChannels() {
         return this.getRecentChannels().filter((channel) => this.getCounter(channel) > 0);

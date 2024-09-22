@@ -1,4 +1,5 @@
 import base64
+import bisect
 import functools
 import hashlib
 import json
@@ -19,7 +20,7 @@ from urllib.parse import urlparse
 from weakref import WeakSet
 
 from werkzeug.local import LocalStack
-from werkzeug.exceptions import BadRequest, HTTPException
+from werkzeug.exceptions import BadRequest, HTTPException, ServiceUnavailable
 
 import odoo
 from odoo import api
@@ -210,9 +211,11 @@ class CloseFrame(Frame):
         super().__init__(Opcode.CLOSE, payload)
 
 
+_websocket_instances = WeakSet()
+
+
 class Websocket:
-    _instances = WeakSet()
-    _event_callbacks = defaultdict(set)
+    __event_callbacks = defaultdict(set)
     # Maximum size for a message in bytes, whether it is sent as one
     # frame or many fragmented ones.
     MESSAGE_MAX_SIZE = 2 ** 20
@@ -221,35 +224,70 @@ class Websocket:
     # or received within CONNECTION_TIMEOUT - 15 seconds.
     CONNECTION_TIMEOUT = 60
     INACTIVITY_TIMEOUT = CONNECTION_TIMEOUT - 15
+    # How much time (in second) the history of last dispatched notifications is
+    # kept in memory for each websocket.
+    # To avoid duplicate notifications, we fetch them based on their ids.
+    # However during parallel transactions, ids are assigned immediately (when
+    # they are requested), but the notifications are dispatched at the time of
+    # the commit. This means lower id notifications might be dispatched after
+    # higher id notifications.
+    # Simply incrementing the last id is sufficient to guarantee no duplicates,
+    # but it is not sufficient to guarantee all notifications are dispatched,
+    # and in particular not sufficient for those with a lower id coming after a
+    # higher id was dispatched.
+    # To solve the issue of missed notifications, the lowest id, stored in
+    # ``_last_notif_sent_id``, is held back by a few seconds to give time for
+    # concurrent transactions to finish. To avoid dispatching duplicate
+    # notifications, the history of already dispatched notifications during this
+    # period is kept in memory in ``_notif_history`` and the corresponding
+    # notifications are discarded from subsequent dispatching even if their id
+    # is higher than ``_last_notif_sent_id``.
+    # In practice, what is important functionally is the time between the create
+    # of the notification and the commit of the transaction in business code.
+    # If this time exceeds this threshold, the notification will never be
+    # dispatched if the target user receive any other notification in the
+    # meantime.
+    # Transactions known to be long should therefore create their notifications
+    # at the end, as close as possible to their commit.
+    MAX_NOTIFICATION_HISTORY_SEC = 10
     # How many requests can be made in excess of the given rate.
     RL_BURST = int(config['websocket_rate_limit_burst'])
     # How many seconds between each request.
     RL_DELAY = float(config['websocket_rate_limit_delay'])
 
-    def __init__(self, sock, session):
+    def __init__(self, sock, session, cookies):
         # Session linked to the current websocket connection.
         self._session = session
-        self._socket = sock
+        # Cookies linked to the current websocket connection.
+        self._cookies = cookies
+        self._db = session.db
+        self.__socket = sock
         self._close_sent = False
         self._close_received = False
         self._timeout_manager = TimeoutManager()
         # Used for rate limiting.
-        self._incoming_frame_timestamps = deque(maxlen=type(self).RL_BURST)
+        self._incoming_frame_timestamps = deque(maxlen=self.RL_BURST)
         # Used to notify the websocket that bus notifications are
         # available.
-        self._notif_sock_w, self._notif_sock_r = socket.socketpair()
+        self.__notif_sock_w, self.__notif_sock_r = socket.socketpair()
         self._channels = set()
+        # For ``_last_notif_sent_id and ``_notif_history``, see
+        # ``MAX_NOTIFICATION_HISTORY_SEC`` for more details.
+        # id of the last sent notification that is no longer in _notif_history
         self._last_notif_sent_id = 0
+        # history of last sent notifications in the format (notif_id, send_time)
+        # always sorted by notif_id ASC
+        self._notif_history = []
         # Websocket start up
-        self._selector = (
+        self.__selector = (
             selectors.PollSelector()
             if odoo.evented and hasattr(selectors, 'PollSelector')
             else selectors.DefaultSelector()
         )
-        self._selector.register(self._socket, selectors.EVENT_READ)
-        self._selector.register(self._notif_sock_r, selectors.EVENT_READ)
+        self.__selector.register(self.__socket, selectors.EVENT_READ)
+        self.__selector.register(self.__notif_sock_r, selectors.EVENT_READ)
         self.state = ConnectionState.OPEN
-        type(self)._instances.add(self)
+        _websocket_instances.add(self)
         self._trigger_lifecycle_event(LifecycleEvent.OPEN)
 
     # ------------------------------------------------------
@@ -261,7 +299,7 @@ class Websocket:
             try:
                 readables = {
                     selector_key[0].fileobj for selector_key in
-                    self._selector.select(type(self).INACTIVITY_TIMEOUT)
+                    self.__selector.select(self.INACTIVITY_TIMEOUT)
                 }
                 if self._timeout_manager.has_timed_out() and self.state is ConnectionState.OPEN:
                     self.disconnect(
@@ -273,9 +311,9 @@ class Websocket:
                 if not readables:
                     self._send_ping_frame()
                     continue
-                if self._notif_sock_r in readables:
+                if self.__notif_sock_r in readables:
                     self._dispatch_bus_notifications()
-                if self._socket in readables:
+                if self.__socket in readables:
                     message = self._process_next_message()
                     if message is not None:
                         yield message
@@ -298,18 +336,20 @@ class Websocket:
 
     @classmethod
     def onopen(cls, func):
-        cls._event_callbacks[LifecycleEvent.OPEN].add(func)
+        cls.__event_callbacks[LifecycleEvent.OPEN].add(func)
         return func
 
     @classmethod
     def onclose(cls, func):
-        cls._event_callbacks[LifecycleEvent.CLOSE].add(func)
+        cls.__event_callbacks[LifecycleEvent.CLOSE].add(func)
         return func
 
     def subscribe(self, channels, last):
         """ Subscribe to bus channels. """
         self._channels = channels
-        if self._last_notif_sent_id < last:
+        # Only assign the last id according to the client once: the server is
+        # more reliable later on, see ``MAX_NOTIFICATION_HISTORY_SEC``.
+        if self._last_notif_sent_id == 0:
             self._last_notif_sent_id = last
         # Dispatch past notifications if there are any.
         self.trigger_notification_dispatching()
@@ -324,11 +364,11 @@ class Websocket:
             return
         readables = {
             selector_key[0].fileobj for selector_key in
-            self._selector.select(0)
+            self.__selector.select(0)
         }
-        if self._notif_sock_r not in readables:
+        if self.__notif_sock_r not in readables:
             # Send a random bit to mark the socket as readable.
-            self._notif_sock_w.send(b'x')
+            self.__notif_sock_w.send(b'x')
 
     # ------------------------------------------------------
     # PRIVATE METHODS
@@ -356,7 +396,7 @@ class Websocket:
             """ Pull n bytes from the socket """
             data = bytearray()
             while len(data) < n:
-                received_data = self._socket.recv(n - len(data))
+                received_data = self.__socket.recv(n - len(data))
                 if not received_data:
                     raise ConnectionClosed()
                 data.extend(received_data)
@@ -402,7 +442,7 @@ class Websocket:
             payload_length = struct.unpack('!H', recv_bytes(2))[0]
         elif payload_length == 127:
             payload_length = struct.unpack('!Q', recv_bytes(8))[0]
-        if payload_length > type(self).MESSAGE_MAX_SIZE:
+        if payload_length > self.MESSAGE_MAX_SIZE:
             raise PayloadTooLargeException()
 
         mask = recv_bytes(4)
@@ -451,7 +491,7 @@ class Websocket:
             if frame.opcode is not Opcode.CONTINUE:
                 raise ProtocolError("A continuation frame was expected")
             message_fragments.extend(frame.payload)
-            if len(message_fragments) > type(self).MESSAGE_MAX_SIZE:
+            if len(message_fragments) > self.MESSAGE_MAX_SIZE:
                 raise PayloadTooLargeException()
             if frame.fin:
                 return bytes(message_fragments)
@@ -498,7 +538,7 @@ class Websocket:
                 struct.pack('!BBQ', first_byte, 127, payload_length)
             )
         output.extend(frame.payload)
-        self._socket.sendall(output)
+        self.__socket.sendall(output)
         self._timeout_manager.acknowledge_frame_sent(frame)
         if not isinstance(frame, CloseFrame):
             return
@@ -508,7 +548,7 @@ class Websocket:
             return self._terminate()
         # After sending a control frame indicating the connection
         # should be closed, a peer does not send any further data.
-        self._selector.unregister(self._notif_sock_r)
+        self.__selector.unregister(self.__notif_sock_r)
 
     def _send_close_frame(self, code, reason=None):
         """ Send a close frame. """
@@ -525,20 +565,23 @@ class Websocket:
     def _terminate(self):
         """ Close the underlying TCP socket. """
         with suppress(OSError, TimeoutError):
-            self._socket.shutdown(socket.SHUT_WR)
+            self.__socket.shutdown(socket.SHUT_WR)
             # Call recv until obtaining a return value of 0 indicating
             # the other end has performed an orderly shutdown. A timeout
             # is set to ensure the connection will be closed even if
             # the other end does not close the socket properly.
-            self._socket.settimeout(1)
-            while self._socket.recv(4096):
+            self.__socket.settimeout(1)
+            while self.__socket.recv(4096):
                 pass
-        self._selector.unregister(self._socket)
-        self._selector.close()
-        self._socket.close()
+        self.__selector.unregister(self.__socket)
+        self.__selector.close()
+        self.__socket.close()
         self.state = ConnectionState.CLOSED
         dispatch.unsubscribe(self)
         self._trigger_lifecycle_event(LifecycleEvent.CLOSE)
+        with acquire_cursor(self._db) as cr:
+            env = api.Environment(cr, self._session.uid, self._session.context)
+            env["ir.websocket"]._on_websocket_closed(self._cookies)
 
     def _handle_control_frame(self, frame):
         if frame.opcode is Opcode.PING:
@@ -596,18 +639,11 @@ class Websocket:
         `RateLimitExceededException`.
         """
         now = time.time()
-        if len(self._incoming_frame_timestamps) >= type(self).RL_BURST:
+        if len(self._incoming_frame_timestamps) >= self.RL_BURST:
             elapsed_time = now - self._incoming_frame_timestamps[0]
-            if elapsed_time < type(self).RL_DELAY * type(self).RL_BURST:
+            if elapsed_time < self.RL_DELAY * self.RL_BURST:
                 raise RateLimitExceededException()
         self._incoming_frame_timestamps.append(now)
-
-    @classmethod
-    def _kick_all(cls):
-        """ Disconnect all the websocket instances. """
-        for websocket in cls._instances:
-            if websocket.state is ConnectionState.OPEN:
-                websocket.disconnect(CloseCode.GOING_AWAY)
 
     def _trigger_lifecycle_event(self, event_type):
         """
@@ -615,11 +651,11 @@ class Websocket:
         registered for this event type. Every callback is given both the
         environment and the related websocket.
         """
-        if not type(self)._event_callbacks[event_type]:
+        if not self.__event_callbacks[event_type]:
             return
-        with closing(acquire_cursor(self._session.db)) as cr:
+        with closing(acquire_cursor(self._db)) as cr:
             env = api.Environment(cr, self._session.uid, self._session.context)
-            for callback in type(self)._event_callbacks[event_type]:
+            for callback in self.__event_callbacks[event_type]:
                 try:
                     service_model.retrying(functools.partial(callback, env, self), env)
                 except Exception:
@@ -644,11 +680,34 @@ class Websocket:
             if session.uid is not None and not check_session(session, env):
                 raise SessionExpiredException()
             # Mark the notification request as processed.
-            self._notif_sock_r.recv(1)
-            notifications = env['bus.bus']._poll(self._channels, self._last_notif_sent_id)
+            self.__notif_sock_r.recv(1)
+            notifications = env["bus.bus"]._poll(
+                self._channels, self._last_notif_sent_id, [n[0] for n in self._notif_history]
+            )
         if not notifications:
             return
-        self._last_notif_sent_id = notifications[-1]['id']
+        for notif in notifications:
+            bisect.insort(self._notif_history, (notif["id"], time.time()), key=lambda x: x[0])
+        # Discard all the smallest notification ids that have expired and
+        # increment the last id accordingly. History can only be trimmed of ids
+        # that are below the new last id otherwise some notifications might be
+        # dispatched again.
+        # For example, if the theshold is 10s, and the state is:
+        # last id 2, history [(3, 8s), (6, 10s), (7, 7s)]
+        # If 6 is removed because it is above the threshold, the next query will
+        # be (id > 2 AND id NOT IN (3, 7)) which will fetch 6 again.
+        # 6 can only be removed after 3 reaches the threshold and is removed as
+        # well, and if 4 appears in the meantime, 3 can be removed but 6 will
+        # have to wait for 4 to reach the threshold as well.
+        last_index = -1
+        for i, notif in enumerate(self._notif_history):
+            if time.time() - notif[1] > self.MAX_NOTIFICATION_HISTORY_SEC:
+                last_index = i
+            else:
+                break
+        if last_index != -1:
+            self._last_notif_sent_id = self._notif_history[last_index][0]
+            self._notif_history = self._notif_history[last_index + 1 :]
         self._send(notifications)
 
 
@@ -678,7 +737,7 @@ class TimeoutManager:
         # Custom keep alive timeout for each TimeoutManager to avoid multiple
         # connections timing out at the same time.
         self._keep_alive_timeout = (
-            type(self).KEEP_ALIVE_TIMEOUT + random.uniform(0, type(self).KEEP_ALIVE_TIMEOUT / 2)
+            self.KEEP_ALIVE_TIMEOUT + random.uniform(0, self.KEEP_ALIVE_TIMEOUT / 2)
         )
         self.timeout_reason = None
         # Start time recorded when we started awaiting an answer to a
@@ -715,7 +774,7 @@ class TimeoutManager:
         if now - self._opened_at >= self._keep_alive_timeout:
             self.timeout_reason = TimeoutReason.KEEP_ALIVE
             return True
-        if self._awaited_opcode and now - self._waiting_start_time >= type(self).TIMEOUT:
+        if self._awaited_opcode and now - self._waiting_start_time >= self.TIMEOUT:
             self.timeout_reason = TimeoutReason.NO_RESPONSE
             return True
         return False
@@ -756,7 +815,6 @@ class WebsocketRequest:
                 f'Invalid JSON data, {exc.args[0]}'
             ) from exc
         data = jsonrequest.get('data')
-        context = jsonrequest.get('context')
         self.session = self._get_session()
 
         try:
@@ -771,11 +829,11 @@ class WebsocketRequest:
             self.env = api.Environment(cr, self.session.uid, self.session.context)
             threading.current_thread().uid = self.env.uid
             service_model.retrying(
-                functools.partial(self._serve_ir_websocket, event_name, data, context),
+                functools.partial(self._serve_ir_websocket, event_name, data),
                 self.env,
             )
 
-    def _serve_ir_websocket(self, event_name, data, context=None):
+    def _serve_ir_websocket(self, event_name, data):
         """
         Delegate most of the processing to the ir.websocket model
         which is extensible by applications. Directly call the
@@ -783,8 +841,6 @@ class WebsocketRequest:
         tolerated: `subscribe` and `update_presence`.
         """
         self.env['ir.websocket']._authenticate()
-        if context:
-            self.update_context(**context)
         if event_name == 'subscribe':
             self.env['ir.websocket']._subscribe(data)
         if event_name == 'update_presence':
@@ -820,9 +876,17 @@ class WebsocketConnectionHandler:
         'connection', 'host', 'sec-websocket-key',
         'sec-websocket-version', 'upgrade', 'origin',
     }
+    # Latest version of the websocket worker. This version should be incremented
+    # every time `websocket_worker.js` is modified to force the browser to fetch
+    # the new worker bundle.
+    _VERSION = "17.0-1"
 
     @classmethod
-    def open_connection(cls, request):
+    def websocket_allowed(cls, request):
+        return not request.registry.in_test_mode()
+
+    @classmethod
+    def open_connection(cls, request, version):
         """
         Open a websocket connection if the handshake is successfull.
         :return: Response indicating the server performed a connection
@@ -831,15 +895,18 @@ class WebsocketConnectionHandler:
         versions the client supports and those we support.
         :raise: BadRequest if the handshake data is incorrect.
         """
-        cls._handle_public_configuration(request)
+        if not cls.websocket_allowed(request):
+            raise ServiceUnavailable("Websocket is disabled in test mode")
+        public_session = cls._handle_public_configuration(request)
         try:
             response = cls._get_handshake_response(request.httprequest.headers)
-            socket = request.httprequest.environ['socket']
-            response.call_on_close(functools.partial(
-                cls._serve_forever,
-                Websocket(socket, request.session),
-                request.db,
-                request.httprequest
+            socket = request.httprequest._HTTPRequest__environ['socket']
+            session, db, httprequest = (public_session or request.session), request.db, request.httprequest
+            response.call_on_close(lambda: cls._serve_forever(
+                Websocket(socket, session, httprequest.cookies),
+                db,
+                httprequest,
+                version
             ))
             # Force save the session. Session must be persisted to handle
             # WebSocket authentication.
@@ -884,9 +951,11 @@ class WebsocketConnectionHandler:
         headers = request.httprequest.headers
         origin_url = urlparse(headers.get('origin'))
         if origin_url.netloc != headers.get('host') or origin_url.scheme != request.httprequest.scheme:
-            request.session = root.session_store.new()
-            request.session.update(get_default_session(), db=request.session.db)
-            request.session.is_explicit = True
+            session = root.session_store.new()
+            session.update(get_default_session(), db=request.session.db)
+            root.session_store.save(session)
+            return session
+        return None
 
     @classmethod
     def _assert_handshake_validity(cls, headers):
@@ -922,12 +991,23 @@ class WebsocketConnectionHandler:
             )
 
     @classmethod
-    def _serve_forever(cls, websocket, db, httprequest):
+    def _serve_forever(cls, websocket, db, httprequest, version):
         """
         Process incoming messages and dispatch them to the application.
         """
         current_thread = threading.current_thread()
         current_thread.type = 'websocket'
+        if httprequest.user_agent and version != cls._VERSION:
+            # Close the connection from an outdated worker. We can't use a
+            # custom close code because the connection is considered successful,
+            # preventing exponential reconnect backoff. This would cause old
+            # workers to reconnect frequently, putting pressure on the server.
+            # Clean closes don't trigger reconnections, assuming they are
+            # intentional. The reason indicates to the origin worker not to
+            # reconnect, preventing old workers from lingering after updates.
+            # Non browsers are ignored since IOT devices do not provide the
+            # worker version.
+            websocket.disconnect(CloseCode.CLEAN, "OUTDATED_VERSION")
         for message in websocket.get_messages():
             with WebsocketRequest(db, httprequest, websocket) as req:
                 try:
@@ -940,4 +1020,11 @@ class WebsocketConnectionHandler:
                     _logger.exception("Exception occurred during websocket request handling")
 
 
-CommonServer.on_stop(Websocket._kick_all)
+def _kick_all():
+    """ Disconnect all the websocket instances. """
+    for websocket in _websocket_instances:
+        if websocket.state is ConnectionState.OPEN:
+            websocket.disconnect(CloseCode.GOING_AWAY)
+
+
+CommonServer.on_stop(_kick_all)

@@ -40,7 +40,7 @@ class TestEventSale(TestEventSaleCommon):
         })
 
         cls.sale_order = cls.env['sale.order'].create({
-            'partner_id': cls.env.ref('base.res_partner_2').id,
+            'partner_id': cls.env['res.partner'].create({'name': 'Test Partner'}).id,
             'note': 'Invoice after delivery',
             'payment_term_id': cls.env.ref('account.account_payment_term_end_following_month').id
         })
@@ -68,6 +68,43 @@ class TestEventSale(TestEventSaleCommon):
         cls.customer_so = cls.env['sale.order'].with_user(cls.user_sales_salesman).create({
             'partner_id': cls.event_customer.id,
         })
+
+        cls.env['account.tax.group'].create(
+            {'name': 'Test Account Tax Group', 'company_id': cls.env.company.id}
+        )
+
+    @users('user_sales_salesman')
+    def test_adjusted_quantity_in_sale_order(self):
+        """ This test ensures that when reducing the quantity of tickets for an event, we will cancel the
+        registrations for those tickets too.
+        """
+        customer_so = self.customer_so.with_user(self.env.user)
+        ticket = self.event_0.event_ticket_ids[0]
+
+        customer_so.write({
+            'order_line': [
+                (0, 0, {
+                    'event_id': self.event_0.id,
+                    'event_ticket_id': ticket.id,
+                    'product_id': ticket.product_id.id,
+                    'product_uom_qty': 3,
+                    'price_unit': 10,
+                })
+            ]
+        })
+
+        editor = self.env['registration.editor'].with_context({'default_sale_order_id': customer_so.id}).create({})
+        editor.action_make_registration()
+
+        registration_to_cancel = self.event_0.registration_ids[0]
+        registration_to_cancel.action_cancel()
+
+        registrations = self.env['event.registration'].search([('sale_order_id', '=', customer_so.id)])
+
+        expected_states = ['draft', 'draft', 'cancel']
+        actual_states = registrations.sorted('id').mapped('state')
+
+        self.assertListEqual(actual_states, expected_states, "One of the registrations should be cancelled.")
 
     @users('user_sales_salesman')
     def test_event_crm_sale(self):
@@ -228,6 +265,13 @@ class TestEventSale(TestEventSaleCommon):
         editor.action_make_registration()
         self.assertEqual(len(self.event_0.registration_ids), TICKET_COUNT)
         self.assertTrue(all(reg.state == "open" for reg in self.event_0.registration_ids))
+
+    def test_event_sale_free_no_saleorder(self):
+        registration = self.env['event.registration'].create({
+            'event_id': self.event_0.id,
+            'partner_id': self.event_customer2.id,
+        })
+        self.assertEqual(registration.sale_status, 'free')
 
     @users('user_sales_salesman')
     def test_event_sale_free_full_event_no_confirm(self):
@@ -469,3 +513,15 @@ class TestEventSale(TestEventSaleCommon):
         self.sale_order._action_cancel()
         self.assertEqual(len(event.registration_ids), 1)
         self.assertEqual(event.registration_ids.state, 'cancel')
+
+    @users('user_salesman')
+    def test_compute_sale_status(self):
+        self.register_person.action_make_registration()
+        registration = self.event_0.registration_ids
+        self.assertEqual(registration.sale_status, 'to_pay')
+        registration.sale_order_line_id.price_total = 0.0
+        self.assertEqual(registration.sale_status, 'free', "Price of $0.00 should be free")
+        registration.sale_order_line_id.price_total = 0.01
+        self.assertEqual(registration.sale_status, 'to_pay', "Price of $0.01 should be paid")
+        registration.sale_order_id.action_confirm()
+        self.assertEqual(registration.sale_status, 'sold')

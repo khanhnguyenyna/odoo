@@ -83,7 +83,7 @@ export class HtmlField extends Component {
             this.commitChanges({ urgent: true })
         );
         useBus(model.bus, "NEED_LOCAL_CHANGES", ({ detail }) =>
-            detail.proms.push(this.commitChanges())
+            detail.proms.push(this.commitChanges({ shouldInline: true }))
         );
 
         useSpellCheck();
@@ -147,13 +147,10 @@ export class HtmlField extends Component {
         onMounted(() => {
             this.dynamicPlaceholder?.setElementRef(this.wysiwyg);
         });
-        onWillUnmount(() => {
+        onWillUnmount(async () => {
             if (!this.props.readonly && this._isDirty()) {
-                // If we still have uncommited changes, commit them with the
-                // urgent flag to avoid losing them. Urgent flag is used to be
-                // able to save the changes before the component is destroyed
-                // by the owl component manager.
-                this.commitChanges({ urgent: true });
+                // If we still have uncommited changes, commit them to avoid losing them.
+                await this.commitChanges();
             }
             if (this._qwebPlugin) {
                 this._qwebPlugin.destroy();
@@ -245,6 +242,7 @@ export class HtmlField extends Component {
             },
             fieldId: this.props.id,
             editorPlugins: [...(wysiwygOptions.editorPlugins || []), QWebPlugin, this.MoveNodePlugin],
+            record: this.props.record,
         };
     }
     /**
@@ -315,6 +313,12 @@ export class HtmlField extends Component {
             this.props.record.model.bus.trigger("FIELD_IS_DIRTY", this._isDirty())
         );
 
+        if (this.props.isCollaborative) {
+            this.wysiwyg.odooEditor.addEventListener("onExternalHistorySteps", () =>
+                this.props.record.model.bus.trigger("FIELD_IS_DIRTY", this._isDirty())
+            );
+        }
+
         this.isRendered = true;
     }
     /**
@@ -364,17 +368,23 @@ export class HtmlField extends Component {
      * @param {Object} position
      */
     positionDynamicPlaceholder(popover, position) {
-        let topPosition = this.wysiwygRangePosition.top;
+        // make sure the popover won't be out(below) of the page
+        const enoughSpaceBelow = window.innerHeight - popover.clientHeight - this.wysiwygRangePosition.top;
+        let topPosition = (enoughSpaceBelow > 0) ? this.wysiwygRangePosition.top : this.wysiwygRangePosition.top + enoughSpaceBelow;
+
         // Offset the popover to ensure the arrow is pointing at
         // the precise range location.
         let leftPosition = this.wysiwygRangePosition.left - 14;
+        // make sure the popover won't be out(right) of the page
+        const enoughSpaceRight = window.innerWidth - popover.clientWidth - leftPosition;
+        leftPosition = (enoughSpaceRight > 0) ? leftPosition : leftPosition + enoughSpaceRight;
 
         // Apply the position back to the element.
         popover.style.top = topPosition + 'px';
         popover.style.left = leftPosition + 'px';
     }
-    async commitChanges({ urgent } = {}) {
-        if (this._isDirty() || urgent) {
+    async commitChanges({ urgent, shouldInline } = {}) {
+        if (this._isDirty() || urgent || (shouldInline && this.props.isInlineStyle)) {
             let savePendingImagesPromise, toInlinePromise;
             if (this.wysiwyg && this.wysiwyg.odooEditor) {
                 this.wysiwyg.odooEditor.observerUnactive('commitChanges');
@@ -383,7 +393,7 @@ export class HtmlField extends Component {
                     // Avoid listening to changes made during the _toInline process.
                     toInlinePromise = this._toInline();
                 }
-                if (urgent) {
+                if (urgent && status(this) !== 'destroyed') {
                     await this.updateValue();
                 }
                 await savePendingImagesPromise;
@@ -414,9 +424,29 @@ export class HtmlField extends Component {
         const strippedPropValue = stripHistoryIds(String(this.props.record.data[this.props.name]));
         const strippedEditingValue = stripHistoryIds(this.getEditingValue());
         const domParser = new DOMParser();
-        const parsedPropValue = domParser.parseFromString(strippedPropValue || '<p><br></p>', 'text/html').body;
-        const parsedEditingValue = domParser.parseFromString(strippedEditingValue, 'text/html').body;
-        return !this.props.readonly && parsedPropValue.innerHTML !== parsedEditingValue.innerHTML;
+        const codeViewEl = this._getCodeViewEl();
+        let parsedPreviousValue;
+        // If the wysiwyg is active, we need to clean the content of the
+        // initialValue as the editingValue will be cleaned.
+        if (!codeViewEl && this.wysiwyg) {
+            const editable = domParser.parseFromString(strippedPropValue || '<p><br></p>', 'text/html').body;
+            // Temporarily append the editable to the DOM because the
+            // wysiwyg.getValue can indirectly call methods that needs to have
+            // access the node.ownerDocument.defaultView.getComputedStyle.
+            // By appending the editable to the dom, the node.ownerDocument will
+            // have a `defaultView`.
+            const div = document.createElement('div');
+            div.style.display = 'none';
+            div.append(editable);
+            document.body.append(div);
+            const editableValue = stripHistoryIds(this.wysiwyg.getValue({ $layout: $(editable) }));
+            div.remove();
+            parsedPreviousValue = domParser.parseFromString(editableValue, 'text/html').body;
+        } else {
+            parsedPreviousValue = domParser.parseFromString(strippedPropValue || '<p><br></p>', 'text/html').body;
+        }
+        const parsedNewValue = domParser.parseFromString(strippedEditingValue, 'text/html').body;
+        return !this.props.readonly && parsedPreviousValue.innerHTML !== parsedNewValue.innerHTML;
     }
     _getCodeViewEl() {
         return this.state.showCodeView && this.codeViewRef.el;
@@ -547,7 +577,7 @@ export class HtmlField extends Component {
         $odooEditor.removeClass('odoo-editor-editable');
         $editable.html(html);
 
-        await toInline($editable, this.cssRules, this.wysiwyg.$iframe);
+        await toInline($editable, undefined, this.wysiwyg.$iframe);
         $odooEditor.addClass('odoo-editor-editable');
 
         this.wysiwyg.setValue($editable.html());
@@ -558,7 +588,7 @@ export class HtmlField extends Component {
         if (!(this.props.record.fieldNames.includes('attachment_ids') && this.props.record.resModel === 'mail.compose.message')) {
             return;
         }
-        this.props.record.data.attachment_ids.linkTo(attachment.res_id, attachment);
+        this.props.record.data.attachment_ids.linkTo(attachment.id, attachment);
     }
     _onDblClickEditableMedia(ev) {
         const el = ev.currentTarget;
@@ -568,7 +598,9 @@ export class HtmlField extends Component {
     }
     _onWysiwygBlur() {
         // Avoid save on blur if the html field is in inline mode.
-        if (!this.props.isInlineStyle) {
+        if (this.props.isInlineStyle) {
+            this.updateValue();
+        } else {
             this.commitChanges();
         }
     }

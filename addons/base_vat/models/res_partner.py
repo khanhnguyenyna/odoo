@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
-
 import datetime
 import string
-import zeep
 import re
 import stdnum
 from stdnum.eu.vat import check_vies
-from stdnum.exceptions import InvalidComponent
+from stdnum.exceptions import InvalidComponent, InvalidChecksum, InvalidFormat
 from stdnum.util import clean
+from stdnum import luhn
 
 import logging
 
 from odoo import api, models, fields, tools, _
+from odoo.tools import zeep
 from odoo.tools.misc import ustr
 from odoo.exceptions import ValidationError
 
@@ -27,31 +25,32 @@ _eu_country_vat_inverse = {v: k for k, v in _eu_country_vat.items()}
 
 _ref_vat = {
     'al': 'ALJ91402501L',
-    'ar': 'AR200-5536168-2 or 20055361682',
+    'ar': _('AR200-5536168-2 or 20055361682'),
     'at': 'ATU12345675',
     'au': '83 914 571 673',
     'be': 'BE0477472701',
     'bg': 'BG1234567892',
-    'br': 'either 11 digits for CPF or 14 digits for CNPJ',
-    'ch': 'CHE-123.456.788 TVA or CHE-123.456.788 MWST or CHE-123.456.788 IVA',  # Swiss by Yannick Vaucher @ Camptocamp
+    'br': _('either 11 digits for CPF or 14 digits for CNPJ'),
+    'cr': _('3101012009'),
+    'ch': _('CHE-123.456.788 TVA or CHE-123.456.788 MWST or CHE-123.456.788 IVA'),  # Swiss by Yannick Vaucher @ Camptocamp
     'cl': 'CL76086428-5',
-    'co': 'CO213123432-1 or CO213.123.432-1',
+    'co': _('CO213123432-1 or CO213.123.432-1'),
     'cy': 'CY10259033P',
     'cz': 'CZ12345679',
-    'de': 'DE123456788',
+    'de': _('DE123456788 or 12/345/67890'),
     'dk': 'DK12345674',
-    'do': 'DO1-01-85004-3 or 101850043',
-    'ec': '1792060346001 or 1792060346',
+    'do': _('DO1-01-85004-3 or 101850043'),
+    'ec': _('1792060346001 or 1792060346'),
     'ee': 'EE123456780',
-    'el': 'EL12345670',
     'es': 'ESA12345674',
     'fi': 'FI12345671',
     'fr': 'FR23334175221',
-    'gb': 'GB123456782 or XI123456782',
-    'gr': 'GR12345670',
-    'hu': 'HU12345676 or 12345678-1-11 or 8071592153',
+    'gb': _('GB123456782 or XI123456782'),
+    'gr': 'EL123456783',
+    'hu': _('HU12345676 or 12345678-1-11 or 8071592153'),
     'hr': 'HR01234567896',  # Croatia, contributed by Milan Tribuson
     'ie': 'IE1234567FA',
+    'il': _('XXXXXXXXX [9 digits] and it should respect the Luhn algorithm checksum'),
     'in': "12AAAAA1234AAZA",
     'is': 'IS062199',
     'it': 'IT12345670017',
@@ -60,25 +59,26 @@ _ref_vat = {
     'lv': 'LV41234567891',
     'mc': 'FR53000004605',
     'mt': 'MT12345634',
-    'mx': 'MXGODE561231GR8 or GODE561231GR8',
+    'mx': _('MXGODE561231GR8 or GODE561231GR8'),
     'nl': 'NL123456782B90',
     'no': 'NO123456785',
-    'nz': '49-098-576 or 49098576',
-    'pe': '10XXXXXXXXY or 20XXXXXXXXY or 15XXXXXXXXY or 16XXXXXXXXY or 17XXXXXXXXY',
+    'nz': _('49-098-576 or 49098576'),
+    'pe': _('10XXXXXXXXY or 20XXXXXXXXY or 15XXXXXXXXY or 16XXXXXXXXY or 17XXXXXXXXY'),
     'ph': '123-456-789-123',
     'pl': 'PL1234567883',
     'pt': 'PT123456789',
-    'ro': 'RO1234567897',
+    'ro': 'RO1234567897 or 8001011234567 or 9000123456789',
     'rs': 'RS101134702',
     'ru': 'RU123456789047',
     'se': 'SE123456789701',
     'si': 'SI12345679',
     'sk': 'SK2022749619',
     'sm': 'SM24165',
-    'tr': 'TR1234567890 (VERGINO) or TR17291716060 (TCKIMLIKNO)',  # Levent Karakas @ Eska Yazilim A.S.
+    'tr': _('TR1234567890 (VERGINO) or TR17291716060 (TCKIMLIKNO)'),  # Levent Karakas @ Eska Yazilim A.S.
+    'uy': _("'219999830019' (should be 12 digits)"),
     've': 'V-12345678-1, V123456781, V-12.345.678-1',
     'xi': 'XI123456782',
-    'sa': '310175397400003 [Fifteen digits, first and last digits should be "3"]'
+    'sa': _('310175397400003 [Fifteen digits, first and last digits should be "3"]')
 }
 
 _region_specific_vat_codes = {
@@ -124,10 +124,6 @@ class ResPartner(models.Model):
         check_func = getattr(self, check_func_name, None) or getattr(stdnum.util.get_cc_module(country_code, 'vat'), 'is_valid', None)
         if not check_func:
             # No VAT validation available, default to check that the country code exists
-            if country_code.upper() == 'EU':
-                # Foreign companies that trade with non-enterprises in the EU
-                # may have a VATIN starting with "EU" instead of a country code.
-                return True
             country_code = _eu_country_vat_inverse.get(country_code, country_code)
             return bool(self.env['res.country'].search([('code', '=ilike', country_code)]))
         return check_func(vat_number)
@@ -207,6 +203,7 @@ class ResPartner(models.Model):
                 partner.vies_valid = False
                 continue
             try:
+                _logger.info('Calling VIES service to check VAT for validation: %s', partner.vies_vat_to_check)
                 vies_valid = check_vies(partner.vies_vat_to_check, timeout=10)
                 partner.vies_valid = vies_valid['valid']
             except (OSError, InvalidComponent, zeep.exceptions.Fault) as e:
@@ -216,6 +213,8 @@ class ResPartner(models.Model):
                         msg = _("Connection with the VIES server failed. The VAT number %s could not be validated.", partner.vies_vat_to_check)
                     elif isinstance(e, InvalidComponent):
                         msg = _("The VAT number %s could not be interpreted by the VIES server.", partner.vies_vat_to_check)
+                    elif isinstance(e, zeep.exceptions.Fault):
+                        msg = _('The request for VAT validation was not processed. VIES service has responded with the following error: %s', e.message)
                     partner._origin.message_post(body=msg)
                 _logger.warning("The VAT number %s failed VIES check.", partner.vies_vat_to_check)
                 partner.vies_valid = False
@@ -227,6 +226,12 @@ class ResPartner(models.Model):
 
         # First check with country code as prefix of the TIN
         vat_country_code, vat_number_split = self._split_vat(vat_number)
+
+        if vat_country_code == 'eu' and default_country not in self.env.ref('base.europe').country_ids:
+            # Foreign companies that trade with non-enterprises in the EU
+            # may have a VATIN starting with "EU" instead of a country code.
+            return True
+
         vat_has_legit_country_code = self.env['res.country'].search([('code', '=', vat_country_code.upper())], limit=1)
         if not vat_has_legit_country_code:
             vat_has_legit_country_code = vat_country_code.lower() in _region_specific_vat_codes
@@ -288,6 +293,28 @@ class ResPartner(models.Model):
         if len(number) == 10 and self.__check_vat_al_re.match(number):
             return True
         return False
+
+    __check_tin1_ro_natural_persons = re.compile(r'[1-9]\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{6}')
+    __check_tin2_ro_natural_persons = re.compile(r'9000\d{9}')
+    def check_vat_ro(self, vat):
+        """
+            Check Romanian VAT number that can be for example 'RO1234567897 or 'xyyzzaabbxxxx' or '9000xxxxxxxx'.
+            - For xyyzzaabbxxxx, 'x' can be any number, 'y' is the two last digit of a year (in the range 00…99),
+              'a' is a month, b is a day of the month, the number 8 and 9 are Country or district code
+              (For those twos digits, we decided to let some flexibility  to avoid complexifying the regex and also
+              for maintainability)
+            - 9000xxxxxxxx, start with 9000 and then is filled by number In the range 0...9
+
+            Also stdum also checks the CUI or CIF (Romanian company identifier). So a number like '123456897' will pass.
+        """
+        tin1 = self.__check_tin1_ro_natural_persons.match(vat)
+        if tin1:
+            return True
+        tin2 = self.__check_tin1_ro_natural_persons.match(vat)
+        if tin2:
+            return True
+        # Check the vat number
+        return stdnum.util.get_cc_module('ro', 'vat').is_valid(vat)
 
     __check_tin_hu_individual_re = re.compile(r'^8\d{9}$')
     __check_tin_hu_companies_re = re.compile(r'^\d{8}-[1-5]-\d{2}$')
@@ -360,22 +387,9 @@ class ResPartner(models.Model):
         checksum = extra + sum((8-i) * int(x) for i, x in enumerate(vat[:7]))
         return 'WABCDEFGHIJKLMNOPQRSTUV'[checksum % 23]
 
+    # TODO: remove in master
     def check_vat_ie(self, vat):
-        """ Temporary Ireland VAT validation to support the new format
-        introduced in January 2013 in Ireland, until upstream is fixed.
-        TODO: remove when fixed upstream"""
-        if len(vat) not in (8, 9) or not vat[2:7].isdigit():
-            return False
-        if len(vat) == 8:
-            # Normalize pre-2013 numbers: final space or 'W' not significant
-            vat += ' '
-        if vat[:7].isdigit():
-            return vat[7] == self._ie_check_char(vat[:7] + vat[8])
-        elif vat[1] in (string.ascii_uppercase + '+*'):
-            # Deprecated format
-            # See http://www.revenue.ie/en/online/third-party-reporting/reporting-payment-details/faqs.html#section3
-            return vat[7] == self._ie_check_char(vat[2:7] + vat[0] + vat[8])
-        return False
+        return stdnum.util.get_cc_module('ie', 'vat').is_valid(vat)
 
     # Mexican VAT verification, contributed by Vauxoo
     # and Panos Christeas <p_christ@hol.gr>
@@ -727,6 +741,16 @@ class ResPartner(models.Model):
         is_cnpj_valid = stdnum.get_cc_module('br', 'cnpj').is_valid
         return is_cpf_valid(vat) or is_cnpj_valid(vat)
 
+    __check_vat_cr_re = re.compile(r'^(?:[1-9]\d{8}|\d{10}|[1-9]\d{10,11})$')
+
+    def check_vat_cr(self, vat):
+        # CÉDULA FÍSICA: 9 digits
+        # CÉDULA JURÍDICA: 10 digits
+        # CÉDULA DIMEX: 11 or 12 digits
+        # CÉDULA NITE: 10 digits
+
+        return self.__check_vat_cr_re.match(vat) or False
+
     def format_vat_eu(self, vat):
         # Foreign companies that trade with non-enterprises in the EU
         # may have a VATIN starting with "EU" instead of a country code.
@@ -735,6 +759,31 @@ class ResPartner(models.Model):
     def format_vat_ch(self, vat):
         stdnum_vat_format = getattr(stdnum.util.get_cc_module('ch', 'vat'), 'format', None)
         return stdnum_vat_format('CH' + vat)[2:] if stdnum_vat_format else vat
+
+    def check_vat_id(self, vat):
+        """ Temporary Indonesian VAT validation to support the new format
+        introduced in January 2024."""
+        vat = clean(vat, ' -.').strip()
+
+        if len(vat) not in (15, 16) or not vat[0:15].isdecimal() or not vat[-1].isdecimal():
+            return False
+
+        # VAT is only digits and of the right length, check the Luhn checksum.
+        try:
+            luhn.validate(vat[0:9] if len(vat) == 15 else vat[1:10])
+        except (InvalidFormat, InvalidChecksum):
+            return False
+
+        return True
+
+    def check_vat_de(self, vat):
+        is_valid_vat = stdnum.util.get_cc_module("de", "vat").is_valid
+        is_valid_stnr = stdnum.util.get_cc_module("de", "stnr").is_valid
+        return is_valid_vat(vat) or is_valid_stnr(vat)
+
+    def check_vat_il(self, vat):
+        check_func = stdnum.util.get_cc_module('il', 'idnr').is_valid
+        return check_func(vat)
 
     def format_vat_sm(self, vat):
         stdnum_vat_format = stdnum.util.get_cc_module('sm', 'vat').compact
@@ -759,10 +808,16 @@ class ResPartner(models.Model):
             if values.get('vat'):
                 country_id = values.get('country_id')
                 values['vat'] = self._fix_vat_number(values['vat'], country_id)
-        return super(ResPartner, self).create(vals_list)
+        res = super().create(vals_list)
+        if self.env.context.get('import_file'):
+            res.env.remove_to_compute(self._fields['vies_valid'], res)
+        return res
 
     def write(self, values):
         if values.get('vat') and len(self.mapped('country_id')) == 1:
             country_id = values.get('country_id', self.country_id.id)
             values['vat'] = self._fix_vat_number(values['vat'], country_id)
-        return super(ResPartner, self).write(values)
+        res = super().write(values)
+        if self.env.context.get('import_file'):
+            self.env.remove_to_compute(self._fields['vies_valid'], self)
+        return res

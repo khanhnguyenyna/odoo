@@ -318,17 +318,25 @@ QUnit.module("Board", (hooks) => {
             const mockRPC = (route, args) => {
                 if (route === "/board/add_to_dashboard") {
                     assert.deepEqual(args.context_to_save.comparison, {
-                        comparisonId: "previous_period",
-                        fieldName: "date",
-                        fieldDescription: "Date",
-                        rangeDescription: "July 2020",
-                        range: ["&", ["date", ">=", "2020-07-01"], ["date", "<=", "2020-07-31"]],
-                        comparisonRange: [
-                            "&",
-                            ["date", ">=", "2020-06-01"],
-                            ["date", "<=", "2020-06-30"],
+                        domains: [
+                            {
+                                arrayRepr: [
+                                    "&",
+                                    ["date", ">=", "2020-07-01"],
+                                    ["date", "<=", "2020-07-31"],
+                                ],
+                                description: "July 2020",
+                            },
+                            {
+                                arrayRepr: [
+                                    "&",
+                                    ["date", ">=", "2020-06-01"],
+                                    ["date", "<=", "2020-06-30"],
+                                ],
+                                description: "June 2020",
+                            },
                         ],
-                        comparisonRangeDescription: "June 2020",
+                        fieldName: "date",
                     });
                     return Promise.resolve(true);
                 }
@@ -505,5 +513,39 @@ QUnit.module("Board", (hooks) => {
         const input = target.querySelector(".o_add_to_board .dropdown-menu input");
         await testUtils.fields.editInput(input, "Pipeline");
         await triggerEvent(input, null, "keydown", { key: "Enter" });
+    });
+
+    QUnit.test("Add to my dashboard is not available in form views", async function (assert) {
+        serverData.views = {
+            "partner,false,list": '<list><field name="foo"/></list>',
+            "partner,false,form": '<form><field name="foo"/></form>',
+            "partner,false,search": "<search></search>",
+        };
+
+        const webClient = await createWebClient({ serverData });
+        await doAction(webClient, {
+            id: 1,
+            res_model: "partner",
+            type: "ir.actions.act_window",
+            context: { fire: "on the bayou" },
+            views: [
+                [false, "list"],
+                [false, "form"],
+            ],
+        });
+
+        assert.containsOnce(target, ".o_list_view", "should display the list view");
+
+        // sanity check
+        await click(target, ".o_cp_action_menus .dropdown-toggle");
+        assert.containsOnce(target, ".o_cp_action_menus .dropdown-menu .o_add_to_board");
+
+        // open form view
+        await click(target.querySelector(".o_data_cell"));
+        assert.containsOnce(target, ".o_form_view");
+
+        await click(target, ".o_cp_action_menus .dropdown-toggle");
+        assert.containsOnce(target, ".o_cp_action_menus .dropdown-menu");
+        assert.containsNone(target, ".o_cp_action_menus .dropdown-menu .o_add_to_board");
     });
 });

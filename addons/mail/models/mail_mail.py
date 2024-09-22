@@ -35,9 +35,9 @@ class MailMail(models.Model):
     def default_get(self, fields):
         # protection for `default_type` values leaking from menu action context (e.g. for invoices)
         # To remove when automatic context propagation is removed in web client
-        if self._context.get('default_type') not in type(self).message_type.base_field.selection:
+        if self._context.get('default_type') not in self._fields['message_type'].base_field.selection:
             self = self.with_context(dict(self._context, default_type=None))
-        if self._context.get('default_state') not in type(self).state.base_field.selection:
+        if self._context.get('default_state') not in self._fields['state'].base_field.selection:
             self = self.with_context(dict(self._context, default_state='outgoing'))
         return super(MailMail, self).default_get(fields)
 
@@ -122,6 +122,24 @@ class MailMail(models.Model):
     def _search_body_content(self, operator, value):
         return [('body_html', operator, value)]
 
+    @api.model
+    def fields_get(self, *args, **kwargs):
+        # related selection will fetch translations from DB
+        # selections added in stable won't be in DB -> add them on the related model if not already added
+        message_type_field = self.env['mail.message']._fields['message_type']
+        if 'auto_comment' not in {value for value, name in message_type_field.get_description(self.env)['selection']}:
+            self._fields_get_message_type_update_selection(message_type_field.selection)
+        return super().fields_get(*args, **kwargs)
+
+    def _fields_get_message_type_update_selection(self, selection):
+        """Update the field selection for message type on mail.message to match the runtime values.
+
+        DO NOT USE it is only there for a stable fix and should not be used for any reason other than hotfixing.
+        """
+        self.env['ir.model.fields'].invalidate_model(['selection_ids'])
+        self.env['ir.model.fields.selection'].sudo()._update_selection('mail.message', 'message_type', selection)
+        self.env.registry.clear_cache()
+
     @api.model_create_multi
     def create(self, values_list):
         # notification field: if not set, set if mail comes from an existing mail.message
@@ -173,9 +191,8 @@ class MailMail(models.Model):
         SQL queries.
         """
         super()._add_inherited_fields()
-        cls = type(self)
         for field in ('email_from', 'reply_to', 'subject'):
-            cls._fields[field].related_sudo = True
+            self._fields[field].related_sudo = True
 
     def action_retry(self):
         self.filtered(lambda mail: mail.state == 'exception').mark_outgoing()
@@ -203,16 +220,19 @@ class MailMail(models.Model):
            message is sent - this is not transactional and should
            not be called during another transaction!
 
-           :param list ids: optional list of emails ids to send. If passed
-                            no search is performed, and these ids are used
-                            instead.
-           :param dict context: if a 'filters' key is present in context,
-                                this value will be used as an additional
-                                filter to further restrict the outgoing
-                                messages to send (by default all 'outgoing'
-                                messages are sent).
+        A maximum of 10K MailMail (configurable using 'mail.mail.queue.batch.size'
+        optional ICP) are fetched in order to keep time under control.
+
+        :param list ids: optional list of emails ids to send. If given only
+                         scheduled and outgoing emails within this ids list
+                         are sent;
+        :param dict context: if a 'filters' key is present in context,
+                             this value will be used as an additional
+                             filter to further restrict the outgoing
+                             messages to send (by default all 'outgoing'
+                             'scheduled' messages are sent).
         """
-        filters = [
+        domain = [
             '&',
                 ('state', '=', 'outgoing'),
                 '|',
@@ -220,20 +240,18 @@ class MailMail(models.Model):
                    ('scheduled_date', '<=', datetime.datetime.utcnow()),
         ]
         if 'filters' in self._context:
-            filters.extend(self._context['filters'])
-        # TODO: make limit configurable
-        filtered_ids = self.search(filters, limit=10000).ids
-        if not ids:
-            ids = filtered_ids
-        else:
-            ids = list(set(filtered_ids) & set(ids))
-        ids.sort()
+            domain.extend(self._context['filters'])
+        batch_size = int(self.env['ir.config_parameter'].sudo().get_param('mail.mail.queue.batch.size', 10000))
+        send_ids = self.search(domain, limit=batch_size).ids
+        if ids:
+            send_ids = list(set(send_ids) & set(ids))
+        send_ids.sort()
 
         res = None
         try:
             # auto-commit except in testing mode
             auto_commit = not getattr(threading.current_thread(), 'testing', False)
-            res = self.browse(ids).send(auto_commit=auto_commit)
+            res = self.browse(send_ids).send(auto_commit=auto_commit)
         except Exception:
             _logger.exception("Failed processing mail queue")
 
@@ -512,9 +530,7 @@ class MailMail(models.Model):
 
             group_per_smtp_from[(mail_server_id, alias_domain_id, smtp_from)].extend(mail_ids)
 
-        sys_params = self.env['ir.config_parameter'].sudo()
-        batch_size = int(sys_params.get_param('mail.session.batch.size', 1000))
-
+        batch_size = int(self.env['ir.config_parameter'].sudo().get_param('mail.session.batch.size')) or 1000
         for (mail_server_id, alias_domain_id, smtp_from), record_ids in group_per_smtp_from.items():
             for batch_ids in tools.split_every(batch_size, record_ids):
                 yield mail_server_id, alias_domain_id, smtp_from, batch_ids

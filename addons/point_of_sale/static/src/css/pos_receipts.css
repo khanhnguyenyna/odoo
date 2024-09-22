@@ -27,6 +27,11 @@
     margin: 0 auto;
 }
 
+.pos-receipt .pos-receipt-qrcode {
+    display: block;
+    margin: 0 auto;
+}
+
 .pos-receipt .pos-receipt-contact {
     text-align: center;
     font-size: 75%;
@@ -85,4 +90,9 @@
     grid-template-columns: min-content min-content auto auto auto;
     width: 100%;
     justify-items: end;
+}
+
+.pos-receipt .orderlines {
+    /*rtl:ignore*/
+    direction: ltr;
 }

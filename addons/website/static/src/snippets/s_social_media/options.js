@@ -4,6 +4,7 @@ import fonts from '@web_editor/js/wysiwyg/fonts';
 import weUtils from '@web_editor/js/common/utils';
 import options from '@web_editor/js/editor/snippets.options';
 import { _t } from "@web/core/l10n/translation";
+import { ICON_SELECTOR } from "@web_editor/js/editor/odoo-editor/src/utils/utils";
 
 let dbSocialValues;
 let dbSocialValuesProm;
@@ -83,6 +84,29 @@ options.registry.SocialMedia = options.Class.extend({
      * @see this.selectClass for parameters
      */
     async renderListItems(previewMode, widgetValue, params) {
+        const ariaLabelsOfSocialNetworks = {
+            "facebook": _t("Facebook"),
+            "twitter": _t("Twitter"),
+            "linkedin": _t("LinkedIn"),
+            "youtube": _t("YouTube"),
+            "instagram": _t("Instagram"),
+            "github": _t("GitHub"),
+            "tiktok": _t("TikTok"),
+        };
+        const setAriaLabelOfSocialNetwork = (el, name, url) => {
+            let ariaLabel = ariaLabelsOfSocialNetworks[name];
+            if (!ariaLabel) {
+                try {
+                    // Return the domain of the given url.
+                    ariaLabel = new URL(url).hostname.split('.').slice(-2)[0];
+                } catch {
+                    // Fallback if the url is not valid.
+                    ariaLabel = _t("Other social network");
+                }
+            }
+            el.setAttribute("aria-label", ariaLabel);
+        };
+
         const anchorEls = this.$target[0].querySelectorAll(':scope > a');
         let entries = JSON.parse(widgetValue);
         const anchorsToRemoveEls = [];
@@ -129,12 +153,16 @@ options.registry.SocialMedia = options.Class.extend({
                         anchorEl = this.$target[0].querySelector(':scope > a').cloneNode(true);
                         this._removeSocialMediaClasses(anchorEl);
                     }
-                    const faIcon = isDbField ? `fa-${entry.media}` : 'fa-pencil';
-                    anchorEl.querySelector('i').classList.add(faIcon);
+                    const iEl = anchorEl.querySelector(ICON_SELECTOR);
+                    if (iEl) {
+                        const faIcon = isDbField ? `fa-${entry.media}` : 'fa-pencil';
+                        iEl.classList.add(faIcon);
+                    }
                     if (isDbField) {
                         anchorEl.href = `/website/social/${encodeURIComponent(entry.media)}`;
                         anchorEl.classList.add(`s_social_media_${entry.media}`);
                     }
+                    setAriaLabelOfSocialNetwork(anchorEl, entry.media, entry.display_name);
                 }
             } else {
                 if (anchorEl) {
@@ -149,17 +177,21 @@ options.registry.SocialMedia = options.Class.extend({
                 // Handle URL change for custom links.
                 const href = anchorEl.getAttribute('href');
                 if (href !== entry.display_name) {
+                    let socialMedia = null;
                     if (this._isValidURL(entry.display_name)) {
                         // Propose an icon only for valid URLs (no mailto).
-                        const socialMedia = this._findRelevantSocialMedia(entry.display_name);
+                        socialMedia = this._findRelevantSocialMedia(entry.display_name);
                         if (socialMedia) {
-                            const iEl = anchorEl.querySelector('i');
+                            const iEl = anchorEl.querySelector(ICON_SELECTOR);
                             this._removeSocialMediaClasses(anchorEl);
                             anchorEl.classList.add(`s_social_media_${socialMedia}`);
-                            iEl.classList.add(`fa-${socialMedia}`);
+                            if (iEl) {
+                                iEl.classList.add(`fa-${socialMedia}`);
+                            }
                         }
                     }
                     anchorEl.setAttribute('href', entry.display_name);
+                    setAriaLabelOfSocialNetwork(anchorEl, socialMedia, entry.display_name);
                 }
             }
             // Place the link at the correct position
@@ -342,10 +374,12 @@ options.registry.SocialMedia = options.Class.extend({
     _removeSocialMediaClasses(anchorEl) {
         let regx = new RegExp('\\b' + 's_social_media_' + '[^1-9][^ ]*[ ]?\\b');
         anchorEl.className = anchorEl.className.replace(regx, '');
-        const iEl = anchorEl.querySelector('i');
-        regx = new RegExp('\\b' + 'fa-' + '[^1-9][^ ]*[ ]?\\b');
-        // Remove every fa classes except fa-x sizes.
-        iEl.className = iEl.className.replace(regx, '');
+        const iEl = anchorEl.querySelector(ICON_SELECTOR);
+        if (iEl) {
+            regx = new RegExp('\\b' + 'fa-' + '[^1-9][^ ]*[ ]?\\b');
+            // Remove every fa classes except fa-x sizes.
+            iEl.className = iEl.className.replace(regx, '');
+        }
     },
 
     //--------------------------------------------------------------------------

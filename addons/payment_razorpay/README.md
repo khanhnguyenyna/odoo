@@ -1,36 +1,47 @@
 # Razorpay
 
-## Implementation details
+## Technical details
 
-### Supported features
+API: [Recurring Payments API](https://razorpay.com/docs/api/payments/recurring-payments/)
+version `1`
 
-- Payment with redirection flow
-- Manual capture
+## Supported features
+
+- Direct payment flow
+- Webhook notifications
+- Full manual capture
 - Partial refunds
-- Several payment methods such as debit/credit cards, netbanking, UPI, and
-  [others](https://razorpay.com/docs/payments/payment-methods/).
-- [Webhook](https://razorpay.com/docs/webhooks).
 
-In addition, Razorpay also allows to implement tokenization but requires passing the card secret for
-each transaction.
+## Not implemented features
 
-### API and gateway
+- Partial manual capture
 
-We choose to integrate with
-[Razorpay Hosted Checkout](https://razorpay.com/docs/payments/payment-gateway/web-integration/hosted).
-The other gateways were ruled out. See the task's dev notes for the details on the other gateways.
+## Module history
 
-The version of the API implemented by this module is v1.
-
-## Merge details
-
-The first version of the module was specified in task
-[2800823](https://www.odoo.com/web#id=2800823&model=project.task) and merged with PR
-odoo/odoo#92848 in `saas-15.5`.
+- `17.0`
+  - The previous Hosted Checkout API that allowed for redirect payments is replaced by the Recurring
+    Payments API that supports direct payments and tokenization. odoo/odoo#143525
+- `16.0`
+  - The first version of the module is merged. odoo/odoo#92848
 
 ## Testing instructions
 
-The partner's phone number must be a valid Indian phone number. Example: +91123456789
+https://razorpay.com/docs/payments/payments/test-card-upi-details/
 
-See https://razorpay.com/docs/payments/payments/test-card-upi-details/ for the list of test
-payment details.
+https://razorpay.com/docs/payments/payments/test-upi-details/
+
+A valid Indian phone number must be set on the partner. Example: `+91123456789`
+
+### VISA
+
+**Card Number**: `4111111111111111`
+
+**Expiry Date**: any future date
+
+**Card Secret**: any
+
+**OTP**: `1111`
+
+### UPI
+
+**UPI ID**: `success@razorpay` or `failure@razorpay`

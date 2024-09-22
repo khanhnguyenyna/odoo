@@ -4,16 +4,18 @@
 # 
 # Translators:
 # 山西清水欧度(QQ:54773801) <54773801@qq.com>, 2023
-# Chloe Wang, 2023
-# Wil Odoo, 2023
+# Chloe Wang, 2024
+# 湘子 南 <1360857908@qq.com>, 2024
+# Jeffery CHEN <jeffery9@gmail.com>, 2024
+# Wil Odoo, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Wil Odoo, 2024\n"
 "Language-Team: Chinese (China) (https://app.transifex.com/odoo/teams/41243/zh_CN/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -358,6 +360,17 @@ msgstr "添加新计划"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__departure_description
 msgid "Additional Information"
 msgstr "其它信息"
+
+#. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee.py:0
+#, python-format
+msgid ""
+"Additional Information: \n"
+" %(description)s"
+msgstr ""
+"附加信息：\n"
+" %(description)s"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__additional_note
@@ -864,6 +877,16 @@ msgid "Create a new department"
 msgstr "创建一个新的部门"
 
 #. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_contract_type_action
+msgid "Create a new employment type"
+msgstr "创建新的就业类型"
+
+#. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
+msgid "Create a new work location"
+msgstr "创建新的工作地点"
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -951,16 +974,18 @@ msgid ""
 "Building strong relationships with clients / customers for business growth profitability.\n"
 "Keep regular interaction with key clients for better extraction and expansion."
 msgstr ""
-"向客户演示 Odoo 各项服务，介绍应用程序的功能。\n"
-"候选人应具有出色的沟通能力。\n"
-"具备建立关系和扩大影响的技能，拥有获取新客户（NCA）和关系管理方面的专长。\n"
-"收集市场和客户信息。\n"
+"向客户演示 ERP 各项服务，介绍应用程序的功能。\n"
+"候选人应具有出色的通信能力。\n"
+"具备建立关系和扩大影响的技能，收购获取新客户（NCA）和关系管理方面的专长。\n"
+"收集商机和客户信息。\n"
 "与销售和技术支持团队协调，以采用多种策略\n"
 "回顾复盘，寻找潜在客户、将产品拓展至新领域。 \n"
 "与客户建立牢固的关系，实现业务增长和盈利。\n"
-"与重要客户保持互动，进一步开拓市场。"
+"与重要客户保持互动，进一步开拓市场."
 
 #. module: hr
+#. odoo-javascript
+#: code:addons/hr/static/src/components/avatar_card/avatar_card_popover_patch.xml:0
 #: model:ir.model,name:hr.model_hr_department
 #: model:ir.model.fields,field_description:hr.field_hr_employee__department_id
 #: model:ir.model.fields,field_description:hr.field_hr_employee_base__department_id
@@ -973,6 +998,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:hr.view_department_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_job_filter
+#, python-format
 msgid "Department"
 msgstr "部门"
 
@@ -1479,7 +1505,7 @@ msgstr "分组方式"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_discuss_channel__subscription_department_ids
 msgid "HR Departments"
-msgstr "人力资源部门"
+msgstr "HR 部门"
 
 #. module: hr
 #: model:ir.actions.server,name:hr.ir_cron_data_check_work_permit_validity_ir_actions_server
@@ -2071,11 +2097,6 @@ msgid "No Tags found ! Let's create one"
 msgstr "未找到标签！让我们创建一个"
 
 #. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid "No Work Locations found ! Let's create one"
-msgstr "未找到工作地点 ！让我们创建一个"
-
-#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2111,7 +2132,7 @@ msgstr "注释"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__notes
 msgid "Notes"
-msgstr "凭单"
+msgstr "备注"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_department__message_needaction_counter
@@ -2170,9 +2191,9 @@ msgid ""
 "                    related to employees by departments: expenses, timesheets,\n"
 "                    leaves, recruitments, etc."
 msgstr ""
-"Odoo 的部门结构用于按部门管理所有与员工相关的文档\n"
+"ERP 的部门结构用于按部门管理所有与员工相关的文档\n"
 "                    ：费用、计工单、\n"
-"                    请假、招聘等。"
+"                    休假、招聘等."
 
 #. module: hr
 #: model_terms:ir.actions.act_window,help:hr.hr_department_kanban_action
@@ -2181,9 +2202,9 @@ msgid ""
 "                related to employees by departments: expenses, timesheets,\n"
 "                time off, recruitments, etc."
 msgstr ""
-"Odoo 的部门结构用于按部门管理所有与员工相关的文档\n"
+"ERP 的部门结构用于按部门管理所有与员工相关的文档\n"
 "                    ：费用、计工单、\n"
-"                    请假、招聘等。"
+"                    请假、招聘等."
 
 #. module: hr
 #: model:ir.model.fields.selection,name:hr.selection__hr_work_location__location_type__office
@@ -2306,16 +2327,6 @@ msgstr "工资册"
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid "Perfect written English"
 msgstr "很好的英文写作能力"
-
-#. module: hr
-#: model_terms:hr.job,description:hr.job_consultant
-#: model_terms:hr.job,description:hr.job_developer
-#: model_terms:hr.job,description:hr.job_marketing
-msgid ""
-"Perform assigned responsibilities, collaborate with team members, and adhere"
-" to company policies. Strong communication, problem-solving, and work ethic "
-"required. Adaptability, initiative, and willingness to learn are valued."
-msgstr "履行指定职责，与团队成员合作，遵守公司政策。要求具备较强的沟通能力、解决问题的能力和职业道德。注重适应性、主动性和学习意愿。"
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -2509,7 +2520,7 @@ msgstr "私人电话"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__private_state_id
 #: model:ir.model.fields,field_description:hr.field_res_users__private_state_id
 msgid "Private State"
-msgstr "省"
+msgstr "私人省/州"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__private_street
@@ -2808,6 +2819,13 @@ msgid "Software Developer"
 msgstr "软件开发人员"
 
 #. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee_base.py:0
+#, python-format
+msgid "Some employee already have a work contact"
+msgstr "部分员工已有工作联系人"
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2952,6 +2970,19 @@ msgid ""
 msgstr ""
 "ISO国家/地区代码包含两个字符。\n"
 "可以使用该字段进行快速搜索。"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_marketing
+msgid ""
+"The Marketing Manager defines the mid- to long-term marketing strategy for his covered market segments in the World.\n"
+"              He develops and monitors the annual budget in collaboration with Sales.\n"
+"              He defines the products and customers portfolio according to the marketing plan.\n"
+"              This mission requires strong collaboration with Technical Service and Sales."
+msgstr ""
+"营销经理为其负责的全球细分市场制定中长期营销战略。\n"
+"              与销售部门合作制定和监控年度预算。\n"
+"              根据营销计划确定产品和客户组合。\n"
+"              这项任务要求与技术服务部门和销售部门密切合作。"
 
 #. module: hr
 #. odoo-python
@@ -3193,7 +3224,7 @@ msgstr "查看资料"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_expire
 #: model:ir.model.fields,field_description:hr.field_res_users__visa_expire
-msgid "Visa Expire Date"
+msgid "Visa Expiration Date"
 msgstr "签证到期日期"
 
 #. module: hr
@@ -3208,6 +3239,21 @@ msgstr "签证号"
 #, python-format
 msgid "Warning"
 msgstr "警告"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_consultant
+msgid ""
+"We are currently looking for someone like that to join our Consultant team."
+msgstr "我们正在寻找这样的人才加入我们的顾问团队。"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_developer
+msgid ""
+"We are currently looking for someone like that to join our Web team.\n"
+"                Someone who can snap out of coding and perform analysis or meet clients to explain the technical possibilities that can meet their needs."
+msgstr ""
+"我们正在寻找这样的人才加入我们的网络团队。\n"
+"                能够从编码工作中抽身出来，进行分析或与客户会面，向他们解释满足其需求的技术可能性。"
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -3253,9 +3299,9 @@ msgid ""
 "                    can easily find all the information you need for each person;\n"
 "                    contact data, job position, availability, etc."
 msgstr ""
-"只需快速浏览Odoo员工屏幕，\n"
-"                    即可轻松找到您所需的个人信息；\n"
-"                    联系人信息、工作岗位、可用性等。"
+"只需快速浏览 ERP 员工屏幕，\n"
+"                    即可轻松查找您所需的个人信息；\n"
+"                    联系人数据、工作岗位、可用性等."
 
 #. module: hr
 #: model_terms:ir.actions.act_window,help:hr.hr_employee_public_action
@@ -3264,9 +3310,9 @@ msgid ""
 "                can easily find all the information you need for each person;\n"
 "                contact data, job position, availability, etc."
 msgstr ""
-"只要快速浏览一下Odoo员工界面，\n"
-"                就可以很容易地找到每个人需要的所有信息：\n"
-"                联系方式、岗位、可用性等。"
+"只要快速浏览一下 ERP 员工屏幕，\n"
+"                就可以很容易地查找到每个人需要的所有信息：\n"
+"                联系人数据、工作岗位、可用性等."
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__address_id
@@ -3317,13 +3363,6 @@ msgstr "工作地点"
 #: model:ir.ui.menu,name:hr.menu_hr_work_location_tree
 msgid "Work Locations"
 msgstr "工作地点"
-
-#. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid ""
-"Work Locations are used to define more precisely where your employee is "
-"located everyday."
-msgstr "工作地点用于更准确地描述员工的日常工作地点。"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__mobile_phone
@@ -3425,17 +3464,17 @@ msgid ""
 "contributing to the set up of a new politic,\n"
 "being involved into satisfaction surveys in order to have a better knowledge of how the support given is seen by the customers."
 msgstr ""
-"Odoo 发布新版本后，您将参与更新我们的教程和售前工具。诚然，任何软件更新都会在功能、人体工学和配置方面带来显著改进。\n"
-"您需要熟悉现有的工具（书籍、课程支持、Odoo 演示幻灯片、商业工具），\n"
+"ERP 发布新版本后，您将参与更新我们的教程和售前工具。诚然，任何软件更新都会在功能、人体工学和配置方面带来显著改进。\n"
+"您需要熟悉现有的工具（书籍、课程支持、ERP 演示幻灯片、商业工具），\n"
 "以参与工具更新，使其适用于软件新版本，\n"
 "并提出改进建议，覆盖软件的新领域。\n"
-"您将加入实施协助部门。团队由 3 人组成，将协助 Odoo 客户安装软件。您的职责是\n"
+"您将加入实施协助部门。团队由 3 人员组成，将协助 ERP 客户安装软件。您的职责是\n"
 "支持网络研讨会，展示软件的多种功能。\n"
 "参与客户支持工作，为客户答疑解惑。\n"
 "帮助经理建立新的支持服务，\n"
 "参与处理新案例，\n"
 "协助建立新的政策，\n"
-"协助参与满意度调查，更好地了解客户对所提供支持的看法。"
+"协助参与满意度调查，更好地了解客户对所提供支持的知识."
 
 #. module: hr
 #. odoo-python
@@ -3452,6 +3491,7 @@ msgid ""
 "The job is located in Grand-Rosière (1367), Belgium (between Louvain-La-Neuve and Namur)."
 msgstr ""
 "您将参与我们为合作伙伴和客户提供的咨询服务：设计、分析、开发、测试、项目管理、支持/辅导。您将独立工作，或协调和监督一些项目的小型分布式开发团队。您还可以为合作伙伴和客户提供 Odoo 培训课程（8-10 人/次）。您会汇报给专业服务主管，并与所有开发人员和顾问密切合作。\n"
+"\n"
 "工作地址：Grand-Rosière （1367），比利时（位于 Louvain-La-Neuve 和 Namur之间）。"
 
 #. module: hr

@@ -3,16 +3,16 @@
 # 	* hr
 # 
 # Translators:
-# Tony Ng, 2023
-# Wil Odoo, 2023
+# Wil Odoo, 2024
+# Tony Ng, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:26+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Wil Odoo, 2023\n"
+"Last-Translator: Tony Ng, 2024\n"
 "Language-Team: Chinese (Taiwan) (https://app.transifex.com/odoo/teams/41243/zh_TW/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -138,7 +138,7 @@ msgstr "<i class=\"fa fa-fw me-2 fa-phone text-primary\" title=\"電話\"/>"
 #: model_terms:hr.job,website_description:hr.job_marketing
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid "<small><b>READ</b></small>"
-msgstr "<small><b>READ</b></small>"
+msgstr "<small><b>讀取</b></small>"
 
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.res_config_settings_view_form
@@ -234,7 +234,7 @@ msgstr "<span class=\"text-muted small\">回應時間</span>"
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_form
 msgid "<span>Km</span>"
-msgstr "<span>Km</span>"
+msgstr "<span>公里</span>"
 
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.view_hr_job_form
@@ -357,6 +357,17 @@ msgstr "添加新計劃"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__departure_description
 msgid "Additional Information"
 msgstr "額外的資訊"
+
+#. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee.py:0
+#, python-format
+msgid ""
+"Additional Information: \n"
+" %(description)s"
+msgstr ""
+"額外資訊：\n"
+" %(description)s"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__additional_note
@@ -516,7 +527,7 @@ msgstr "自動將這些部門的成員訂閱到道。"
 #: model_terms:hr.job,website_description:hr.job_marketing
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid "Autonomy"
-msgstr "當責"
+msgstr "自主"
 
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.res_users_view_form_profile
@@ -857,6 +868,16 @@ msgid "Create a new department"
 msgstr "建立新部門"
 
 #. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_contract_type_action
+msgid "Create a new employment type"
+msgstr "新增聘用類型"
+
+#. module: hr
+#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
+msgid "Create a new work location"
+msgstr "新增工作地點"
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -955,6 +976,8 @@ msgstr ""
 "與重要客戶保持定期互動，以更好地提取和擴展。"
 
 #. module: hr
+#. odoo-javascript
+#: code:addons/hr/static/src/components/avatar_card/avatar_card_popover_patch.xml:0
 #: model:ir.model,name:hr.model_hr_department
 #: model:ir.model.fields,field_description:hr.field_hr_employee__department_id
 #: model:ir.model.fields,field_description:hr.field_hr_employee_base__department_id
@@ -967,6 +990,7 @@ msgstr ""
 #: model_terms:ir.ui.view,arch_db:hr.view_department_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_filter
 #: model_terms:ir.ui.view,arch_db:hr.view_job_filter
+#, python-format
 msgid "Department"
 msgstr "部門"
 
@@ -1984,7 +2008,7 @@ msgstr "我的個人資料"
 #: model_terms:ir.ui.view,arch_db:hr.hr_employee_public_view_search
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_filter
 msgid "My Team"
-msgstr "我的部屬"
+msgstr "我的團隊"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_contract_type__name
@@ -2061,11 +2085,6 @@ msgid "No Tags found ! Let's create one"
 msgstr "找不到標籤！讓我們創建一個"
 
 #. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid "No Work Locations found ! Let's create one"
-msgstr "找不到工作地點！讓我們創建一個"
-
-#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2086,7 +2105,7 @@ msgstr "沒有愚蠢的管理者，沒有愚蠢的工具，沒有嚴格的工作
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid ""
 "No waste of time in enterprise processes, real responsibilities and autonomy"
-msgstr "在企業流程中聰明工作，真正的自主與當責"
+msgstr "無謂在企業流程上浪費時間，肩負真正責任及自主權"
 
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.res_users_view_form_profile
@@ -2284,7 +2303,7 @@ msgstr "護照號"
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.view_employee_form
 msgid "Payroll"
-msgstr "薪資表"
+msgstr "薪酬管理"
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -2296,16 +2315,6 @@ msgstr "薪資表"
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid "Perfect written English"
 msgstr "英語書寫能力流暢"
-
-#. module: hr
-#: model_terms:hr.job,description:hr.job_consultant
-#: model_terms:hr.job,description:hr.job_developer
-#: model_terms:hr.job,description:hr.job_marketing
-msgid ""
-"Perform assigned responsibilities, collaborate with team members, and adhere"
-" to company policies. Strong communication, problem-solving, and work ethic "
-"required. Adaptability, initiative, and willingness to learn are valued."
-msgstr "履行指定職責，與團隊成員合作，遵守公司政策。要求具備較強的溝通能力、解決問題的能力和職業道德。注重適應性、主動性和學習意願。"
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -2555,7 +2564,7 @@ msgstr "研發（美國）"
 #: model:ir.model.fields,field_description:hr.field_hr_employee__rating_ids
 #: model:ir.model.fields,field_description:hr.field_hr_job__rating_ids
 msgid "Ratings"
-msgstr "點評"
+msgstr "評分"
 
 #. module: hr
 #: model_terms:ir.actions.act_window,help:hr.action_hr_job
@@ -2798,6 +2807,13 @@ msgid "Software Developer"
 msgstr "軟件開發員"
 
 #. module: hr
+#. odoo-python
+#: code:addons/hr/models/hr_employee_base.py:0
+#, python-format
+msgid "Some employee already have a work contact"
+msgstr "部份員工已經有工作聯絡人"
+
+#. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
 #: model_terms:hr.job,website_description:hr.job_consultant
 #: model_terms:hr.job,website_description:hr.job_cto
@@ -2942,6 +2958,19 @@ msgid ""
 msgstr ""
 "ISO 國家代碼使用兩個字元。\n"
 " 您可以使用此欄位進行快速搜尋。"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_marketing
+msgid ""
+"The Marketing Manager defines the mid- to long-term marketing strategy for his covered market segments in the World.\n"
+"              He develops and monitors the annual budget in collaboration with Sales.\n"
+"              He defines the products and customers portfolio according to the marketing plan.\n"
+"              This mission requires strong collaboration with Technical Service and Sales."
+msgstr ""
+"營銷經理為其負責的全球細分市場制定中長期營銷戰略。\n"
+"              與銷售部門合作制定和監控年度預算。\n"
+"              根據營銷計劃確定產品和客戶組合。\n"
+"              這項任務要求與技術服務部門和銷售部門密切合作。"
 
 #. module: hr
 #. odoo-python
@@ -3110,7 +3139,7 @@ msgstr "見習"
 #: model_terms:hr.job,website_description:hr.job_marketing
 #: model_terms:hr.job,website_description:hr.job_trainee
 msgid "Trainings"
-msgstr "培訓計畫"
+msgstr "培訓"
 
 #. module: hr
 #: model:ir.model.fields,help:hr.field_hr_employee__activity_exception_decoration
@@ -3183,8 +3212,8 @@ msgstr "查看個人檔案"
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_expire
 #: model:ir.model.fields,field_description:hr.field_res_users__visa_expire
-msgid "Visa Expire Date"
-msgstr "簽證到期日期"
+msgid "Visa Expiration Date"
+msgstr "簽證到期日"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__visa_no
@@ -3198,6 +3227,21 @@ msgstr "簽證號"
 #, python-format
 msgid "Warning"
 msgstr "警告"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_consultant
+msgid ""
+"We are currently looking for someone like that to join our Consultant team."
+msgstr "我們正在尋找這樣的人才加入我們的顧問團隊。"
+
+#. module: hr
+#: model_terms:hr.job,description:hr.job_developer
+msgid ""
+"We are currently looking for someone like that to join our Web team.\n"
+"                Someone who can snap out of coding and perform analysis or meet clients to explain the technical possibilities that can meet their needs."
+msgstr ""
+"我們正在尋找這樣的人才加入我們的網絡團隊。\n"
+"                能夠從編碼工作中抽身出來，進行分析或與客戶會面，向他們解釋能滿足其需求的技術可能性。"
 
 #. module: hr
 #: model_terms:hr.job,website_description:hr.job_ceo
@@ -3281,7 +3325,7 @@ msgstr "工作聯絡"
 #: model:ir.model.fields,field_description:hr.field_hr_employee_public__work_email
 #: model:ir.model.fields,field_description:hr.field_res_users__work_email
 msgid "Work Email"
-msgstr "工作Email"
+msgstr "工作電郵"
 
 #. module: hr
 #: model_terms:ir.ui.view,arch_db:hr.hr_employee_public_view_form
@@ -3307,13 +3351,6 @@ msgstr "工作地點"
 #: model:ir.ui.menu,name:hr.menu_hr_work_location_tree
 msgid "Work Locations"
 msgstr "工作地點"
-
-#. module: hr
-#: model_terms:ir.actions.act_window,help:hr.hr_work_location_action
-msgid ""
-"Work Locations are used to define more precisely where your employee is "
-"located everyday."
-msgstr "工作地點用於更準確地描述員工的日常工作地點。"
 
 #. module: hr
 #: model:ir.model.fields,field_description:hr.field_hr_employee__mobile_phone

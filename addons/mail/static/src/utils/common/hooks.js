@@ -11,6 +11,7 @@ import {
     useState,
 } from "@odoo/owl";
 
+import { browser } from "@web/core/browser/browser";
 import { useService } from "@web/core/utils/hooks";
 
 export function useLazyExternalListener(target, eventName, handler, eventParams) {
@@ -49,6 +50,7 @@ export function onExternalClick(refName, cb) {
     function onClick(ev) {
         if (ref.el && !ref.el.contains(ev.target)) {
             cb(ev, { downTarget, upTarget });
+            upTarget = downTarget = null;
         }
     }
     function onMousedown(ev) {
@@ -163,9 +165,12 @@ export function useAutoScroll(refName, shouldScrollPredicate = () => true) {
  * @param {string} refName
  * @param {function} cb
  */
-export function useVisible(refName, cb, { init = false } = {}) {
+export function useVisible(refName, cb, { init = false, ready = true } = {}) {
     const ref = useRef(refName);
-    const state = { isVisible: init };
+    const state = useState({
+        isVisible: init,
+        ready,
+    });
     function setValue(value) {
         state.isVisible = value;
         cb();
@@ -174,8 +179,8 @@ export function useVisible(refName, cb, { init = false } = {}) {
         setValue(entries.at(-1).isIntersecting);
     });
     useEffect(
-        (el) => {
-            if (el) {
+        (el, ready) => {
+            if (el && ready) {
                 observer.observe(el);
                 return () => {
                     setValue(false);
@@ -183,7 +188,7 @@ export function useVisible(refName, cb, { init = false } = {}) {
                 };
             }
         },
-        () => [ref.el]
+        () => [ref.el, state.ready]
     );
     return state;
 }
@@ -233,6 +238,7 @@ export function useScrollSnapshot(ref, { onWillPatch: p_onWillPatch, onPatched: 
 
 /**
  * @typedef {Object} MessageHighlight
+ * @property {function} clearHighlight
  * @property {function} highlightMessage
  * @property {number|null} highlightedMessageId
  * @returns {MessageHighlight}
@@ -241,6 +247,13 @@ export function useMessageHighlight(duration = 2000) {
     let timeout;
     const threadService = useService("mail.thread");
     const state = useState({
+        clearHighlight() {
+            if (this.highlightedMessageId) {
+                browser.clearTimeout(timeout);
+                timeout = null;
+                this.highlightedMessageId = null;
+            }
+        },
         /**
          * @param {import("models").Message} message
          * @param {import("models").Thread} thread
@@ -251,21 +264,17 @@ export function useMessageHighlight(duration = 2000) {
             }
             await threadService.loadAround(thread, message.id);
             const lastHighlightedMessageId = state.highlightedMessageId;
-            clearHighlight();
+            this.clearHighlight();
             if (lastHighlightedMessageId === message.id) {
                 // Give some time for the state to update.
                 await new Promise(setTimeout);
             }
+            thread.scrollTop = undefined;
             state.highlightedMessageId = message.id;
-            timeout = setTimeout(clearHighlight, duration);
+            timeout = browser.setTimeout(() => this.clearHighlight(), duration);
         },
         highlightedMessageId: null,
     });
-    function clearHighlight() {
-        clearTimeout(timeout);
-        timeout = null;
-        state.highlightedMessageId = null;
-    }
     return state;
 }
 

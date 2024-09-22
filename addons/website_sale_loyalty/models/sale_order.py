@@ -24,8 +24,8 @@ class SaleOrder(models.Model):
                 if leaf[0] != 'sale_ok':
                     continue
                 res[idx] = ('ecommerce_ok', '=', True)
-                break
-        return expression.AND([res, [('website_id', 'in', (self.website_id.id, False))]])
+                return expression.AND([res, [('website_id', 'in', (self.website_id.id, False))]])
+        return res
 
     def _get_trigger_domain(self):
         res = super()._get_trigger_domain()
@@ -35,8 +35,8 @@ class SaleOrder(models.Model):
                 if leaf[0] != 'program_id.sale_ok':
                     continue
                 res[idx] = ('program_id.ecommerce_ok', '=', True)
-                break
-        return expression.AND([res, [('program_id.website_id', 'in', (self.website_id.id, False))]])
+                return expression.AND([res, [('program_id.website_id', 'in', (self.website_id.id, False))]])
+        return res
 
     def _try_pending_coupon(self):
         if not request:
@@ -161,8 +161,13 @@ class SaleOrder(models.Model):
             request.session.pop('successful_code')
         return code
 
-    def _cart_update(self, *args, **kwargs):
-        res = super(SaleOrder, self)._cart_update(*args, **kwargs)
+    def _cart_update(self, product_id, line_id=None, add_qty=0, set_qty=0, **kwargs):
+        line = self.order_line.filtered(lambda sol: sol.product_id.id == product_id)[:1]
+        reward_id = line.reward_id
+        if set_qty == 0 and line.coupon_id and reward_id and reward_id.reward_type == 'discount':
+            # Force the deletion of the line even if it's a temporary record created by new()
+            line_id = line.id
+        res = super()._cart_update(product_id, line_id, add_qty, set_qty, **kwargs)
         self._update_programs_and_rewards()
         self._auto_apply_rewards()
         return res
@@ -197,8 +202,7 @@ class SaleOrder(models.Model):
         res = self._get_claimable_rewards()
         loyality_cards = self.env['loyalty.card'].search([
             ('partner_id', '=', self.partner_id.id),
-            ('program_id.website_id', 'in', [False, self.website_id.id]),
-            ('program_id.company_id', 'in', [False, self.company_id.id]),
+            ('program_id', 'any', self._get_program_domain()),
             '|',
                 ('program_id.trigger', '=', 'with_code'),
                 '&', ('program_id.trigger', '=', 'auto'), ('program_id.applies_on', '=', 'future'),
@@ -229,3 +233,10 @@ class SaleOrder(models.Model):
         lines = super()._cart_find_product_line(product_id, line_id, **kwargs)
         lines = lines.filtered(lambda l: not l.is_reward_line) if not line_id else lines
         return lines
+
+    def _check_carrier_quotation(self, **kwargs):
+        check = super()._check_carrier_quotation(**kwargs)
+        if check and not self.only_services:
+            self._update_programs_and_rewards()
+            self.validate_taxes_on_sales_order()
+        return check

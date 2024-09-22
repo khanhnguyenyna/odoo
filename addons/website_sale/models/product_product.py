@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models, _
+from werkzeug.urls import url_join
+
+from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -47,7 +48,10 @@ class Product(models.Model):
     def _compute_product_website_url(self):
         for product in self:
             attributes = ','.join(str(x) for x in product.product_template_attribute_value_ids.ids)
-            product.website_url = "%s#attr=%s" % (product.product_tmpl_id.website_url, attributes)
+            url = product.product_tmpl_id.website_url
+            if attributes:
+                url = url_join(url, f"#attr={attributes}")
+            product.website_url = url
 
     def _prepare_variant_values(self, combination):
         variant_dict = super()._prepare_variant_values(combination)
@@ -71,22 +75,13 @@ class Product(models.Model):
         This returns a list and not a recordset because the records might be
         from different models (template, variant and image).
 
-        It contains in this order: the main image of the variant (if set), the
-        Variant Extra Images, and the Template Extra Images.
+        It contains in this order: the main image of the variant (which will fall back on the main
+        image of the template, if unset), the Variant Extra Images, and the Template Extra Images.
         """
         self.ensure_one()
         variant_images = list(self.product_variant_image_ids)
-        if self.image_variant_1920:
-            # if the main variant image is set, display it first
-            variant_images = [self] + variant_images
-        else:
-            # If the main variant image is empty, it will fallback to template
-            # image, in this case insert it after the other variant images, so
-            # that all variant images are first and all template images last.
-            variant_images = variant_images + [self]
-        # [1:] to remove the main image from the template, we only display
-        # the template extra images here
-        return variant_images + self.product_tmpl_id._get_images()[1:]
+        template_images = list(self.product_tmpl_id.product_template_image_ids)
+        return [self] + variant_images + template_images
 
     def _get_combination_info_variant(self, **kwargs):
         """Return the variant info based on its combination.
@@ -108,10 +103,13 @@ class Product(models.Model):
 
     def _get_contextual_price_tax_selection(self):
         self.ensure_one()
-        price = self._get_contextual_price()
         website = self.env['website'].get_current_website()
-        line_tax_type = website.show_line_subtotals_tax_selection
-        company_taxes = self.taxes_id.filtered(lambda tax: tax.company_id == self.env.company)
-        if line_tax_type == "tax_included" and company_taxes:
-            price = company_taxes.compute_all(price, product=self, partner=self.env['res.partner'])['total_included']
-        return price
+        fiscal_position_sudo = website.sudo().fiscal_position_id
+        product_taxes = self.sudo().taxes_id._filter_taxes_by_company(self.env.company)
+        return self.env['product.template']._apply_taxes_to_price(
+            self._get_contextual_price(),
+            website.currency_id,
+            product_taxes,
+            fiscal_position_sudo.map_tax(product_taxes),
+            self,
+        )

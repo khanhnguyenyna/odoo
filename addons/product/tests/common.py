@@ -18,6 +18,9 @@ class ProductCommon(
     def setUpClass(cls):
         super().setUpClass()
 
+        cls.env.company.currency_id = cls.env.ref('base.USD')
+        cls.currency = cls.env.ref('base.USD')
+
         # Ideally, this logic should be moved into sthg like a NoAccountCommon in account :D
         # Since tax fields are specified in account module, cannot be given as create values
         NO_TAXES_CONTEXT = {
@@ -85,6 +88,28 @@ class ProductAttributesCommon(ProductCommon):
             cls.color_attribute_blue,
             cls.color_attribute_green,
         ) = cls.color_attribute.value_ids
+
+        cls.no_variant_attribute = cls.env['product.attribute'].create({
+            'name': 'No variant',
+            'create_variant': 'no_variant',
+            'value_ids': [
+                Command.create({'name': 'extra'}),
+                Command.create({'name': 'second'}),
+            ]
+        })
+        (
+            cls.no_variant_attribute_extra,
+            cls.no_variant_attribute_second,
+        ) = cls.no_variant_attribute.value_ids
+
+        cls.dynamic_attribute = cls.env['product.attribute'].create({
+            'name': 'Dynamic',
+            'create_variant': 'dynamic',
+            'value_ids': [
+                Command.create({'name': 'dyn1'}),
+                Command.create({'name': 'dyn2'}),
+            ]
+        })
 
 
 class ProductVariantsCommon(ProductAttributesCommon):

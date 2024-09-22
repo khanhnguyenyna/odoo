@@ -29,10 +29,7 @@ class PaymentPortal(payment_portal.PaymentPortal):
             raise AccessError(_("The POS session is not opened."))
 
     def _get_partner_sudo(self, user_sudo):
-        partner_sudo = user_sudo.partner_id
-        if not partner_sudo and user_sudo._is_public():
-            partner_sudo = self.env.ref('base.public_user')
-        return partner_sudo
+        return user_sudo.partner_id
 
     def _redirect_login(self):
         return request.redirect('/web/login?' + url_encode({'redirect': request.httprequest.full_path}))
@@ -62,18 +59,24 @@ class PaymentPortal(payment_portal.PaymentPortal):
         return compatible_providers_sudo & payment_method._get_online_payment_providers(pos_order_sudo.config_id.id, error_if_invalid=False)
 
     @staticmethod
-    def _get_exit_route_arg(exit_route):
-        return '&' + url_encode({'exit_route': exit_route}) if exit_route else ''
+    def _new_url_params(access_token, exit_route=None):
+        url_params = {
+            'access_token': access_token,
+        }
+        if exit_route:
+            url_params['exit_route'] = exit_route
+        return url_params
 
     @staticmethod
     def _get_pay_route(pos_order_id, access_token, exit_route=None):
-        exit_route_arg = PaymentPortal._get_exit_route_arg(exit_route)
-        return f'/pos/pay/{pos_order_id}?access_token={access_token}{exit_route_arg}'
+        return f'/pos/pay/{pos_order_id}?' + url_encode(PaymentPortal._new_url_params(access_token, exit_route))
 
     @staticmethod
-    def _get_landing_route(pos_order_id, access_token, exit_route_arg=None, tx_id=None):
-        tx_id_arg = f'&tx_id={tx_id}' if tx_id else ''
-        return f'/pos/pay/confirmation/{pos_order_id}?access_token={access_token}{exit_route_arg}{tx_id_arg}'
+    def _get_landing_route(pos_order_id, access_token, exit_route=None, tx_id=None):
+        url_params = PaymentPortal._new_url_params(access_token, exit_route)
+        if tx_id:
+            url_params['tx_id'] = tx_id
+        return f'/pos/pay/confirmation/{pos_order_id}?' + url_encode(url_params)
 
     @http.route('/pos/pay/<int:pos_order_id>', type='http', methods=['GET'], auth='public', website=True, sitemap=False)
     def pos_order_pay(self, pos_order_id, access_token=None, exit_route=None):
@@ -92,23 +95,24 @@ class PaymentPortal(payment_portal.PaymentPortal):
         self._ensure_session_open(pos_order_sudo)
 
         user_sudo = request.env.user
+        if not pos_order_sudo.partner_id:
+            user_sudo = request.env.ref('base.public_user')
         logged_in = not user_sudo._is_public()
-        partner_sudo = self._get_partner_sudo(user_sudo)
+        partner_sudo = pos_order_sudo.partner_id or self._get_partner_sudo(user_sudo)
         if not partner_sudo:
             return self._redirect_login()
 
         kwargs = {
             'pos_order_id': pos_order_sudo.id,
         }
-        exit_route_arg = self._get_exit_route_arg(exit_route)
         rendering_context = {
             **kwargs,
             'exit_route': exit_route,
             'reference_prefix': request.env['payment.transaction'].sudo()._compute_reference_prefix(provider_code=None, separator='-', **kwargs),
             'partner_id': partner_sudo.id,
             'access_token': access_token,
-            'transaction_route': f'/pos/pay/transaction/{pos_order_sudo.id}?access_token={access_token}{exit_route_arg}',
-            'landing_route': self._get_landing_route(pos_order_sudo.id, access_token, exit_route_arg=exit_route_arg),
+            'transaction_route': f'/pos/pay/transaction/{pos_order_sudo.id}?' + url_encode(PaymentPortal._new_url_params(access_token, exit_route)),
+            'landing_route': self._get_landing_route(pos_order_sudo.id, access_token, exit_route=exit_route),
             **self._get_extra_payment_form_values(**kwargs),
         }
 
@@ -173,8 +177,10 @@ class PaymentPortal(payment_portal.PaymentPortal):
         self._ensure_session_open(pos_order_sudo)
         exit_route = request.httprequest.args.get('exit_route')
         user_sudo = request.env.user
+        if not pos_order_sudo.partner_id:
+            user_sudo = request.env.ref('base.public_user')
         logged_in = not user_sudo._is_public()
-        partner_sudo = self._get_partner_sudo(user_sudo)
+        partner_sudo = pos_order_sudo.partner_id or self._get_partner_sudo(user_sudo)
         if not partner_sudo:
             return self._redirect_login()
 
@@ -189,6 +195,7 @@ class PaymentPortal(payment_portal.PaymentPortal):
         # Avoid tokenization for the public user.
         kwargs.update({
             'partner_id': partner_sudo.id,
+            'partner_phone': partner_sudo.phone,
             'custom_create_values': {
                 'pos_order_id': pos_order_sudo.id,
             },
@@ -232,7 +239,7 @@ class PaymentPortal(payment_portal.PaymentPortal):
         kwargs.pop('pos_order_id', None) # _create_transaction kwargs keys must be different than custom_create_values keys
 
         tx_sudo = self._create_transaction(**kwargs)
-        tx_sudo.landing_route = self._get_landing_route(pos_order_sudo.id, access_token, exit_route_arg=self._get_exit_route_arg(exit_route), tx_id=tx_sudo.id)
+        tx_sudo.landing_route = PaymentPortal._get_landing_route(pos_order_sudo.id, access_token, exit_route=exit_route, tx_id=tx_sudo.id)
 
         return tx_sudo._get_processing_values()
 

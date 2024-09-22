@@ -69,6 +69,11 @@ export function checkLabels(assert, graph, expectedLabels) {
     assert.deepEqual(labels, expectedLabels);
 }
 
+export function checkYTicks(assert, graph, expectedLabels) {
+    const labels = getChart(graph).scales.y.ticks.map((l) => l.label);
+    assert.deepEqual(labels, expectedLabels);
+}
+
 export function checkLegend(assert, graph, expectedLegendLabels) {
     expectedLegendLabels =
         expectedLegendLabels instanceof Array ? expectedLegendLabels : [expectedLegendLabels];
@@ -153,6 +158,21 @@ export async function clickOnDataset(graph) {
     await triggerEvent(chart.canvas, null, "click", {
         pageX: rectangle.left + point.x,
         pageY: rectangle.top + point.y,
+    });
+}
+
+export async function clickOnLegend(graph, text) {
+    const chart = getChart(graph);
+    const index = chart.legend.legendItems.findIndex((e) => e.text === text);
+    const { left, top, width, height } = chart.legend.legendHitBoxes[index];
+    const rectangle = chart.canvas.getBoundingClientRect();
+    const middle = {
+        x: left + width / 2,
+        y: top + height / 2,
+    };
+    await triggerEvent(chart.canvas, null, "click", {
+        pageX: rectangle.left + middle.x,
+        pageY: rectangle.top + middle.y,
     });
 }
 
@@ -1096,6 +1116,56 @@ QUnit.module("Views", (hooks) => {
         }
     );
 
+    QUnit.test("format total in hh:mm when measure is unit_amount", async function (assert) {
+        assert.expect(11);
+        serverData.models["account.analytic.line"] = {
+            fields: {
+                unit_amount: {
+                    string: "Unit Amount",
+                    type: "float",
+                    group_operator: "sum",
+                    store: true,
+                },
+                project_id: {
+                    string: "Project",
+                    type: "many2one",
+                    relation: "project.project",
+                    store: true,
+                    sortable: true,
+                },
+            },
+            records: [{ id: 1, unit_amount: 8, project_id: false }],
+        };
+        const graph = await makeView({
+            serverData,
+            resModel: "account.analytic.line",
+            type: "graph",
+            arch: `
+                    <graph>
+                        <field name="unit_amount"/>
+                        <field name="unit_amount" type="measure" widget="float_time"/>
+                    </graph>`,
+        });
+        const { measure, fieldAttrs } = getGraphModelMetaData(graph);
+        assert.hasClass(target.querySelector(".o_graph_view"), "o_view_controller");
+        assert.containsOnce(target, "div.o_graph_canvas_container canvas");
+        assert.strictEqual(measure, "unit_amount", `the measure should be "unit_amount"`);
+        checkLegend(assert, graph, "Unit Amount");
+        checkLabels(assert, graph, ["Total"]);
+        assert.strictEqual(
+            fieldAttrs[measure].widget,
+            "float_time",
+            "should be a float_time widget"
+        );
+        checkYTicks(assert, graph, ["00:00", "02:00", "04:00", "06:00", "08:00"]);
+        checkTooltip(
+            assert,
+            graph,
+            { title: "Unit Amount", lines: [{ label: "Total", value: "08:00" }] },
+            0
+        );
+    });
+
     QUnit.test("Stacked button visible in the line chart", async function (assert) {
         const graph = await makeView({
             serverData,
@@ -1481,6 +1551,56 @@ QUnit.module("Views", (hooks) => {
             3
         );
     });
+
+    QUnit.test(
+        "line chart rendering (one groupBy, several domains with date identification) without stacked attribute",
+        async function (assert) {
+            serverData.models.foo.records = [
+                { date: "2021-01-04", revenue: 12 },
+                { date: "2021-01-12", revenue: 5 },
+                { date: "2021-01-19", revenue: 15 },
+                { date: "2021-01-26", revenue: 2 },
+                { date: "2021-02-04", revenue: 14 },
+                { date: "2021-02-17", revenue: false },
+                { date: false, revenue: 0 },
+            ];
+            await makeView({
+                serverData,
+                type: "graph",
+                resModel: "foo",
+                arch: `
+                    <graph type="line">
+                        <field name="revenue" type="measure"/>
+                        <field name="date" interval="week"/>
+                    </graph>
+                `,
+                comparison: {
+                    domains: [
+                        {
+                            arrayRepr: [
+                                ["date", ">=", "2021-02-01"],
+                                ["date", "<=", "2021-02-28"],
+                            ],
+                            description: "February 2021",
+                        },
+                        {
+                            arrayRepr: [
+                                ["date", ">=", "2021-01-01"],
+                                ["date", "<=", "2021-01-31"],
+                            ],
+                            description: "January 2021",
+                        },
+                    ],
+                    fieldName: "date",
+                },
+            });
+            assert.doesNotHaveClass(
+                target.querySelector(".o_graph_button[data-tooltip=Stacked]"),
+                "active",
+                "The stacked mode should be disabled"
+            );
+        }
+    );
 
     QUnit.test(
         "line chart rendering (one groupBy, several domains with date identification)",
@@ -2337,6 +2457,18 @@ QUnit.module("Views", (hooks) => {
         }
     );
 
+    QUnit.test("pie chart toggling dataset hides label", async function (assert) {
+        const graph = await makeView({
+            serverData,
+            type: "graph",
+            resModel: "foo",
+            arch: `<graph type="pie"/>`,
+        });
+        checkLabels(assert, graph, ["Total"]);
+        await clickOnLegend(graph, "Total");
+        assert.ok(getChart(graph).legend.legendItems[0].hidden);
+    });
+
     QUnit.test("mode props", async function (assert) {
         assert.expect(2);
         const graph = await makeView({
@@ -2440,7 +2572,7 @@ QUnit.module("Views", (hooks) => {
     QUnit.test("process default view description", async function (assert) {
         assert.expect(1);
         const propsFromArch = new GraphArchParser().parse();
-        assert.deepEqual(propsFromArch, { fields: {}, fieldAttrs: {}, groupBy: [] });
+        assert.deepEqual(propsFromArch, { fields: {}, fieldAttrs: {}, groupBy: [], measures: [] });
     });
 
     QUnit.test("process simple arch (no field tag)", async function (assert) {
@@ -2454,6 +2586,7 @@ QUnit.module("Views", (hooks) => {
             fields,
             fieldAttrs: {},
             groupBy: [],
+            measures: [],
             mode: "line",
             order: "ASC",
         });
@@ -2465,6 +2598,7 @@ QUnit.module("Views", (hooks) => {
             fields,
             fieldAttrs: {},
             groupBy: [],
+            measures: [],
             stacked: false,
             title: "Title",
         });
@@ -2492,8 +2626,30 @@ QUnit.module("Views", (hooks) => {
                 fighters: { string: "FooFighters" },
             },
             measure: "revenue",
+            measures: ["revenue"],
             groupBy: ["date:day", "foo"],
             mode: "pie",
+        });
+    });
+
+    QUnit.test("process arch with non stored field tags of type measure", async function (assert) {
+        assert.expect(1);
+        const fields = serverData.models.foo.fields;
+        fields.revenue.store = false;
+        const arch = `
+            <graph>
+                <field name="product_id"/>
+                <field name="revenue" type="measure"/>
+                <field name="foo" type="measure"/>
+            </graph>
+        `;
+        const propsFromArch = new GraphArchParser().parse(arch, fields);
+        assert.deepEqual(propsFromArch, {
+            fields,
+            fieldAttrs: {},
+            measure: "foo",
+            measures: ["revenue", "foo"],
+            groupBy: ["product_id"],
         });
     });
 
@@ -3077,6 +3233,28 @@ QUnit.module("Views", (hooks) => {
         checkLegend(assert, graph, "Product");
         assert.strictEqual(getYAxeLabel(graph), "Product");
     });
+
+    QUnit.test(
+        "non store fields defined on the arch are present in the measures",
+        async function (assert) {
+            serverData.models.foo.fields.revenue.store = false;
+            await makeView({
+                serverData,
+                type: "graph",
+                resModel: "foo",
+                arch: `<graph>
+                <field name="product_id"/>
+                <field name="revenue" type="measure"/>
+                <field name="foo" type="measure"/>
+            </graph>`,
+            });
+            await toggleMenu(target, "Measures");
+            assert.deepEqual(
+                Array.from(target.querySelectorAll(".o_menu_item")).map((e) => e.innerText.trim()),
+                ["Foo", "Revenue", "Count"]
+            );
+        }
+    );
 
     QUnit.test('graph view "graph_measure" field in context', async function (assert) {
         assert.expect(6);

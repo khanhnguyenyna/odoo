@@ -4,15 +4,17 @@
 # 
 # Translators:
 # Wil Odoo, 2023
-# Junko Augias, 2023
+# Yoshi Tashiro (Quartile) <tashiro@roomsfor.hk>, 2024
+# Junko Augias, 2024
+# Ryoko Tsuda <ryoko@quartile.co>, 2024
 # 
 msgid ""
 msgstr ""
 "Project-Id-Version: Odoo Server 17.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2023-10-26 21:55+0000\n"
+"POT-Creation-Date: 2024-08-13 10:27+0000\n"
 "PO-Revision-Date: 2023-10-26 23:09+0000\n"
-"Last-Translator: Junko Augias, 2023\n"
+"Last-Translator: Ryoko Tsuda <ryoko@quartile.co>, 2024\n"
 "Language-Team: Japanese (https://app.transifex.com/odoo/teams/41243/ja/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -165,7 +167,7 @@ msgstr "分析勘定明細"
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_account_analytic_plan
 msgid "Analytic Plans"
-msgstr "分析プラン"
+msgstr "分析計画"
 
 #. module: stock_account
 #: model:ir.model.fields.selection,name:stock_account.selection__product_category__property_valuation__real_time
@@ -200,7 +202,7 @@ msgstr "ベーコン"
 #. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_revaluation_form_view
 msgid "Cancel"
-msgstr "キャンセル"
+msgstr "取消"
 
 #. module: stock_account
 #. odoo-python
@@ -209,7 +211,8 @@ msgstr "キャンセル"
 msgid ""
 "Cannot find a stock input account for the product %s. You must define one on"
 " the product category, or on the location, before processing this operation."
-msgstr "製品 %sの在庫入力勘定を見つけることができません。 この操作を処理する前に、製品カテゴリまたはロケーションを定義する必要があります。"
+msgstr ""
+"プロダクト %sの在庫入力勘定を見つけることができません。 この操作を処理する前に、プロダクトカテゴリまたはロケーションを定義する必要があります。"
 
 #. module: stock_account
 #. odoo-python
@@ -219,7 +222,8 @@ msgid ""
 "Cannot find a stock output account for the product %s. You must define one "
 "on the product category, or on the location, before processing this "
 "operation."
-msgstr "製品 %sの在庫出力勘定を見つけることができません。 この操作を処理する前に、製品カテゴリまたはロケーションを定義する必要があります。"
+msgstr ""
+"プロダクト %sの在庫出力勘定を見つけることができません。 この操作を処理する前に、プロダクトカテゴリまたはロケーションを定義する必要があります。"
 
 #. module: stock_account
 #. odoo-python
@@ -243,6 +247,7 @@ msgstr "売上原価元"
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__company_id
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer_revaluation__company_id
+#: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Company"
 msgstr "会社"
 
@@ -278,7 +283,7 @@ msgstr "プロダクトカテゴリ%sの原価計算法を %sから %sに変更�
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer_revaluation__account_id
 msgid "Counterpart Account"
-msgstr "相手方口座"
+msgstr "相手勘定"
 
 #. module: stock_account
 #: model:ir.model.fields,help:stock_account.field_product_category__property_stock_account_input_categ_id
@@ -322,11 +327,12 @@ msgstr "現在の数量"
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer_revaluation__current_value_svl
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_revaluation_form_view
 msgid "Current Value"
-msgstr "実際の数値"
+msgstr "現在価値"
 
 #. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_form
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
+#: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Date"
 msgstr "日付"
 
@@ -385,7 +391,7 @@ msgstr "グル―プ化…"
 #. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Has Remaining Qty"
-msgstr "残数量があるか"
+msgstr "残数量あり"
 
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__id
@@ -397,6 +403,12 @@ msgstr "ID"
 #: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Incoming"
 msgstr "入荷"
+
+#. module: stock_account
+#: model:ir.actions.act_window,name:stock_account.inventory_aging_action
+#: model:ir.ui.menu,name:stock_account.menu_inventory_aging
+msgid "Inventory Aging"
+msgstr "在庫エイジング"
 
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_stock_location
@@ -434,6 +446,7 @@ msgstr "仕訳帳"
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_account_move
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__account_move_id
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
 msgid "Journal Entry"
 msgstr "仕訳"
 
@@ -517,11 +530,6 @@ msgid "New value by quantity"
 msgstr "数量ごとの新しい値"
 
 #. module: stock_account
-#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
-msgid "Open Valuation Layer"
-msgstr "評価レイヤを開く"
-
-#. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_form
 msgid "Other Info"
 msgstr "その他情報"
@@ -536,19 +544,19 @@ msgstr "出庫"
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__product_id
 #: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Product"
-msgstr "製品"
+msgstr "プロダクト"
 
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_product_category
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__categ_id
 #: model_terms:ir.ui.view,arch_db:stock_account.view_inventory_valuation_search
 msgid "Product Category"
-msgstr "製品カテゴリ"
+msgstr "プロダクトカテゴリ"
 
 #. module: stock_account
 #: model:ir.model,name:stock_account.model_stock_move_line
 msgid "Product Moves (Stock Move Line)"
-msgstr "製品の移動(在庫移動ライン)"
+msgstr "プロダクトの移動(在庫移動ライン)"
 
 #. module: stock_account
 #. odoo-python
@@ -599,6 +607,11 @@ msgstr "理由"
 #: model:ir.model.fields,help:stock_account.field_stock_valuation_layer_revaluation__reason
 msgid "Reason of the revaluation"
 msgstr "再評価の理由"
+
+#. module: stock_account
+#: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__warehouse_id
+msgid "Receipt WH"
+msgstr "領収書 WH"
 
 #. module: stock_account
 #: model:ir.model.fields,field_description:stock_account.field_stock_valuation_layer__reference
@@ -815,6 +828,16 @@ msgid ""
 msgstr "移動明細が一貫していません。同じ移動元または移動先会社を共有していません。"
 
 #. module: stock_account
+#. odoo-python
+#: code:addons/stock_account/wizard/stock_valuation_layer_revaluation.py:0
+#, python-format
+msgid ""
+"The value of a stock valuation layer cannot be negative. Landed cost could "
+"be use to correct a specific transfer."
+msgstr "在庫評価レイヤーの値をマイナスにすることはできません。仕入諸掛を使用して個別に運送を修正してください。"
+
+#. module: stock_account
+#: model_terms:ir.actions.act_window,help:stock_account.inventory_aging_action
 #: model_terms:ir.actions.act_window,help:stock_account.stock_valuation_layer_action
 #: model_terms:ir.actions.act_window,help:stock_account.stock_valuation_layer_report_action
 msgid ""
@@ -823,12 +846,19 @@ msgid ""
 msgstr "評価レイヤがありません。評価レイヤは在庫評価に影響を与えるプロダクト移動がある時に作成されます。"
 
 #. module: stock_account
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
+msgid "Total Moved Quantity"
+msgstr "合計移動数量"
+
+#. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_report_tree
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
 msgid "Total Remaining Quantity"
 msgstr "残数量合計"
 
 #. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_report_tree
+#: model_terms:ir.ui.view,arch_db:stock_account.stock_valuation_layer_tree
 msgid "Total Remaining Value"
 msgstr "残価合計"
 
@@ -852,7 +882,7 @@ msgstr "移動"
 msgid ""
 "Trigger a decrease of the delivered/received quantity in the associated Sale"
 " Order/Purchase Order"
-msgstr "関連する販売オーダ/購買オーダの配送済/入荷数量の減少をトリガします。"
+msgstr "関連する販売オーダ/購買オーダの配送済/入荷数量の減少をトリガーします。"
 
 #. module: stock_account
 #: model_terms:ir.ui.view,arch_db:stock_account.product_product_stock_tree_inherit_stock_account
@@ -1016,7 +1046,16 @@ msgstr "自動評価でプロダクトの原価を更新することはできま
 msgid ""
 "You don't have any input valuation account defined on your product category."
 " You must define one before processing this operation."
-msgstr "製品カテゴリに入庫評価勘定が定義されていません。この操作を行う前に、入庫評価勘定を定義する必要があります。"
+msgstr "プロダクトカテゴリに入庫評価勘定が定義されていません。この操作を行う前に、入庫評価勘定を定義する必要があります。"
+
+#. module: stock_account
+#. odoo-python
+#: code:addons/stock_account/models/product.py:0
+#, python-format
+msgid ""
+"You don't have any output valuation account defined on your product "
+"category. You must define one before processing this operation."
+msgstr "プロダクトカテゴリに出庫評価勘定が定義されていません。この操作を行う前に、出庫評価勘定を定義する必要があります。"
 
 #. module: stock_account
 #. odoo-python
@@ -1046,7 +1085,7 @@ msgstr "プロダクトカテゴリに在庫仕訳帳が定義されていませ
 msgid ""
 "You don't have any stock valuation account defined on your product category."
 " You must define one before processing this operation."
-msgstr "製品カテゴリに定義されている在庫評価勘定はありません。 この操作を処理する前に定義する必要があります。"
+msgstr "プロダクトカテゴリに定義されている在庫評価勘定はありません。 この操作を処理する前に定義する必要があります。"
 
 #. module: stock_account
 #. odoo-python
