@@ -232,7 +232,8 @@ def get_default_session():
         'session_token': None,
     }
 
-DEFAULT_MAX_CONTENT_LENGTH = 128 * 1024 * 1024  # 128MiB
+# Fix REQUESt ENTITY TOO LARGE error 128 * 1024 * 1024 => 500 * 1024 * 1024
+DEFAULT_MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 128MiB
 
 # Two empty objects used when the geolocalization failed. They have the
 # sames attributes as real countries/cities except that accessing them
